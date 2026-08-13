@@ -1,0 +1,14 @@
+{
+  "created_at_utc": "2026-08-13T15:39:11.793847+00:00",
+  "effect_claim_allowed": false,
+  "files_sha256": {
+    "case_metrics.jsonl": "5edaa60f32b043c3b4aa6a2492177c4f75d0f48e1ce3bc5b61c85c9e3bb05332",
+    "config_snapshot.json": "80e63724f2d902affe4efe7d921c4b4da6ac92c59f82e46386d660c85c7ad0c7",
+    "environment.json": "bc460da1ff49376d42dedc83a0df87a702fb57a7a64b65f1fb5728cccaa7a800",
+    "progress.jsonl": "3c45f50859480404d34c05b0a2aca5779ee4d04c7c8fed8f9018d1f41afbfab9",
+    "selection_manifest.json": "70648f86238b984154bc1fb5f7583653b3b0f4f16041487d608f6fb5fc9f95a6",
+    "summary.json": "f56475f8ea0916dee6deb66aa2e0e7019c06b3beb637239fabfcc2d590a79570"
+  },
+  "run_id": "stress-recovery-v0.5-dev",
+  "schema": "tunnelgeopt.stress_recovery.development.artifacts.v1"
+}

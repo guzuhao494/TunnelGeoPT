@@ -1,0 +1,248 @@
+{
+  "schema": "tunnelgeopt.load_basis_confirmation.config.v1",
+  "run_id": "linear-load-basis-confirmation-v0.5.0",
+  "status": "frozen_plan_not_executed",
+  "purpose": "independent_new_geometry_direct_fem_confirmation_of_fixed_system_load_axis_factorization",
+  "classification_if_all_gates_pass": "LINEAR_ELASTIC_LOAD_AXIS_FACTORIZATION_CONFIRMED",
+  "post_solve_classifications": {
+    "invalid_protocol_or_qc": "ABSTAIN_INVALID",
+    "valid_protocol_numerical_gate_failed": "STOP_BASIS_CONFIRMATION",
+    "all_gates_passed": "LINEAR_ELASTIC_LOAD_AXIS_FACTORIZATION_CONFIRMED"
+  },
+  "solve_contract": {
+    "geometry_count": 3,
+    "basis_loads_per_geometry": 3,
+    "heldout_loads_per_geometry": 5,
+    "total_direct_fem_solves": 24
+  },
+  "execution_evidence_contract": {
+    "reserve_output_directory_atomically_before_first_mesh_or_solve": true,
+    "record_each_solve_before_solver_call": true,
+    "persist_planned_attempted_solver_returned_validated_completed_failed_and_not_attempted_counts": true,
+    "post_reservation_mesh_solver_or_qc_failure_writes_abstain_invalid": true,
+    "nonfinite_persisted_float_becomes_null_with_explicit_reason_and_abstain_invalid": true,
+    "artifact_write": "exclusive_tmp_file_then_atomic_replace_in_reserved_output_directory"
+  },
+  "response_contract": {
+    "primary": "query_total_in_plane_stress",
+    "required_auxiliary": [
+      "nodal_displacement",
+      "element_delta_stress",
+      "query_delta_stress"
+    ],
+    "secondary_report_only": "element_sigma_xx",
+    "primary_and_stress_component_order": [
+      "yy",
+      "zz",
+      "yz"
+    ]
+  },
+  "material": {
+    "young_modulus_over_reference_stress": 500.0,
+    "poisson_ratio": 0.25,
+    "formulation": "two_dimensional_small_strain_plane_strain_linear_elasticity"
+  },
+  "fine_mesh": {
+    "backend": "gmsh",
+    "element": "first_order_triangle",
+    "mesh_size_over_radius": 0.4,
+    "wall_size_over_radius": 0.0625,
+    "farfield_size_over_radius": 0.4,
+    "single_mesh_generated_once_and_reused_for_all_eight_loads_per_geometry": true
+  },
+  "query": {
+    "nearfield_points": 384,
+    "wall_offset_points": 64,
+    "farfield_points": 64,
+    "nearfield_scale": 3.2,
+    "farfield_scale": 3.0,
+    "nearfield_distance_over_radius": [
+      0.05,
+      2.0
+    ],
+    "wall_offset_over_radius": 0.02,
+    "total_points": 512,
+    "same_query_used_for_all_eight_loads_per_geometry": true
+  },
+  "geometries": [
+    {
+      "name": "confirm_circle_01",
+      "section_family": "circle",
+      "continuous_parameters": {
+        "axis_ratio": 1.137,
+        "superellipse_exponent": 2.731
+      },
+      "boundary_points": 192,
+      "characteristic_radius": 1.0,
+      "roughness_amplitude": 0.0173,
+      "roughness_seed": 26081301,
+      "outer_domain_scale": 8.0,
+      "query_seed": 913001,
+      "expected_identities": {
+        "geometry_group_id": "25db29b80f5f4f551dc3ba489c3c5c9bc8f1ee3dab08f95f3af9f5a062510626",
+        "boundary_float64_sha256": "7903f23164b95ff166d040cc0d5e20e94d7e8a7ee7359645b17b1d319da8bd36",
+        "query_hash": "0517e0e3701ab01bca70a1ca0022fcc86a20815b9b96c247bea6178b9528b7fb"
+      }
+    },
+    {
+      "name": "confirm_horseshoe_01",
+      "section_family": "horseshoe",
+      "continuous_parameters": {
+        "span_height_ratio": 0.873,
+        "sidewall_height_ratio": 1.087,
+        "crown_shape": 2.417
+      },
+      "boundary_points": 192,
+      "characteristic_radius": 1.0,
+      "roughness_amplitude": 0.0191,
+      "roughness_seed": 26081302,
+      "outer_domain_scale": 8.0,
+      "query_seed": 913002,
+      "expected_identities": {
+        "geometry_group_id": "487d54a28ee9a1e95c6e9ee65a99fc56b957f70e2585bcf243a3fd6823b19d7f",
+        "boundary_float64_sha256": "8857db5dc0f46286e8b68b8caafde5ce3cd0a882af47d8403b24c9b8233a23b2",
+        "query_hash": "ceadb1aa8339a4a18965b0cd81f7e790c1b20fdd90de0b20ff6db3dd5f5594c9"
+      }
+    },
+    {
+      "name": "confirm_straight_wall_arch_01",
+      "section_family": "straight_wall_arch",
+      "continuous_parameters": {
+        "span_height_ratio": 1.143,
+        "springline_height_ratio": 0.237,
+        "crown_rise_span": 0.817
+      },
+      "boundary_points": 192,
+      "characteristic_radius": 1.0,
+      "roughness_amplitude": 0.0157,
+      "roughness_seed": 26081303,
+      "outer_domain_scale": 8.0,
+      "query_seed": 913003,
+      "expected_identities": {
+        "geometry_group_id": "e85cdb108c1471afd8c64c16350717b83d5416978e751dfc7d22f85c0b694eb9",
+        "boundary_float64_sha256": "6478870d7144fd45ba22be08a22412c670bf4247ef6b283b9c89afa4ba2fef96",
+        "query_hash": "a6acfd447efcfeae2e69782e59eb9df8ca3e3b4f8ad524868a59eeed08d01064"
+      }
+    }
+  ],
+  "load_sign_convention": "tension_positive_internal_negative_values_are_compression",
+  "basis_loads_tension_positive": [
+    [1.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0],
+    [0.0, 0.0, 0.7071067811865475]
+  ],
+  "heldout_loads_tension_positive": [
+    [-0.62, -0.37, -0.11],
+    [-0.48, -0.71, 0.13],
+    [-0.83, -0.29, -0.07],
+    [-0.34, -0.91, 0.16],
+    [-0.74, -0.55, 0.0]
+  ],
+  "expected_load_group_ids": [
+    "96bedd1be586f02e5f455b54186572c3591db749bd325dc45bb13addcfe2d706",
+    "315d4b085d569a564750a2d76709c72f804f421c1e8d9ca74996bc840100a950",
+    "6c438d928d146da0e855d9a05737e07f26a041820aa028e87380ba2fe58bbaff",
+    "177efd0477a40d8071162f28c0238e0745c3c6d6f849742ee60ccbc5d554d274",
+    "dba15d5bae2d8891137b3e3e717d379e6bf54b06184a4fb87c2402f4d33903ed",
+    "33419b4c48c69f150a51d2c54e4c0b75dfb369b7fe0d621301d8d6e0b6cfb165",
+    "d916852ea625182e2181b81a9da8f234cdbc77a9ef4f4c58d989c41fe7188816",
+    "b406b455607a88b60b2c7d5f96640e4cacbd69a19a8980da40363fb0e3cc9ce3"
+  ],
+  "expected_case_group_ids": [
+    "21f327cca4fd1fc03e16893cddc6698263e2e0be32b5ac50620caf0dbe3791a5",
+    "dc792d2e134473cfe2ba30d71ffd7801371a7b83c4bb91c0b3841e28a27e6c4f",
+    "f98989e02e437290405c929b1df86783947ef8a6e9536d49a3fac4c56d9aa801",
+    "1fbb6f2594a2c2aa59c9064f9cf0a1f110fd8d45b79e1604b665ec7a0de9a54e",
+    "8b2b409d40bbb141403d6a5b0d798e49e30dc1c4000674b892c87aabfad267f7",
+    "8491b4a9740cd26a8376a2305818c7b356452dceae52c80c379127fa4b57c58b",
+    "c8000b18f425aa53cfbf72797e304ec53a0acd8ed6bc6574f863ac3ba3f27af0",
+    "541b82791997d79c317f6a8764ad70fe4eaf45e47bc0af328cf19e3b2477bf00",
+    "786b3402c6dd7dfddeedddc6fe3664154048475449a2f66cc6ae899cd1a008de",
+    "a7149cb589666c0f39aa26d15a0cce1f609d88fe7234242f4af0dcbebb5122ec",
+    "e28904c419d68cb4dabbda33812945a4b00e781de66f0956639051be53b85eff",
+    "4af75709e03d710fb84c0f3394c95f8a4c561fc328e1ba647bded74bee961845",
+    "58d29a46d1a225f2b1f7df6233bbf8b9c7bc4b19553152533f6c9a67df3e0f0d",
+    "6431b63cfedadc19776b604a258131d7f6bdd7a528e8f3c90a7ee462ddfc1d51",
+    "aca49d420140c50d9ee121e6d7fc64b442c2ac020583e50238b751325d3b4f41",
+    "92bd7a39a748fe7da90acc85568ab5d6c2db547930cd0a67d8d6d1023b8b8080",
+    "b58ba2a1666197f6492f8c8adaa19f8684e8c43e477cd0d081ac2c16a59afc88",
+    "d999b5b8a578adb6d446ea90901b3feb5a465ee40f391a9f55d2b010fac7b758",
+    "d83afd67519948b33deae4e4943e68ff42ecefe5e53d1ef58643f93fd0249746",
+    "1f1e2c4a5405101d0474c0356c419154328e66b8270e31e66af6d6a537736bc6",
+    "6c40710eea03728613a22343adb2fca4ce3fd338f1df4c6107b69c2eab7289a5",
+    "368234b8c7588967d301d1ecc646920b9bee1a8cb33df928c55a15d00547bedb",
+    "bd67c87e92125e061b98209bba81d2314006fdd6d509f370b81db592ff80c253",
+    "fc9e50d41a61b9297ab1582b52cf65bbfa2837188d2e4a26b4aa068a113c39c4"
+  ],
+  "identity_exclusions": {
+    "legacy_aggregate": {
+      "path": "configs/multifidelity_seen_identity_exclusions.json",
+      "sha256": "04bd08cfd97d50e9f2ca8ac6153824a4e04775c5b2da4063670aac8c542802a2"
+    },
+    "legacy_query_sources": [
+      {
+        "path": "artifacts/experiment/mf-residual-smoke-v0.3.0/dataset_manifest.json",
+        "sha256": "f13ec17a728b2fb02ee64af30ed0e9bc30fdfc3318e2a5a400aa13c3af677c0a"
+      },
+      {
+        "path": "artifacts/analysis/mf-convergence-dev-v0.3.0/case_metrics.json",
+        "sha256": "60ae5bfe614fa9ec2230c02bb1822998807bdb2d04354c61fb280a0d2376e65b"
+      }
+    ],
+    "v03_formal_manifest": {
+      "path": "artifacts/experiment/mf-residual-formal-v0.3.0/data/formal_dataset_manifest.json",
+      "sha256": "0e492e27cf67acbbf5fcf0dcd142c8d762ca66f0176d3abd8e88d0abeb0bcc10"
+    },
+    "v03_public_identity_store": {
+      "path": "artifacts/experiment/mf-residual-formal-v0.3.0/data/public_inputs_and_coarse_fields.npz",
+      "sha256": "af2ff1c980e95917aab79d28bd75465d9ba3302b6ce3dc2d99d9ccea9ca54c9e"
+    }
+  },
+  "gates": {
+    "median_relative_l2_max": 1e-11,
+    "maximum_relative_l2_max": 1e-9,
+    "maximum_auxiliary_response_relative_l2": 1e-9,
+    "required_basis_rank": 3,
+    "required_basis_condition_number": 1.4142135623730951,
+    "maximum_solver_algebraic_residual": 1e-9,
+    "maximum_solver_energy_closure": 1e-9,
+    "require_same_geometry_boundary_mesh_query_per_eight_loads": true,
+    "require_all_query_points_located": true,
+    "require_explicit_wall_and_farfield_tags": true,
+    "require_zero_element_centroids_inside_cavity": true,
+    "require_new_identity_zero_intersection": true
+  },
+  "claim_scope": {
+    "confirmed": [
+      "fixed_geometry",
+      "fixed_material",
+      "fixed_mesh",
+      "fixed_query",
+      "two_dimensional_small_strain_linear_elasticity",
+      "linear_factorization_of_in_plane_farfield_load_axis"
+    ],
+    "excluded": [
+      "geometry_generalization",
+      "mesh_generalization",
+      "material_generalization",
+      "fracture",
+      "damage",
+      "plasticity",
+      "rockburst",
+      "micro_to_field_transfer",
+      "field_prediction",
+      "engineering_truth"
+    ]
+  },
+  "implementation_preflight": {
+    "require_tracked_clean": true,
+    "require_head_equals_upstream": true,
+    "require_explicit_expected_head": true,
+    "require_output_absent": true,
+    "required_path_sha256": {
+      "scripts/run_load_basis_confirmation.py": "efac59c4ea3dabad630c3da8f6bb6535b3191b52c62a1accc6f99fb4deabada3",
+      "src/tunnelgeopt/load_basis.py": "8ae842485ad15168270dc54ce3f986451d9580292d6f276ccbbfbb23962e60aa"
+    }
+  },
+  "expected_plan_sha256": "cf91a557bae100545ad84bec121cc6bbcdcc09e1ae6a7fd3da98c7d9cf463ef5"
+}

@@ -1,0 +1,90 @@
+{
+  "claim_exclusions": [
+    "formal_effect_claim",
+    "independent_locked_test_claim",
+    "fracture",
+    "damage",
+    "rockburst",
+    "three_dimensional_dynamics",
+    "micro_to_field_transfer",
+    "field_prediction",
+    "engineering_truth"
+  ],
+  "config_name": "stress_recovery_seen_v03_development",
+  "exploratory_gates": {
+    "each_section_ultrafine_center_ratio_max": 1.0,
+    "effect_claim_allowed": false,
+    "interpretation": "development_routing_only_not_a_formal_effect_gate",
+    "overall_ultrafine_center_ratio_max": 0.9,
+    "wall_resultant_ultrafine_center_ratio_max": 1.0,
+    "wall_traction_ultrafine_center_ratio_max": 1.0
+  },
+  "metrics": {
+    "center": "ratio_of_equal_case_mean_errors",
+    "component_squared_weights": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "primary": "nearfield_area_weighted_tensor_frobenius_relative_l2_against_ultrafine",
+    "report_case_ratio": "recovered_error_divided_by_raw_coarse_error",
+    "report_each_section": true,
+    "report_raw_coarse_and_recovered": true,
+    "secondary_reference": "fine",
+    "wall_offset": {
+      "references": [
+        "fine",
+        "ultrafine"
+      ],
+      "report_resultant_discrepancy": true,
+      "report_traction_discrepancy": true
+    }
+  },
+  "operator": {
+    "barycentric_tolerance": 1e-10,
+    "implementation": "src/tunnelgeopt/stress_recovery.py::recover_stress_at_queries",
+    "linearity_in_element_stress_required": true,
+    "name": "incident_element_area_over_distance_affine_nodal_recovery_then_p1_interpolation",
+    "parameter_status": "frozen_default_no_tuning",
+    "rank_tolerance": 1e-12
+  },
+  "quality_control": {
+    "maximum_clapeyron_relative_energy_error": 1e-09,
+    "maximum_free_dof_algebraic_residual": 1e-09,
+    "minimum_triangle_quality": 0.02,
+    "require_all_query_points_located": true,
+    "require_explicit_wall_and_farfield_tags": true,
+    "require_same_boundary_outer_bounds_and_query": true
+  },
+  "run_id": "stress-recovery-v0.5-dev",
+  "schema_version": "tunnelgeopt.stress_recovery.development.v1",
+  "scope": "development_only_deterministic_stress_recovery_diagnostic_on_seen_v03_cases",
+  "selection": {
+    "cases_per_partition_section": 1,
+    "expected_case_count": 15,
+    "partitions": [
+      "train_id",
+      "dev_id",
+      "locked_iid",
+      "locked_geometry_ood",
+      "locked_load_ood"
+    ],
+    "protocol": "minimum_sha256_of_canonical_partition_section_case_id_within_full_v03_plan_v1",
+    "salt": "tunnelgeopt-stress-recovery-v0.5-dev-20260813-v1",
+    "section_families": [
+      "circle",
+      "horseshoe",
+      "straight_wall_arch"
+    ],
+    "selection_must_not_use_solver_or_label_values": true
+  },
+  "source": {
+    "all_v03_cases_declared_seen": true,
+    "effect_claim_allowed": false,
+    "fine_and_ultrafine_labels_are_development_only": true,
+    "formal_config": "configs/multifidelity_formal.json",
+    "formal_plan_reconstruction": "full_v03_plan_with_identity_preserving_nonformal_override",
+    "locked_or_independent_label_claim_allowed": false
+  },
+  "status": "frozen_development_only_before_execution"
+}

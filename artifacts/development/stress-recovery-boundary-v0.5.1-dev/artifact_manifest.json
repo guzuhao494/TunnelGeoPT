@@ -1,0 +1,14 @@
+{
+  "created_at_utc": "2026-08-13T15:48:31.553199+00:00",
+  "effect_claim_allowed": false,
+  "files_sha256": {
+    "case_metrics.jsonl": "e27f0b9201269d40ef5c3c95564d823f7a3f20f0cbf09e5a7544d557accb8e87",
+    "config_snapshot.json": "0ec7c2eb7ad29a1587204b650d91965a142973a59adbc5f7169cb4cea0daa83e",
+    "environment.json": "d28a652fdc7a9998117c44ed298db4f057491a5bc659f300f43846993f35f56e",
+    "progress.jsonl": "30188a77bac88e7fdb66c5a45d1b251d2583e181d6a2be93718749867fe11117",
+    "selection_manifest.json": "dd9757e70cfeba8ae7f22c9b0d3bd1434aef2bd95a45af2a258b53563ab94083",
+    "summary.json": "4ba9c64f2c96ad53810c169bc838bc4eec044e5ed2177429a2c250538cc580ce"
+  },
+  "run_id": "stress-recovery-boundary-v0.5.1-dev",
+  "schema": "tunnelgeopt.stress_recovery.boundary_development.artifacts.v1"
+}

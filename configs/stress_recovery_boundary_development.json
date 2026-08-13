@@ -1,0 +1,109 @@
+{
+  "schema_version": "tunnelgeopt.stress_recovery.boundary_development.v1",
+  "config_name": "traction_preserving_stress_recovery_seen_v03_development",
+  "run_id": "stress-recovery-boundary-v0.5.1-dev",
+  "status": "frozen_post_v05_failure_development_only_before_execution",
+  "scope": "development_only_traction_preserving_recovery_redesign_on_same_seen_v03_cases",
+  "redesign_provenance": {
+    "developed_after_observing_predecessor_results": true,
+    "predecessor_run_id": "stress-recovery-v0.5-dev",
+    "predecessor_artifact": "artifacts/development/stress-recovery-v0.5-dev",
+    "observed_failure": "unconstrained_recovery_worsened_wall_offset_traction_and_resultant_discrepancy",
+    "confirmatory_status": "not_confirmatory_post_hoc_development_redesign",
+    "new_case_or_label_independence_claim_allowed": false
+  },
+  "claim_exclusions": [
+    "formal_effect_claim",
+    "independent_locked_test_claim",
+    "confirmatory_claim",
+    "fracture",
+    "damage",
+    "rockburst",
+    "three_dimensional_dynamics",
+    "micro_to_field_transfer",
+    "field_prediction",
+    "engineering_truth"
+  ],
+  "source": {
+    "formal_config": "configs/multifidelity_formal.json",
+    "all_v03_cases_declared_seen": true,
+    "fine_and_ultrafine_labels_are_development_only": true,
+    "effect_claim_allowed": false
+  },
+  "selection": {
+    "protocol": "minimum_sha256_of_canonical_partition_section_case_id_within_full_v03_plan_v1",
+    "salt": "tunnelgeopt-stress-recovery-v0.5-dev-20260813-v1",
+    "section_families": [
+      "circle",
+      "horseshoe",
+      "straight_wall_arch"
+    ],
+    "partitions": [
+      "train_id",
+      "dev_id",
+      "locked_iid",
+      "locked_geometry_ood",
+      "locked_load_ood"
+    ],
+    "cases_per_partition_section": 1,
+    "expected_case_count": 15,
+    "require_exact_predecessor_case_ids": true,
+    "selection_must_not_use_solver_or_label_values": true
+  },
+  "operator": {
+    "base_recovery": "src/tunnelgeopt/stress_recovery.py::recover_stress_at_queries",
+    "wall_projection": "src/tunnelgeopt/stress_recovery.py::preserve_baseline_traction_with_tangential_correction",
+    "nonwall_rule": "use_unconstrained_recovered_stress",
+    "wall_offset_rule": "raw_coarse_plus_tangential_tangential_projection_of_recovered_minus_raw",
+    "parameter_status": "frozen_post_v05_structural_redesign_no_v051_result_tuning",
+    "barycentric_tolerance": 1e-10,
+    "rank_tolerance": 1e-12,
+    "normal_tolerance": 1e-08,
+    "maximum_traction_increment_norm": 1e-12,
+    "linearity_in_raw_and_recovered_stress_required": true
+  },
+  "metrics": {
+    "primary": "nearfield_area_weighted_tensor_frobenius_relative_l2_against_ultrafine",
+    "secondary_reference": "fine",
+    "component_squared_weights": [
+      1.0,
+      1.0,
+      2.0
+    ],
+    "center": "ratio_of_equal_case_mean_errors",
+    "wall_offset": {
+      "references": [
+        "fine",
+        "ultrafine"
+      ],
+      "diagnostics": [
+        "traction",
+        "resultant",
+        "full_stress_relative_l2"
+      ],
+      "report_raw_unconstrained_and_boundary_preserving": true
+    }
+  },
+  "quality_control": {
+    "maximum_free_dof_algebraic_residual": 1e-09,
+    "maximum_clapeyron_relative_energy_error": 1e-09,
+    "minimum_triangle_quality": 0.02,
+    "require_all_query_points_located": true,
+    "require_explicit_wall_and_farfield_tags": true,
+    "require_same_boundary_outer_bounds_and_query": true
+  },
+  "development_routing_gates": {
+    "overall_ultrafine_nearfield_center_ratio_max": 0.9,
+    "each_section_ultrafine_nearfield_center_ratio_max": 1.0,
+    "required_wall_references": [
+      "fine",
+      "ultrafine"
+    ],
+    "wall_diagnostic_center_ratio_max": 1.0,
+    "ratio_numerical_tolerance": 1e-12,
+    "all_case_traction_increment_norm_max": 1e-12,
+    "passing_route": "READY_FOR_NEW_CONFIRMATORY_PREREGISTRATION",
+    "failing_route": "STOP_OR_REDESIGN_BEFORE_ANY_NEW_CONFIRMATORY_PREREGISTRATION",
+    "effect_claim_allowed": false
+  }
+}

@@ -1,0 +1,399 @@
+{
+  "schema_version": "tunnelgeopt.multifidelity_v04_development.v1",
+  "protocol_id": "mf-structured-residual-development-v0.4.0",
+  "status": "implementation_stop_pending_pivot",
+  "execution_authorization": {
+    "validate_only_authorized": true,
+    "tiny_mock_authorized": true,
+    "real_cross_fit_authorized": false,
+    "reason": "structured prototypes did not satisfy the frozen launch margins; a pivot decision is required before expensive compute"
+  },
+  "scope": "development_only_architecture_selection_on_all_v0.3_seen_labels",
+  "effect_claim_allowed": false,
+  "independent_validation_claim_allowed": false,
+  "claim_exclusions": [
+    "no_new_locked_data",
+    "no_confirmatory_go_or_no_go_claim",
+    "no_fracture_or_damage_evolution",
+    "no_dynamic_rockburst",
+    "no_micro_to_field_transfer",
+    "no_engineering_warning_claim"
+  ],
+  "source_experiment": {
+    "run_id": "mf-residual-formal-v0.3.0",
+    "root": "artifacts/experiment/mf-residual-formal-v0.3.0",
+    "required_classification": "ABSTAIN",
+    "required_effect_claim_allowed": false,
+    "config_sha256": "5564a06529b9895f4577a4ad0489611e1ebc319662ceb52e26651675ba10b5e7",
+    "files": {
+      "dataset_manifest": {
+        "path": "data/formal_dataset_manifest.json",
+        "sha256": "0e492e27cf67acbbf5fcf0dcd142c8d762ca66f0176d3abd8e88d0abeb0bcc10"
+      },
+      "public_inputs": {
+        "path": "data/public_inputs_and_coarse_fields.npz",
+        "sha256": "af2ff1c980e95917aab79d28bd75465d9ba3302b6ce3dc2d99d9ccea9ca54c9e"
+      },
+      "train_dev_labels": {
+        "path": "data/train_dev_fine_labels.npz",
+        "sha256": "42b0a4cbee981ed9808ea61f2d274975b3709657ce9c2484e95843932bc35111"
+      },
+      "seen_iid_labels": {
+        "path": "data/.sealed_generator_store/locked_iid.npz",
+        "sha256": "a9920219d7cabc06740b7d9b32e7666191a5d82fc6d0827123fcff437982e0d6",
+        "original_partition": "locked_iid",
+        "development_partition": "seen_iid"
+      },
+      "seen_geometry_ood_labels": {
+        "path": "data/.sealed_generator_store/locked_geometry_ood.npz",
+        "sha256": "091db71f0ab1f648f83b89cbb5120b5d3c1016c7d7708e3a9983b91842587914",
+        "original_partition": "locked_geometry_ood",
+        "development_partition": "seen_geometry_ood"
+      },
+      "seen_load_ood_labels": {
+        "path": "data/.sealed_generator_store/locked_load_ood.npz",
+        "sha256": "ec193b5e1ee75abbf3fd2ca2214febbf744291a020239b16a696584ba67cf672",
+        "original_partition": "locked_load_ood",
+        "development_partition": "seen_load_ood"
+      },
+      "seen_joint_ood_labels": {
+        "path": "data/.sealed_generator_store/locked_joint_ood.npz",
+        "sha256": "7fedb070fbeb5fdf0b50a3ae01c2b1d73deb05168e457984f62b3315df2db324",
+        "original_partition": "locked_joint_ood",
+        "development_partition": "seen_joint_ood"
+      },
+      "v03_decision": {
+        "path": "analysis/decision.json",
+        "sha256": "80db392622a9a706fdafcc430d43607ec3c7b10e30a34f25e15a121de96899f6"
+      },
+      "v03_checkpoint_manifest": {
+        "path": "checkpoints/checkpoint_manifest.json",
+        "sha256": "9362091e0c8a0339e6d1eb9c4bde1c3ac1ca975e4f15f8c00403572b96f1f0c7"
+      }
+    }
+  },
+  "seen_data_contract": {
+    "development_partitions": [
+      "train_id",
+      "dev_id",
+      "seen_iid",
+      "seen_geometry_ood",
+      "seen_load_ood",
+      "seen_joint_ood"
+    ],
+    "former_locked_partitions_are_seen": true,
+    "former_locked_labels_may_be_used_only_for_post_selection_seen_stress_testing": true,
+    "new_locked_partition_count": 0,
+    "generator_invocation_allowed": false,
+    "split_unit": "geometry_group_id",
+    "all_loads_and_points_follow_parent": true,
+    "cross_fit_source_partition": "train_id",
+    "fixed_early_stopping_partition": "dev_id",
+    "former_locked_training_access_allowed": false,
+    "cross_fit_strata": [
+      "section_family"
+    ]
+  },
+  "cross_fit": {
+    "fold_count": 5,
+    "fold_salt": "tunnelgeopt-v0.4-development-crossfit-20260813-v1",
+    "assignment": "salted_sha256_sort_then_round_robin_within_partition_and_section",
+    "require_each_parent_exactly_one_oof_fold": true,
+    "outer_oof_parent_count": 72,
+    "fine_label_fraction_for_structured_and_generic_residual": 0.5,
+    "optimizer_parent_count_per_fold": 36,
+    "optimizer_parents_per_section_per_fold": 12,
+    "fine_parent_selection": "salted_prefix_exactly_12_per_section_from_non_oof_train_id",
+    "fine_parent_salt": "tunnelgeopt-v0.4-development-fine50-20260813-v1",
+    "same_fold_models": [
+      "structured_linear_residual",
+      "three_one_switch_diagnostics",
+      "generic_residual50_v03",
+      "scratch_full_available",
+      "direct_full_available"
+    ],
+    "same_fold_comparator_budget": {
+      "scratch_full_available": "all_non_oof_train_id_parents_in_fold_57_or_60",
+      "direct_full_available": "all_non_oof_train_id_parents_in_fold_57_or_60",
+      "fixed_early_stopping": "all_original_dev_id_parents_18",
+      "explicitly_not": "frozen_v03_72_parent_full_baselines"
+    },
+    "former_locked_stress_comparators": [
+      "frozen_v03_scratch100",
+      "frozen_v03_direct100",
+      "frozen_v03_generic_residual50",
+      "coarse_only"
+    ],
+    "normalization_fit_scope": "cross_fit_training_rows_selected_for_optimization_only",
+    "oof_rows_never_used_for_optimizer_normalization_or_early_stopping": true
+  },
+  "training_seeds": [
+    103,
+    211,
+    307,
+    401,
+    509
+  ],
+  "architecture": {
+    "champion": {
+      "name": "structured_linear_residual",
+      "kind": "structured_linear_residual",
+      "strict_load_linearity": true,
+      "local_tensor_frame": true,
+      "exact_zero_init_coarse_gate": true
+    },
+    "ablations": [
+      {
+        "name": "ablate_strict_load_linearity",
+        "kind": "structured_linear_residual",
+        "strict_load_linearity": false,
+        "local_tensor_frame": true,
+        "exact_zero_init_coarse_gate": true
+      },
+      {
+        "name": "ablate_local_tensor_frame",
+        "kind": "structured_linear_residual",
+        "strict_load_linearity": true,
+        "local_tensor_frame": false,
+        "exact_zero_init_coarse_gate": true
+      },
+      {
+        "name": "ablate_zero_init_coarse_gate",
+        "kind": "structured_linear_residual",
+        "strict_load_linearity": true,
+        "local_tensor_frame": true,
+        "exact_zero_init_coarse_gate": false
+      }
+    ],
+    "same_fold_reference": {
+      "name": "generic_residual50_v03",
+      "kind": "generic_residual_v03",
+      "hidden_width": 64,
+      "global_context_blocks": 3
+    },
+    "same_fold_comparators": [
+      {
+        "name": "scratch_full_available",
+        "kind": "scratch_v03_architecture",
+        "optimizer_budget": "all_non_oof_train_id_parents"
+      },
+      {
+        "name": "direct_full_available",
+        "kind": "direct_coarse_v03_architecture",
+        "optimizer_budget": "all_non_oof_train_id_parents"
+      }
+    ],
+    "former_locked_stress_baselines": [
+      {
+        "name": "frozen_v03_scratch100",
+        "kind": "authenticated_v03_checkpoint"
+      },
+      {
+        "name": "frozen_v03_direct100",
+        "kind": "authenticated_v03_checkpoint"
+      },
+      {
+        "name": "frozen_v03_generic_residual50",
+        "kind": "authenticated_v03_checkpoint"
+      }
+    ],
+    "wall_hinge_training_loss": {
+      "enabled": false,
+      "role": "diagnostic_only_not_an_optional_model_change"
+    },
+    "comparison_disclosures": {
+      "parameter_counts": {
+        "structured_linear_residual": 40685,
+        "generic_residual50_v03": 38787,
+        "ablate_strict_load_linearity": 38598,
+        "ablate_local_tensor_frame": 40813,
+        "ablate_zero_init_coarse_gate": 40685
+      },
+      "equal_parameter_count": false,
+      "generic_models_receive_original_common_14_channels": true,
+      "structured_model_receives_17_packed_channels": true,
+      "packed_extra_channels": "deterministic_hybrid_frame_yz_and_wall_mask",
+      "wall_frame_source": "stored_physical_wall_normal_from_frozen_public_geometry",
+      "nonwall_frame_source": "negative_nearest_distance_gradient",
+      "structured_model_has_additional_derived_information": true,
+      "structured_training_loss": "residual_relative_per_case",
+      "generic_training_loss": "legacy_weighted_mse",
+      "loss_functions_matched": false,
+      "whole_candidate_comparison_allowed": true,
+      "causal_component_attribution_allowed": false,
+      "ablation_role": "diagnostic_only_not_component_necessity_evidence"
+    },
+    "selection_rule": "champion_is_fixed_ex_ante_and_must_pass_every_launch_gate"
+  },
+  "model": {
+    "point_input_width": 14,
+    "base_feature_width": 11,
+    "coarse_feature_width": 3,
+    "hidden_width": 64,
+    "global_context_blocks": 3,
+    "output_width": 3,
+    "activation": "gelu"
+  },
+  "optimization": {
+    "optimizer": "adamw",
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "case_batch_size": 8,
+    "max_epochs": 300,
+    "early_stopping_patience": 35,
+    "early_stopping_min_delta": 0.00001,
+    "deterministic_algorithms": true,
+    "silent_seed_restart_allowed": false,
+    "cross_fit_early_stopping": "fixed_original_dev_id_only",
+    "cross_fit_early_stopping_parent_count": 18,
+    "cross_fit_early_stopping_parents_per_section": 6
+  },
+  "evaluation": {
+    "metric": "nearfield_area_weighted_tensor_frobenius_relative_l2",
+    "aggregation": "mean_loads_within_parent_then_mean_parents_within_section_then_equal_mean_of_source_partitions",
+    "bootstrap_replicates": 10000,
+    "bootstrap_seed": 404013,
+    "one_sided_upper_confidence_level": 0.95,
+    "wall_offset": {
+      "coarse_nonworsening_multiplier": 1.1,
+      "traction_additive_margin_over_S_inf": 0.005,
+      "resultant_additive_margin_over_S_inf": 0.0025,
+      "absolute_caps": {
+        "seen_iid": {
+          "max_traction_discrepancy": 0.1,
+          "max_resultant_discrepancy": 0.05
+        },
+        "seen_geometry_ood": {
+          "max_traction_discrepancy": 0.15,
+          "max_resultant_discrepancy": 0.08
+        },
+        "seen_load_ood": {
+          "max_traction_discrepancy": 0.15,
+          "max_resultant_discrepancy": 0.08
+        },
+        "seen_joint_ood": {
+          "max_traction_discrepancy": 0.2,
+          "max_resultant_discrepancy": 0.1,
+          "report_only": true
+        }
+      }
+    }
+  },
+  "launch_gates": {
+    "primary_partitions": [
+      "seen_iid",
+      "seen_geometry_ood",
+      "seen_load_ood"
+    ],
+    "cross_fit_architecture_gate": {
+      "partition": "train_id_oof",
+      "champion_to_same_fold_generic_residual50_max_point_ratio": 0.98,
+      "champion_to_each_ablation_max_point_ratio": 0.99,
+      "champion_to_each_same_fold_learned_comparator_max_point_ratio": 0.95,
+      "paired_parent_group_one_sided_upper_ratio_max": 1.0,
+      "paired_parent_group_interval_role": "development_heuristic_only_fold_dependence_precludes_formal_ci_claim",
+      "candidate_and_generic_optimizer_parent_count": 36,
+      "candidate_and_generic_optimizer_parents_per_section": 12,
+      "scratch_direct_optimizer_budget": "all_non_oof_train_id_parents_57_or_60",
+      "fixed_early_stopping_parent_count": 18,
+      "fixed_early_stopping_parents_per_section": 6
+    },
+    "post_selection_seen_stress_gate": {
+      "old_locked_labels_are_seen": true,
+      "champion_frozen_before_stress_test": true,
+      "champion_to_frozen_v03_generic_residual50_max_point_ratio": 0.98,
+      "absolute_seed_stability_minimum": 4,
+      "absolute_seed_stability_total": 5,
+      "section_gate_uses_partition_absolute_margins": true
+    },
+    "absolute_safety_margins": {
+      "seen_iid": {
+        "max_point_ratio_to_each_learned_baseline": 0.95,
+        "max_one_sided_upper_ratio_to_coarse": 0.68
+      },
+      "seen_geometry_ood": {
+        "max_point_ratio_to_each_learned_baseline": 0.98,
+        "max_one_sided_upper_ratio_to_coarse": 0.78
+      },
+      "seen_load_ood": {
+        "max_point_ratio_to_each_learned_baseline": 0.98,
+        "max_one_sided_upper_ratio_to_coarse": 0.78
+      }
+    },
+    "seed_stability": {
+      "minimum_passing_seeds": 4,
+      "total_seeds": 5,
+      "apply_partition_point_thresholds_to_each_seed": true
+    },
+    "cross_fit_section_robustness": {
+      "required_sections": [
+        "circle",
+        "horseshoe",
+        "straight_wall_arch"
+      ],
+      "max_ratio_to_any_comparator": 1.02
+    },
+    "post_selection_wall_all_primary_partitions_must_pass_original_v03_gates": true,
+    "all_three_one_switch_diagnostics_must_be_reported": true,
+    "pass_classification": "READY_FOR_NEW_LOCKED_PREREGISTRATION",
+    "fail_classification": "IMPLEMENTATION_STOP_PENDING_PIVOT",
+    "neither_classification_is_a_confirmatory_effect_claim": true
+  },
+  "final_development_fit": {
+    "run_only_after_all_launch_gates_pass": true,
+    "method": "structured_linear_residual",
+    "optimizer_and_normalization_source": "exact_original_v03_residual50_train_geometry_ids",
+    "expected_optimizer_parent_count": 36,
+    "expected_optimizer_parents_per_section": 12,
+    "early_stopping_source": "exact_original_v03_dev_id_geometry_ids",
+    "expected_early_stopping_parent_count": 18,
+    "expected_early_stopping_parents_per_section": 6,
+    "source_training_contract_key_pattern": "residual_coarse__f050__seed{seed}",
+    "required_v03_selection_sha256": "0f62e6e197f96f582115d1c63888fb9852112debf38662b40f3ff33f07dd2ab9",
+    "forbidden_final_fit_partitions": [
+      "seen_iid",
+      "seen_geometry_ood",
+      "seen_load_ood",
+      "seen_joint_ood"
+    ],
+    "forbid_former_locked_labels_in_optimizer_normalization_and_early_stopping": true,
+    "reinitialize_all_weights_for_each_seed": true,
+    "checkpoint_count": 5,
+    "checkpoint_scope": "development_candidate_only_not_locked_evaluated"
+  },
+  "output_contract": {
+    "create_new_locked_data": false,
+    "allowed_artifacts": [
+      "config_snapshot.json",
+      "production_preflight.json",
+      "input_audit.json",
+      "fold_manifest.json",
+      "cross_fit_metrics.json",
+      "cross_fit_gate.json",
+      "seen_stress_open_audit.json",
+      "seen_stress_metrics.json",
+      "seen_stress_gate.json",
+      "launch_decision.json",
+      "final_fit_manifest.json",
+      "access_audit.jsonl",
+      "training_progress.jsonl",
+      "development_checkpoints"
+    ],
+    "forbidden_artifact_tokens": [
+      "new_locked",
+      "sealed_new",
+      "formal_v04_result"
+    ],
+    "real_execution_preflight": {
+      "require_clean_git_worktree": true,
+      "require_head_equal_upstream": true,
+      "require_all_critical_sources_tracked": true,
+      "critical_sources": [
+        "configs/multifidelity_v04_development.json",
+        "scripts/run_v04_development.py",
+        "src/tunnelgeopt/structured_residual.py"
+      ],
+      "record_git_head_and_each_source_sha256": true
+    }
+  }
+}

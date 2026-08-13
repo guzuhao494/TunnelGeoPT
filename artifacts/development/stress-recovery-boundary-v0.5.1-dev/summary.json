@@ -1,0 +1,125 @@
+{
+  "all_v03_cases_declared_seen": true,
+  "by_section": {
+    "circle": {
+      "case_count": 5,
+      "fine_nearfield_center_ratio": 0.5365408600688659,
+      "ultrafine_nearfield_center_ratio": 0.37425109722644434
+    },
+    "horseshoe": {
+      "case_count": 5,
+      "fine_nearfield_center_ratio": 0.5997796804846741,
+      "ultrafine_nearfield_center_ratio": 0.44682727641360304
+    },
+    "straight_wall_arch": {
+      "case_count": 5,
+      "fine_nearfield_center_ratio": 0.6338768767914871,
+      "ultrafine_nearfield_center_ratio": 0.4868478607761002
+    }
+  },
+  "case_count": 15,
+  "claim_boundary": "Post-v0.5 development redesign on exactly the same 15 seen synthetic cases. READY means only that a new, separately preregistered unseen confirmation is scientifically worth considering; it is not an effect or generalization claim.",
+  "completed_at_utc": "2026-08-13T15:48:31.529881+00:00",
+  "confirmatory_status": "not_confirmatory_post_hoc_development_redesign",
+  "developed_after_observing_v05_failure": true,
+  "development_routing": "STOP_OR_REDESIGN_BEFORE_ANY_NEW_CONFIRMATORY_PREREGISTRATION",
+  "effect_claim_allowed": false,
+  "nearfield_against_fine": {
+    "center_ratio_boundary_over_raw": 0.5932425896198943
+  },
+  "nearfield_against_ultrafine": {
+    "boundary_preserving_error": {
+      "maximum": 0.02355132406523624,
+      "mean": 0.013953223599883336,
+      "median": 0.0142743552695091,
+      "p90": 0.017771473444913834
+    },
+    "case_ratio_distribution": {
+      "maximum": 0.5422183821707655,
+      "mean": 0.4362652610146062,
+      "median": 0.43338550322353975,
+      "p90": 0.5056656042044614
+    },
+    "center_ratio_boundary_over_raw": 0.44132043675318505,
+    "raw_coarse_error": {
+      "maximum": 0.04451623961138833,
+      "mean": 0.03161698946583542,
+      "median": 0.029983231854609233,
+      "p90": 0.04010094923807265
+    }
+  },
+  "predecessor_artifact_unchanged": true,
+  "projection_contract": {
+    "maximum_nearfield_metric_identity_error_vs_unconstrained": 0.0,
+    "maximum_traction_increment_norm": 2.3551386880256624e-16,
+    "required_tolerance": 1e-12
+  },
+  "routing_checks": {
+    "all_case_traction_increment_norm": true,
+    "each_section_ultrafine_nearfield_center_ratio": true,
+    "effect_claim_allowed": false,
+    "nearfield_benefit_identical_to_unconstrained": true,
+    "overall_ultrafine_nearfield_center_ratio": true,
+    "solver_mesh_qc": true,
+    "wall_nonworsening": false
+  },
+  "run_id": "stress-recovery-boundary-v0.5.1-dev",
+  "runtime": {
+    "maximum_case_seconds": 3.1884808000031626,
+    "mean_case_seconds": 2.1527097200019245,
+    "total_solver_seconds": 28.627066199973342,
+    "wall_clock_seconds": 58.43656209999608
+  },
+  "schema": "tunnelgeopt.stress_recovery.boundary_development.summary.v1",
+  "scope": "development_only_traction_preserving_recovery_redesign_on_same_seen_v03_cases",
+  "solver_mesh_qc": {
+    "checks": {
+      "all_query_points_located": true,
+      "complete_case_count": true,
+      "explicit_wall_and_farfield_tags": true,
+      "maximum_algebraic_residual": true,
+      "maximum_energy_closure": true,
+      "minimum_triangle_quality": true,
+      "same_boundary_outer_bounds_and_query": true,
+      "zero_element_centroids_inside_cavity": true
+    },
+    "maximum_algebraic_residual": 2.90844857911135e-13,
+    "maximum_energy_closure": 2.007199409198757e-14,
+    "minimum_triangle_quality": 0.6882716431672701,
+    "passed": true
+  },
+  "wall_nonworsening_checks": {
+    "fine_full_stress_relative_l2": false,
+    "fine_resultant": true,
+    "fine_traction": true,
+    "ultrafine_full_stress_relative_l2": false,
+    "ultrafine_resultant": true,
+    "ultrafine_traction": true
+  },
+  "wall_offset_center_ratios_over_raw": {
+    "fine": {
+      "boundary_preserving": {
+        "full_stress_relative_l2": 2.3031491612385726,
+        "resultant": 1.0000000000000002,
+        "traction": 1.0
+      },
+      "unconstrained_recovery": {
+        "full_stress_relative_l2": 2.9308456506687066,
+        "resultant": 3.104440780221866,
+        "traction": 3.4787831453075815
+      }
+    },
+    "ultrafine": {
+      "boundary_preserving": {
+        "full_stress_relative_l2": 1.041210752793628,
+        "resultant": 1.0000000000000002,
+        "traction": 1.0
+      },
+      "unconstrained_recovery": {
+        "full_stress_relative_l2": 1.069469964774345,
+        "resultant": 1.603914012186057,
+        "traction": 1.186040897631707
+      }
+    }
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "schema": "tunnelgeopt.v04_exploratory_stop_record.v1",
+  "record_id": "v04-structured-prototype-stop-20260813",
+  "recorded_at_date": "2026-08-13",
+  "record_type": "manual_migration_of_exploratory_conversation_record",
+  "provenance_quality": "conversation_record_only",
+  "raw_training_logs_available": false,
+  "raw_checkpoints_available": false,
+  "replayable_from_this_record": false,
+  "effect_claim_allowed": false,
+  "independent_validation_claim_allowed": false,
+  "formal_go_no_go_claim_allowed": false,
+  "source_scope": "pre_crossfit_structured_residual_prototypes",
+  "reported_exploratory_observations": {
+    "structured_residual_seed_probe": {
+      "module_dynamic_context": "pointwise_global_mean",
+      "optimizer_parent_count": 36,
+      "early_stopping_parent_count": 18,
+      "training_seed_count": 5,
+      "metric": "normalized_nearfield_tensor_relative_l2",
+      "domain_order": [
+        "train",
+        "dev",
+        "seen_iid",
+        "seen_geometry_ood",
+        "seen_load_ood",
+        "seen_joint_ood"
+      ],
+      "values_by_seed": {
+        "103": [
+          0.032483,
+          0.032815,
+          0.032092,
+          0.033226,
+          0.03725,
+          0.037148
+        ],
+        "211": [
+          0.032777,
+          0.033052,
+          0.032226,
+          0.033268,
+          0.037394,
+          0.037008
+        ],
+        "307": [
+          0.031894,
+          0.032393,
+          0.031944,
+          0.03344,
+          0.036908,
+          0.037677
+        ],
+        "401": [
+          0.031229,
+          0.032278,
+          0.031661,
+          0.034175,
+          0.037442,
+          0.038317
+        ],
+        "509": [
+          0.029552,
+          0.03119,
+          0.03061,
+          0.032927,
+          0.03712,
+          0.038025
+        ]
+      },
+      "mean_values": [
+        0.031587,
+        0.032346,
+        0.031707,
+        0.033407,
+        0.037223,
+        0.037635
+      ],
+      "coarse_mean_by_primary_seen_partition": {
+        "seen_iid": 0.033556,
+        "seen_geometry_ood": 0.034412,
+        "seen_load_ood": 0.038596
+      },
+      "candidate_to_coarse_point_ratio_approximate": {
+        "seen_iid": 0.945,
+        "seen_geometry_ood": 0.971,
+        "seen_load_ood": 0.965
+      },
+      "frozen_candidate_to_coarse_upper_targets": {
+        "seen_iid": 0.68,
+        "seen_geometry_ood": 0.78,
+        "seen_load_ood": 0.78
+      },
+      "five_seed_launch_requirements_passed": false,
+      "interpretation": "primary candidate-to-coarse ratios were far above the intended launch targets"
+    },
+    "geometry_attention_probe": {
+      "training_seed": 103,
+      "key_width": 8,
+      "metric": "normalized_nearfield_tensor_relative_l2",
+      "domain_order": [
+        "seen_iid",
+        "seen_geometry_ood",
+        "seen_load_ood",
+        "seen_joint_ood"
+      ],
+      "values_by_head_count": {
+        "2": [
+          0.03184,
+          0.033312,
+          0.036922,
+          0.03747
+        ],
+        "4": [
+          0.032026,
+          0.03344,
+          0.03741,
+          0.037521
+        ],
+        "8": [
+          0.033131,
+          0.034114,
+          0.038031,
+          0.03788
+        ]
+      },
+      "launch_requirements_passed": false,
+      "interpretation": "the best two-head variant improved only modestly and did not justify production crossfit"
+    }
+  },
+  "locally_verified_implementation_numbers": {
+    "parameter_count_method": "sum_of_trainable_tensor_numel_from_current_local_source",
+    "structured_linear_residual": 40685,
+    "generic_residual50_v03": 38787,
+    "ablate_strict_load_linearity": 38598,
+    "ablate_local_tensor_frame": 40813,
+    "ablate_zero_init_coarse_gate": 40685
+  },
+  "known_comparison_confounds": {
+    "equal_parameter_count": false,
+    "structured_training_loss": "residual_relative_per_case",
+    "generic_training_loss": "legacy_weighted_mse",
+    "loss_functions_matched": false,
+    "structured_input_channels": 17,
+    "generic_input_channels": 14,
+    "structured_has_additional_derived_frame_and_wall_information": true,
+    "ablation_component_causal_attribution_allowed": false
+  },
+  "execution_counts": {
+    "production_v04_crossfit_runs": 0,
+    "new_v04_locked_cases_generated": 0,
+    "v03_former_locked_cases_reclassified_as_seen": 345
+  },
+  "decision": {
+    "classification": "IMPLEMENTATION_STOP_PENDING_PIVOT",
+    "real_cross_fit_authorized": false,
+    "reason": "available exploratory evidence did not satisfy the frozen launch requirements",
+    "required_next_transition": "explicit_pivot_decision_before_any_real_crossfit"
+  },
+  "missing_evidence_policy": "null_means_not_recorded; no value may be reconstructed or inferred from this manual record"
+}

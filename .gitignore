@@ -26,6 +26,16 @@ artifacts/experiment/*-dry-run*/
 artifacts/experiment/*/data/.generator_case_cache/
 artifacts/experiment/*/data/.sealed_generator_store/
 
+# Private formal-run audit streams retain machine-local paths and detailed
+# training traces.  Publish only the curated, checksum-authenticated evidence.
+artifacts/experiment/*/access_audit.jsonl
+artifacts/experiment/*/generation_progress.jsonl
+artifacts/experiment/*/analysis/analysis_access_state.json
+artifacts/experiment/*/checkpoints/checkpoint_manifest.json
+artifacts/experiment/*/checkpoints/training_progress.jsonl
+artifacts/experiment/*/checkpoints/training_worker_audit.json
+artifacts/experiment/*/checkpoints/training_worker_contract.json
+
 # Local IDE and operating-system files.
 .vscode/
 .idea/

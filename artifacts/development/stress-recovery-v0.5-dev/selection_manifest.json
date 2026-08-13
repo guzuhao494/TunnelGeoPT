@@ -1,0 +1,139 @@
+{
+  "created_at_utc": "2026-08-13T15:38:39.440210+00:00",
+  "effect_claim_allowed": false,
+  "full_seen_plan": {
+    "all_v03_cases_declared_seen": true,
+    "case_count": 705,
+    "formal_eligible": false,
+    "parent_geometry_count": 195
+  },
+  "protocol": "minimum_sha256_of_canonical_partition_section_case_id_within_full_v03_plan_v1",
+  "run_id": "stress-recovery-v0.5-dev",
+  "salt_sha256": "3950ed91749856686142afd1c2cfecb7f01bd1c99f371b4780fde288ffc06acf",
+  "schema": "tunnelgeopt.stress_recovery.development.selection.v1",
+  "selected_case_count": 15,
+  "selected_cases": [
+    {
+      "case_group_id": "ba1084c8aa4cc41cf2c95e3bd398b7daeb6122324eb9aa3fe1d4453211102506",
+      "formal_partition": "train_id",
+      "geometry_group_id": "084ed2b113ae0f3f98516be4d24ac28d746b58b0ebbc3acc7062b7758b02683e",
+      "load_index": 0,
+      "parent_index": 17,
+      "section_family": "circle"
+    },
+    {
+      "case_group_id": "20f3d63a95bf91a742a7145ac0f5e4f7a2e2bed0882f888b949494f7211b4b4c",
+      "formal_partition": "train_id",
+      "geometry_group_id": "16e8768f83d3b69187bdce403045454e382d1393a3137e145ff8a8ed65a13d13",
+      "load_index": 2,
+      "parent_index": 9,
+      "section_family": "horseshoe"
+    },
+    {
+      "case_group_id": "4dfe662ed26dbeab10c086d0b9daf8a9251692fdcf6d291351958fade74594ac",
+      "formal_partition": "train_id",
+      "geometry_group_id": "7b5062e41a5ebff10b44986cc6de477314ff453ce1a9cdd3048f5f300077b749",
+      "load_index": 2,
+      "parent_index": 18,
+      "section_family": "straight_wall_arch"
+    },
+    {
+      "case_group_id": "abd21ef652c27f64c17fd432a1d0b21190febf111f29a101174959356f44bf3d",
+      "formal_partition": "dev_id",
+      "geometry_group_id": "27b43491aaefd60b317669846dc2c5de323eb37d13fe511c5732d3a62c0db5d0",
+      "load_index": 0,
+      "parent_index": 1,
+      "section_family": "circle"
+    },
+    {
+      "case_group_id": "238c78769b7c89cc20cbb5dbc0c5dcff6941c2ef0b6b5df7aaec88289da2ec5e",
+      "formal_partition": "dev_id",
+      "geometry_group_id": "b115caae202ff2ff841c74ecafd07d8c315d1eb3630aaa5ac4ca386793c2b802",
+      "load_index": 0,
+      "parent_index": 2,
+      "section_family": "horseshoe"
+    },
+    {
+      "case_group_id": "a0a57c56e25382933b21ed6847f55ddc643174b0ff2f4def5b538412c6397c30",
+      "formal_partition": "dev_id",
+      "geometry_group_id": "d7231a727e05bb1823750fa6e89266cd7ed39767b474d727accd7cbbdc920645",
+      "load_index": 1,
+      "parent_index": 4,
+      "section_family": "straight_wall_arch"
+    },
+    {
+      "case_group_id": "4f470a812f77a1c2b80b5a27b145c9481916405798a4d9ed01b9cec8588cbf5c",
+      "formal_partition": "locked_iid",
+      "geometry_group_id": "3c5ee185d8026a25be1e79b6acb2f355c90572b1cb713feba608ecb5218d587d",
+      "load_index": 0,
+      "parent_index": 5,
+      "section_family": "circle"
+    },
+    {
+      "case_group_id": "a6f4a1abfcbd1bcaf0ee00c150f033f3822e83aed73b41c3abc7d04de8925eca",
+      "formal_partition": "locked_iid",
+      "geometry_group_id": "837754f58f33329ddfee407012e6603a3cca7433038ebdd95c1113d6a4e5e55b",
+      "load_index": 0,
+      "parent_index": 5,
+      "section_family": "horseshoe"
+    },
+    {
+      "case_group_id": "e8eb06c87091a46e9bc8b0b2604ee56aa11a3459c0993f8486481554d3cc8e01",
+      "formal_partition": "locked_iid",
+      "geometry_group_id": "93f202589e9364ddd4dfaee478fbd573576dd24cc44f7850f9530ba3a7e97b76",
+      "load_index": 0,
+      "parent_index": 3,
+      "section_family": "straight_wall_arch"
+    },
+    {
+      "case_group_id": "cf57ffa9f797a170b01f2850bbf95616e125ff35bd885ce9164c82638002afaf",
+      "formal_partition": "locked_geometry_ood",
+      "geometry_group_id": "326a52ac5d9f2dcd354e601d6f9071f6bd51bebfb73092adb203b7335d489f6c",
+      "load_index": 2,
+      "parent_index": 3,
+      "section_family": "circle"
+    },
+    {
+      "case_group_id": "0b7f8068393c633f055238ef6dbb96853585cd6151866c63647d2e373e89a843",
+      "formal_partition": "locked_geometry_ood",
+      "geometry_group_id": "0a204609e4deabc52bec2c5dc322ae66585d45d4454eb2222a0b4083f85f3946",
+      "load_index": 1,
+      "parent_index": 4,
+      "section_family": "horseshoe"
+    },
+    {
+      "case_group_id": "53bc737f634da56949257f2ce60f32810bb34c256d92e8fbdd4801e761b9d3d2",
+      "formal_partition": "locked_geometry_ood",
+      "geometry_group_id": "504bc91eb6364f9bfe325d9b7bbdd3bb61b3db9196e2706cdf0b3d10c4d26ddf",
+      "load_index": 0,
+      "parent_index": 6,
+      "section_family": "straight_wall_arch"
+    },
+    {
+      "case_group_id": "a625f953d903441267788282a5cf5650b13a8695c4817b8e5b0c5c48a6c8e098",
+      "formal_partition": "locked_load_ood",
+      "geometry_group_id": "e0056c021d2e885af9099fdb7b90b3713aaa24b9099fc700f3d29a00a21da39a",
+      "load_index": 2,
+      "parent_index": 0,
+      "section_family": "circle"
+    },
+    {
+      "case_group_id": "545e465ca2c55d525a1a99bf5a99de38fbf19346c89ced213ebd98d7f6f93f54",
+      "formal_partition": "locked_load_ood",
+      "geometry_group_id": "e98bdfba3e50c2bfddfb991ccc1ced593b767231a2ce8f6d11cd09e6b7f72f23",
+      "load_index": 0,
+      "parent_index": 0,
+      "section_family": "horseshoe"
+    },
+    {
+      "case_group_id": "8ebbd4b4514d20d6bf8804c1d87935fa29a77a193d573ee6c4d4c078cf224bc9",
+      "formal_partition": "locked_load_ood",
+      "geometry_group_id": "940411b828b244e9cc9572ae56157c23216ad42ede195f4af9ad02fcde3bd80c",
+      "load_index": 2,
+      "parent_index": 7,
+      "section_family": "straight_wall_arch"
+    }
+  ],
+  "selection_used_solver_or_label_values": false,
+  "source_formal_config_canonical_sha256": "5564a06529b9895f4577a4ad0489611e1ebc319662ceb52e26651675ba10b5e7"
+}

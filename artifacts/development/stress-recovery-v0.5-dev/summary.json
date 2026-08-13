@@ -1,0 +1,154 @@
+{
+  "all_v03_cases_declared_seen": true,
+  "by_partition": {
+    "dev_id": {
+      "case_count": 3,
+      "fine_center_ratio": 0.571240869927569,
+      "ultrafine_center_ratio": 0.4743400077471336
+    },
+    "locked_geometry_ood": {
+      "case_count": 3,
+      "fine_center_ratio": 0.6161548867578007,
+      "ultrafine_center_ratio": 0.4669639834061057
+    },
+    "locked_iid": {
+      "case_count": 3,
+      "fine_center_ratio": 0.5871477977684516,
+      "ultrafine_center_ratio": 0.4351286005046275
+    },
+    "locked_load_ood": {
+      "case_count": 3,
+      "fine_center_ratio": 0.5967542052606758,
+      "ultrafine_center_ratio": 0.41417272958743273
+    },
+    "train_id": {
+      "case_count": 3,
+      "fine_center_ratio": 0.5960552716398487,
+      "ultrafine_center_ratio": 0.4190199653088711
+    }
+  },
+  "by_section": {
+    "circle": {
+      "case_count": 5,
+      "case_ratio_ultrafine": {
+        "maximum": 0.38557539704930327,
+        "mean": 0.3747284552611625,
+        "median": 0.3765545749294513,
+        "p90": 0.38203521671990587
+      },
+      "fine_center_ratio": 0.5365408600688659,
+      "ultrafine_center_ratio": 0.37425109722644434
+    },
+    "horseshoe": {
+      "case_count": 5,
+      "case_ratio_ultrafine": {
+        "maximum": 0.5078541312708698,
+        "mean": 0.45032904352898184,
+        "median": 0.43338550322353975,
+        "p90": 0.4969292079190633
+      },
+      "fine_center_ratio": 0.5997796804846741,
+      "ultrafine_center_ratio": 0.44682727641360304
+    },
+    "straight_wall_arch": {
+      "case_count": 5,
+      "case_ratio_ultrafine": {
+        "maximum": 0.5422183821707655,
+        "mean": 0.48373828425367443,
+        "median": 0.46877924734976106,
+        "p90": 0.5262841547443988
+      },
+      "fine_center_ratio": 0.6338768767914871,
+      "ultrafine_center_ratio": 0.4868478607761002
+    }
+  },
+  "case_count": 15,
+  "claim_boundary": "Development-only deterministic diagnostic on already-seen v0.3 identities. No formal effect, independent test, fracture, rockburst, field, or transfer claim.",
+  "completed_at_utc": "2026-08-13T15:39:11.769842+00:00",
+  "development_routing": "STOP_OR_REDESIGN_BEFORE_ANY_NEW_UNSEEN_CONFIRMATORY_RUN",
+  "effect_claim_allowed": false,
+  "exploratory_checks": {
+    "each_section_ultrafine_center_ratio": true,
+    "effect_claim_allowed": false,
+    "overall_ultrafine_center_ratio": true,
+    "wall_resultant_ultrafine_center_ratio": false,
+    "wall_traction_ultrafine_center_ratio": false
+  },
+  "fine_ultrafine_reference_discrepancy": {
+    "maximum": 0.033242451795637507,
+    "mean": 0.02333942451307228,
+    "median": 0.023051977110727997,
+    "p90": 0.03206112706536355
+  },
+  "primary_against_ultrafine": {
+    "case_ratio_distribution": {
+      "maximum": 0.5422183821707655,
+      "mean": 0.4362652610146062,
+      "median": 0.43338550322353975,
+      "p90": 0.5056656042044614
+    },
+    "center_ratio_recovered_over_raw": 0.44132043675318505,
+    "raw_coarse_error": {
+      "maximum": 0.04451623961138833,
+      "mean": 0.03161698946583542,
+      "median": 0.029983231854609233,
+      "p90": 0.04010094923807265
+    },
+    "recovered_error": {
+      "maximum": 0.02355132406523624,
+      "mean": 0.013953223599883336,
+      "median": 0.0142743552695091,
+      "p90": 0.017771473444913834
+    }
+  },
+  "run_id": "stress-recovery-v0.5-dev",
+  "runtime": {
+    "maximum_case_seconds": 3.219880099997681,
+    "mean_case_seconds": 2.1432106333328798,
+    "total_solver_seconds": 28.51818380003533,
+    "wall_clock_seconds": 58.675187200002256
+  },
+  "schema": "tunnelgeopt.stress_recovery.development.summary.v1",
+  "scope": "development_only_deterministic_stress_recovery_diagnostic_on_seen_v03_cases",
+  "secondary_against_fine": {
+    "center_ratio_recovered_over_raw": 0.5932425896198943,
+    "raw_coarse_error": {
+      "maximum": 0.05211859930719981,
+      "mean": 0.03463731368858662,
+      "median": 0.03439127604073385,
+      "p90": 0.036848284045683494
+    },
+    "recovered_error": {
+      "maximum": 0.03173905641924831,
+      "mean": 0.02054832967009374,
+      "median": 0.021091135147128286,
+      "p90": 0.023910914948140276
+    }
+  },
+  "solver_mesh_qc": {
+    "checks": {
+      "all_query_points_located": true,
+      "complete_case_count": true,
+      "explicit_wall_and_farfield_tags": true,
+      "maximum_algebraic_residual": true,
+      "maximum_energy_closure": true,
+      "minimum_triangle_quality": true,
+      "same_boundary_outer_bounds_and_query": true,
+      "zero_element_centroids_inside_cavity": true
+    },
+    "maximum_algebraic_residual": 2.90844857911135e-13,
+    "maximum_energy_closure": 2.007199409198757e-14,
+    "minimum_triangle_quality": 0.6882716431672701,
+    "passed": true
+  },
+  "wall_offset_center_ratios": {
+    "fine": {
+      "resultant": 3.104440780221866,
+      "traction": 3.4787831453075815
+    },
+    "ultrafine": {
+      "resultant": 1.603914012186057,
+      "traction": 1.186040897631707
+    }
+  }
+}

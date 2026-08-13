@@ -5,3 +5,9 @@
 *.md text eol=lf
 *.json text eol=lf
 *.yml text eol=lf
+
+# These published development records are byte-for-byte authenticated by
+# artifact_manifest.json.  Preserve their original bytes across clones so
+# Git newline normalization cannot invalidate the recorded SHA-256 values.
+artifacts/development/stress-recovery-v0.5-dev/** -text -diff
+artifacts/development/stress-recovery-boundary-v0.5.1-dev/** -text -diff

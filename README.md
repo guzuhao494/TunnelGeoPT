@@ -12,6 +12,15 @@
 > OOD 上却未稳定优于 `Direct100`。完整证据和边界见
 > [`RESULT_SUMMARY.md`](artifacts/experiment/mf-residual-formal-v0.3.0/RESULT_SUMMARY.md)。
 
+> **v0.5 development result (2026-08-13): 数值算子路线取得可复核进展。**
+> 在全部视为 seen 的 v0.3 标签上，九通道线性载荷响应基对 120 个父几何做
+> 480 次逐载荷留一预测，中位 near-field RelL2 为 `7.276e-8`；固定 P1 应力
+> 恢复在 15 个三档 FEM case 上将相对 ultrafine 的平均误差从 `3.1617%`
+> 降至 `1.3953%`，但 wall-offset 牵引/合力诊断恶化，故该恢复版本按规则停止并
+> 转向边界兼容重设计；重设计虽精确保留了粗网格牵引，但 wall-offset 全应力仍
+> 略微恶化，因此同样记录为 STOP。结果、限制和数据路线见
+> [`MILESTONE_V05_NUMERICAL_OPERATORS.md`](docs/MILESTONE_V05_NUMERICAL_OPERATORS.md)。
+
 v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久化的二维线弹性里程碑：程序可以为圆形、马蹄形和直墙拱形隧洞生成有限元网格，求解均质各向同性平面应变开挖增量，并将位移、应变、应力和应变能保存为独立 B-elastic 数据记录。
 
 ## 当前证据边界

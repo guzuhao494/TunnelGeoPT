@@ -1,0 +1,44 @@
+{
+  "all_v03_cases_declared_seen": true,
+  "created_at_utc": "2026-08-13T15:47:59.067367+00:00",
+  "effect_claim_allowed": false,
+  "exact_predecessor_case_ids": true,
+  "predecessor_evidence": {
+    "artifact_tree_sha256": {
+      "artifact_manifest.json": "9aad4690936eea85f2d3ef4c94a6f4f141309e9c8dc6c546c4cb0f0a6f0562bc",
+      "case_metrics.jsonl": "5edaa60f32b043c3b4aa6a2492177c4f75d0f48e1ce3bc5b61c85c9e3bb05332",
+      "config_snapshot.json": "80e63724f2d902affe4efe7d921c4b4da6ac92c59f82e46386d660c85c7ad0c7",
+      "environment.json": "bc460da1ff49376d42dedc83a0df87a702fb57a7a64b65f1fb5728cccaa7a800",
+      "progress.jsonl": "3c45f50859480404d34c05b0a2aca5779ee4d04c7c8fed8f9018d1f41afbfab9",
+      "selection_manifest.json": "70648f86238b984154bc1fb5f7583653b3b0f4f16041487d608f6fb5fc9f95a6",
+      "summary.json": "f56475f8ea0916dee6deb66aa2e0e7019c06b3beb637239fabfcc2d590a79570"
+    },
+    "observed_ultrafine_wall_center_ratios": {
+      "resultant": 1.603914012186057,
+      "traction": 1.186040897631707
+    },
+    "selection_manifest_sha256": "70648f86238b984154bc1fb5f7583653b3b0f4f16041487d608f6fb5fc9f95a6",
+    "summary_sha256": "f56475f8ea0916dee6deb66aa2e0e7019c06b3beb637239fabfcc2d590a79570"
+  },
+  "run_id": "stress-recovery-boundary-v0.5.1-dev",
+  "schema": "tunnelgeopt.stress_recovery.boundary_development.selection.v1",
+  "selected_case_count": 15,
+  "selected_case_ids": [
+    "ba1084c8aa4cc41cf2c95e3bd398b7daeb6122324eb9aa3fe1d4453211102506",
+    "20f3d63a95bf91a742a7145ac0f5e4f7a2e2bed0882f888b949494f7211b4b4c",
+    "4dfe662ed26dbeab10c086d0b9daf8a9251692fdcf6d291351958fade74594ac",
+    "abd21ef652c27f64c17fd432a1d0b21190febf111f29a101174959356f44bf3d",
+    "238c78769b7c89cc20cbb5dbc0c5dcff6941c2ef0b6b5df7aaec88289da2ec5e",
+    "a0a57c56e25382933b21ed6847f55ddc643174b0ff2f4def5b538412c6397c30",
+    "4f470a812f77a1c2b80b5a27b145c9481916405798a4d9ed01b9cec8588cbf5c",
+    "a6f4a1abfcbd1bcaf0ee00c150f033f3822e83aed73b41c3abc7d04de8925eca",
+    "e8eb06c87091a46e9bc8b0b2604ee56aa11a3459c0993f8486481554d3cc8e01",
+    "cf57ffa9f797a170b01f2850bbf95616e125ff35bd885ce9164c82638002afaf",
+    "0b7f8068393c633f055238ef6dbb96853585cd6151866c63647d2e373e89a843",
+    "53bc737f634da56949257f2ce60f32810bb34c256d92e8fbdd4801e761b9d3d2",
+    "a625f953d903441267788282a5cf5650b13a8695c4817b8e5b0c5c48a6c8e098",
+    "545e465ca2c55d525a1a99bf5a99de38fbf19346c89ced213ebd98d7f6f93f54",
+    "8ebbd4b4514d20d6bf8804c1d87935fa29a77a193d573ee6c4d4c078cf224bc9"
+  ],
+  "selection_used_solver_or_label_values": false
+}
