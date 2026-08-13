@@ -28,6 +28,7 @@
     "gpu_transfer_pytest": "15 passed",
     "ruff": "passed",
     "format_check": "passed",
+    "remote_ci": "GitHub Actions tests on Python 3.11 and 3.12 plus the CPU-PyTorch learning smoke passed",
     "wheel_build": "tunnelgeopt-0.2.0-py3-none-any.whl built successfully",
     "cli_e2e": "elastic-solve, elastic-validate, and SI-scale elastic-kirsch passed",
     "b_elastic_inventory": "42 of 42 file hashes matched; 18 of 18 semantic records reloaded",
