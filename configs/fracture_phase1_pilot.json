@@ -1,0 +1,511 @@
+{
+  "schema_version": "tunnelgeopt.fracture.phase1.v1",
+  "protocol_id": "fracture-phase1-development-pilot-v1",
+  "status": {
+    "state": "frozen_development_only_not_run",
+    "development_only": true,
+    "solver_implemented": false,
+    "labels_generated": false,
+    "formal_or_locked_use_allowed": false
+  },
+  "scope": {
+    "spatial_dimension": 2,
+    "kinematics": "plane_strain",
+    "regime": "quasi_static",
+    "material_class": "homogeneous_isotropic_brittle",
+    "fracture_model": "AT2",
+    "claim_boundary": "synthetic_two_dimensional_quasi_static_brittle_fracture_development_only"
+  },
+  "exclusions": [
+    "Stress-Lift or lifted-dynamics inputs",
+    "three-dimensional faces or excavation advance",
+    "dynamic inertia or ejection",
+    "joints",
+    "geometric roughness",
+    "random or heterogeneous material fields",
+    "acoustic-emission or microseismic waveforms",
+    "fragment contact",
+    "plasticity",
+    "field prediction or engineering rockburst claims"
+  ],
+  "design": {
+    "factorization": "full_cross_product",
+    "section_families": [
+      "circle",
+      "horseshoe",
+      "straight_wall_arch"
+    ],
+    "material_level_ids": [
+      "m1",
+      "m2",
+      "m3"
+    ],
+    "load_path_ids": [
+      "p1",
+      "p2",
+      "p3",
+      "p4"
+    ],
+    "replicates_per_cell": 1,
+    "trajectory_count": 36,
+    "random_sampling": false,
+    "result_conditioned_replacement_allowed": false,
+    "ultrafine_audit": {
+      "count": 12,
+      "coverage": "one_case_for_every_section_family_x_load_path_cell",
+      "material_selection_rule": "material_index_zero_based=(section_index_zero_based+path_index_zero_based)%3",
+      "selection_before_solver_results": true,
+      "replacement_allowed": false
+    }
+  },
+  "geometry": {
+    "characteristic_radius_R": 1.0,
+    "boundary_points": 256,
+    "boundary_perturbation": "none",
+    "sections": [
+      {
+        "id": "circle",
+        "parameters": {
+          "axis_ratio": 1.0,
+          "superellipse_exponent": 2.0
+        }
+      },
+      {
+        "id": "horseshoe",
+        "parameters": {
+          "span_height_ratio": 0.82,
+          "sidewall_height_ratio": 1.0,
+          "crown_shape": 2.0
+        }
+      },
+      {
+        "id": "straight_wall_arch",
+        "parameters": {
+          "span_height_ratio": 1.0,
+          "springline_height_ratio": 0.2,
+          "crown_rise_span": 0.8
+        }
+      }
+    ],
+    "outer_domain": {
+      "type": "centered_axis_aligned_square",
+      "bounds_over_R": {
+        "y": [
+          -8.0,
+          8.0
+        ],
+        "z": [
+          -8.0,
+          8.0
+        ]
+      },
+      "fixed_across_sections_materials_paths_and_meshes": true
+    }
+  },
+  "materials": {
+    "stress_scale": "UCS",
+    "length_scale": "R",
+    "spatial_variation": "none",
+    "fixed": {
+      "youngs_modulus_over_UCS": 500.0,
+      "poisson_ratio": 0.25
+    },
+    "coupling": {
+      "rule": "Gc_over_UCS_R=ell_over_R_times_Gc_over_UCS_ell",
+      "Gc_over_UCS_ell": 0.0002,
+      "AT2_homogeneous_peak_stress_formula": "sigma_peak_over_UCS=sqrt((27/256)*(E_over_UCS)*(Gc_over_UCS_ell))",
+      "implied_sigma_peak_over_UCS": 0.10269797953221865,
+      "interpretation": "regularization_sensitivity_at_fixed_dimensionless_AT2_strength_scale"
+    },
+    "levels": [
+      {
+        "id": "m1",
+        "ell_over_R": 0.04,
+        "Gc_over_UCS_R": 0.000008
+      },
+      {
+        "id": "m2",
+        "ell_over_R": 0.06,
+        "Gc_over_UCS_R": 0.000012
+      },
+      {
+        "id": "m3",
+        "ell_over_R": 0.08,
+        "Gc_over_UCS_R": 0.000016
+      }
+    ]
+  },
+  "load_paths": {
+    "stress_components": "principal_compression_magnitudes_reported_positive_then_converted_to_solver_tension_positive_tensor",
+    "path_parameter": "s_in_[0,1]",
+    "interpolation": "piecewise_linear_between_control_knots",
+    "wall_release_definition": "lambda=0_supported_in_situ_wall_traction_lambda=1_fully_released",
+    "wall_zones_for_p4": {
+      "coordinate_rule": "polar_angle_about_boundary_centroid_measured_from_positive_z_toward_positive_y",
+      "crown": "[-45deg,45deg]",
+      "right_sidewall": "(45deg,135deg)",
+      "invert": "[135deg,225deg]",
+      "left_sidewall": "(225deg,315deg)",
+      "transition_blend_deg": 5.0
+    },
+    "paths": [
+      {
+        "id": "p1",
+        "name": "proportional_uniform_release",
+        "control_knots": [
+          {
+            "s": 0.0,
+            "sigma1_over_UCS": 0.45,
+            "sigma3_over_sigma1": 0.7,
+            "principal_angle_deg": 0.0,
+            "wall_release": {
+              "all": 0.0
+            }
+          },
+          {
+            "s": 0.25,
+            "sigma1_over_UCS": 0.45,
+            "sigma3_over_sigma1": 0.7,
+            "principal_angle_deg": 0.0,
+            "wall_release": {
+              "all": 0.25
+            }
+          },
+          {
+            "s": 0.5,
+            "sigma1_over_UCS": 0.45,
+            "sigma3_over_sigma1": 0.7,
+            "principal_angle_deg": 0.0,
+            "wall_release": {
+              "all": 0.5
+            }
+          },
+          {
+            "s": 0.75,
+            "sigma1_over_UCS": 0.45,
+            "sigma3_over_sigma1": 0.7,
+            "principal_angle_deg": 0.0,
+            "wall_release": {
+              "all": 0.75
+            }
+          },
+          {
+            "s": 1.0,
+            "sigma1_over_UCS": 0.45,
+            "sigma3_over_sigma1": 0.7,
+            "principal_angle_deg": 0.0,
+            "wall_release": {
+              "all": 1.0
+            }
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "name": "stress_ratio_change_then_uniform_release",
+        "control_knots": [
+          {
+            "s": 0.0,
+            "sigma1_over_UCS": 0.45,
+            "sigma3_over_sigma1": 0.8,
+            "principal_angle_deg": 0.0,
+            "wall_release": {
+              "all": 0.0
+            }
+          },
+          {
+            "s": 0.25,
+            "sigma1_over_UCS": 0.55,
+            "sigma3_over_sigma1": 0.8,
+            "principal_angle_deg": 0.0,
+            "wall_release": {
+              "all": 0.15
+            }
+          },
+          {
+            "s": 0.5,
+            "sigma1_over_UCS": 0.65,
+            "sigma3_over_sigma1": 0.55,
+            "principal_angle_deg": 0.0,
+            "wall_release": {
+              "all": 0.4
+            }
+          },
+          {
+            "s": 0.75,
+            "sigma1_over_UCS": 0.65,
+            "sigma3_over_sigma1": 0.35,
+            "principal_angle_deg": 0.0,
+            "wall_release": {
+              "all": 0.7
+            }
+          },
+          {
+            "s": 1.0,
+            "sigma1_over_UCS": 0.65,
+            "sigma3_over_sigma1": 0.35,
+            "principal_angle_deg": 0.0,
+            "wall_release": {
+              "all": 1.0
+            }
+          }
+        ]
+      },
+      {
+        "id": "p3",
+        "name": "principal_rotation_with_uniform_release",
+        "control_knots": [
+          {
+            "s": 0.0,
+            "sigma1_over_UCS": 0.55,
+            "sigma3_over_sigma1": 0.55,
+            "principal_angle_deg": -30.0,
+            "wall_release": {
+              "all": 0.0
+            }
+          },
+          {
+            "s": 0.25,
+            "sigma1_over_UCS": 0.55,
+            "sigma3_over_sigma1": 0.55,
+            "principal_angle_deg": -30.0,
+            "wall_release": {
+              "all": 0.2
+            }
+          },
+          {
+            "s": 0.5,
+            "sigma1_over_UCS": 0.55,
+            "sigma3_over_sigma1": 0.55,
+            "principal_angle_deg": 0.0,
+            "wall_release": {
+              "all": 0.45
+            }
+          },
+          {
+            "s": 0.75,
+            "sigma1_over_UCS": 0.55,
+            "sigma3_over_sigma1": 0.55,
+            "principal_angle_deg": 30.0,
+            "wall_release": {
+              "all": 0.7
+            }
+          },
+          {
+            "s": 1.0,
+            "sigma1_over_UCS": 0.55,
+            "sigma3_over_sigma1": 0.55,
+            "principal_angle_deg": 30.0,
+            "wall_release": {
+              "all": 1.0
+            }
+          }
+        ]
+      },
+      {
+        "id": "p4",
+        "name": "crown_sidewalls_invert_staged_release",
+        "control_knots": [
+          {
+            "s": 0.0,
+            "sigma1_over_UCS": 0.55,
+            "sigma3_over_sigma1": 0.45,
+            "principal_angle_deg": 15.0,
+            "wall_release": {
+              "crown": 0.0,
+              "right_sidewall": 0.0,
+              "invert": 0.0,
+              "left_sidewall": 0.0
+            }
+          },
+          {
+            "s": 0.25,
+            "sigma1_over_UCS": 0.55,
+            "sigma3_over_sigma1": 0.45,
+            "principal_angle_deg": 15.0,
+            "wall_release": {
+              "crown": 0.75,
+              "right_sidewall": 0.0,
+              "invert": 0.0,
+              "left_sidewall": 0.0
+            }
+          },
+          {
+            "s": 0.5,
+            "sigma1_over_UCS": 0.55,
+            "sigma3_over_sigma1": 0.45,
+            "principal_angle_deg": 15.0,
+            "wall_release": {
+              "crown": 1.0,
+              "right_sidewall": 0.5,
+              "invert": 0.0,
+              "left_sidewall": 0.5
+            }
+          },
+          {
+            "s": 0.75,
+            "sigma1_over_UCS": 0.55,
+            "sigma3_over_sigma1": 0.45,
+            "principal_angle_deg": 15.0,
+            "wall_release": {
+              "crown": 1.0,
+              "right_sidewall": 1.0,
+              "invert": 0.5,
+              "left_sidewall": 1.0
+            }
+          },
+          {
+            "s": 1.0,
+            "sigma1_over_UCS": 0.55,
+            "sigma3_over_sigma1": 0.45,
+            "principal_angle_deg": 15.0,
+            "wall_release": {
+              "crown": 1.0,
+              "right_sidewall": 1.0,
+              "invert": 1.0,
+              "left_sidewall": 1.0
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "time_discretization": {
+    "required_output_s": [
+      0.0,
+      0.025,
+      0.05,
+      0.075,
+      0.1,
+      0.125,
+      0.15,
+      0.175,
+      0.2,
+      0.225,
+      0.25,
+      0.275,
+      0.3,
+      0.325,
+      0.35,
+      0.375,
+      0.4,
+      0.425,
+      0.45,
+      0.475,
+      0.5,
+      0.525,
+      0.55,
+      0.575,
+      0.6,
+      0.625,
+      0.65,
+      0.675,
+      0.7,
+      0.725,
+      0.75,
+      0.775,
+      0.8,
+      0.825,
+      0.85,
+      0.875,
+      0.9,
+      0.925,
+      0.95,
+      0.975,
+      1.0
+    ],
+    "required_output_step_count": 41,
+    "adaptive_substeps_allowed_between_required_outputs": true,
+    "store_every_accepted_internal_step": true
+  },
+  "fracture_model": {
+    "damage_convention": "d=0_intact_d=1_fully_damaged",
+    "degradation": "g(d)=(1-d)^2+k",
+    "residual_stiffness_k": 1e-08,
+    "split": "three_dimensional_spectral_strain_split_evaluated_under_plane_strain_epsilon_xx_zero",
+    "history": "integration_point_H_n=max(H_previous,psi_plus_current)",
+    "irreversibility": "bound_constrained_d_n>=d_previous_and_0<=d_n<=1",
+    "displacement_element": "P1",
+    "damage_element": "P1",
+    "energy_and_history_integration": "explicit_quadrature",
+    "unconstrained_solve_then_clipping_allowed": false
+  },
+  "mesh": {
+    "backend": "gmsh",
+    "element": "first_order_triangle",
+    "same_boundary_and_outer_domain_across_tiers": true,
+    "potential_fracture_region": {
+      "definition": "rock_points_with_wall_distance_at_most_2R",
+      "max_wall_distance_over_R": 2.0,
+      "trajectory_invalid_if_damage_reaches_outer_edge": true
+    },
+    "tiers": {
+      "fine": {
+        "role": "all_36_primary_development_trajectories",
+        "max_h_over_ell_in_potential_fracture_region": 0.25,
+        "farfield_h_over_R": 0.4
+      },
+      "ultrafine_audit": {
+        "role": "12_preselected_fine_to_ultrafine_audits",
+        "max_h_over_ell_in_potential_fracture_region": 0.125,
+        "farfield_h_over_R": 0.25
+      }
+    }
+  },
+  "solver": {
+    "formulation": "total_field_affine_farfield_plus_correction",
+    "nonlinear_scheme": "alternate_minimization_displacement_history_bound_constrained_damage",
+    "damage_constraint_method": "primal_dual_active_set",
+    "max_staggered_iterations": 100,
+    "max_active_set_iterations": 100,
+    "relative_displacement_increment_tolerance": 1e-08,
+    "relative_damage_increment_tolerance": 1e-08,
+    "relative_energy_increment_tolerance": 1e-08,
+    "equilibrium_relative_residual_tolerance": 1e-06,
+    "kkt_complementarity_relative_residual_tolerance": 1e-06,
+    "step_retry_factor": 0.5,
+    "max_step_retries_per_required_output_interval": 6,
+    "minimum_s_increment": 0.000390625,
+    "retry_exhaustion_action": "invalidate_trajectory_without_replacement",
+    "final_unconverged_iterate_may_be_stored_as_label": false
+  },
+  "quality_control": {
+    "per_trajectory": {
+      "required_output_step_count": 41,
+      "max_nonfinite_fraction": 0.0,
+      "max_equilibrium_relative_residual": 1e-06,
+      "max_kkt_complementarity_relative_residual": 1e-06,
+      "max_damage_irreversibility_violation": 1e-10,
+      "max_damage_range_violation": 1e-10,
+      "max_history_monotonicity_violation": 1e-10,
+      "max_relative_energy_imbalance": 0.05,
+      "min_incremental_dissipation_over_UCS_R2": -1e-10,
+      "max_damage_on_refined_region_outer_edge": 0.0001,
+      "require_all_steps_converged": true,
+      "require_complete_failure_ledger": true,
+      "require_zero_replacement_attempts": true
+    },
+    "fine_to_ultrafine": {
+      "max_peak_reaction_relative_change": 0.05,
+      "max_total_fracture_energy_relative_change": 0.05,
+      "both_metrics_required_for_every_preselected_audit": true
+    },
+    "solver_prerequisites_before_pilot": {
+      "intact_regression_max_relative_error": 1e-06,
+      "require_rigid_body_zero_energy_test": true,
+      "require_spectral_reconstruction_and_compression_tests": true,
+      "require_tangent_directional_derivative_test": true,
+      "require_constrained_damage_kkt_test": true,
+      "require_MOOSE_crack2d_iso_cross_check": true,
+      "require_single_edge_notch_tension_and_shear_three_grid_benchmarks": true
+    },
+    "failed_trajectory_policy": "retain_identity_and_failure_ledger_exclude_from_successful_labels_no_replacement",
+    "minimum_pass_fraction": 1.0
+  },
+  "identity": {
+    "case_id_template": "fp1-{section_family}-{material_level_id}-{load_path_id}",
+    "canonical_order": "section_then_material_then_path_in_config_order",
+    "mesh_tier_excluded_from_case_identity": true,
+    "attempt_or_restart_excluded_from_case_identity": true
+  }
+}

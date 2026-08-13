@@ -37,6 +37,15 @@ ROCK = "rock"
 # The Gmsh Python API owns process-global model state and is not thread-safe.
 _GMSH_LOCK = Lock()
 
+# Gmsh's size field is a target rather than a mathematical upper bound.  The
+# public near-field value below is therefore audited against the generated
+# connectivity with a small, documented allowance for mesher discretization.
+_NEARFIELD_AUDIT_RELATIVE_TOLERANCE = 0.02
+# Empirically conservative conversion from the public maximum-edge contract to
+# Gmsh's characteristic-length target.  The generated connectivity remains the
+# authority: exceeding the public cap still raises instead of being accepted.
+_NEARFIELD_GMSH_TARGET_FACTOR = 0.5
+
 
 @dataclass(frozen=True)
 class TunnelMesh:
@@ -186,6 +195,77 @@ def _triangle_quality(nodes: FloatArray, elements: IntArray) -> tuple[FloatArray
     return area, quality
 
 
+def _point_to_polyline_distance(points: FloatArray, polyline: FloatArray) -> FloatArray:
+    """Return minimum Euclidean distance to a closed piecewise-linear curve."""
+
+    starts = polyline
+    ends = np.roll(polyline, -1, axis=0)
+    directions = ends - starts
+    length_sq = np.sum(directions**2, axis=1)
+    distances_sq = np.empty(points.shape[0], dtype=np.float64)
+    # Chunk both axes so auditing a production mesh does not allocate an array
+    # proportional to every cell times every wall segment.
+    for point_first in range(0, points.shape[0], 16_384):
+        point_chunk = points[point_first : point_first + 16_384]
+        point_distances_sq = np.full(point_chunk.shape[0], np.inf, dtype=np.float64)
+        for segment_first in range(0, starts.shape[0], 64):
+            segment_start = starts[segment_first : segment_first + 64]
+            segment_direction = directions[segment_first : segment_first + 64]
+            segment_length_sq = length_sq[segment_first : segment_first + 64]
+            offsets = point_chunk[:, None, :] - segment_start[None, :, :]
+            projection = np.sum(offsets * segment_direction[None, :, :], axis=2)
+            projection /= segment_length_sq[None, :]
+            projection = np.clip(projection, 0.0, 1.0)
+            closest = (
+                segment_start[None, :, :] + projection[:, :, None] * segment_direction[None, :, :]
+            )
+            chunk_distance_sq = np.sum((point_chunk[:, None, :] - closest) ** 2, axis=2)
+            point_distances_sq = np.minimum(
+                point_distances_sq,
+                chunk_distance_sq.min(axis=1),
+            )
+        distances_sq[point_first : point_first + point_chunk.shape[0]] = point_distances_sq
+    return np.sqrt(distances_sq)
+
+
+def _resolve_nearfield_parameters(
+    *,
+    nearfield_distance: float | None,
+    nearfield_mesh_size: float | None,
+    fracture_length_scale: float | None,
+    nearfield_transition_width: float | None,
+) -> tuple[float, float, float, float] | None:
+    supplied = (
+        nearfield_distance,
+        nearfield_mesh_size,
+        fracture_length_scale,
+        nearfield_transition_width,
+    )
+    if all(value is None for value in supplied):
+        return None
+    if any(value is None for value in supplied[:3]):
+        raise ValueError(
+            "nearfield_distance, nearfield_mesh_size, and fracture_length_scale "
+            "must be supplied together"
+        )
+
+    assert nearfield_distance is not None
+    assert nearfield_mesh_size is not None
+    assert fracture_length_scale is not None
+
+    distance = float(nearfield_distance)
+    size = float(nearfield_mesh_size)
+    length_scale = float(fracture_length_scale)
+    transition = (
+        distance if nearfield_transition_width is None else float(nearfield_transition_width)
+    )
+    if not all(
+        np.isfinite(value) and value > 0.0 for value in (distance, size, length_scale, transition)
+    ):
+        raise ValueError("all near-field parameters must be finite and positive")
+    return distance, size, length_scale, transition
+
+
 def _facets_from_edges(mesh: Any, edges: IntArray, *, label: str) -> IntArray:
     facet_lookup = {
         (int(edge[0]), int(edge[1])): index
@@ -243,6 +323,10 @@ def generate_tunnel_mesh(
     mesh_size: float | None = None,
     wall_mesh_size: float | None = None,
     farfield_mesh_size: float | None = None,
+    nearfield_distance: float | None = None,
+    nearfield_mesh_size: float | None = None,
+    fracture_length_scale: float | None = None,
+    nearfield_transition_width: float | None = None,
     gmsh_algorithm: int = 6,
     verbose: bool = False,
 ) -> TunnelMesh:
@@ -262,6 +346,17 @@ def generate_tunnel_mesh(
     mesh_size, wall_mesh_size, farfield_mesh_size:
         Target first-order edge sizes.  The wall defaults to half the global
         size; no statement about high fidelity is implied by these defaults.
+    nearfield_distance, nearfield_mesh_size, fracture_length_scale:
+        Optional fracture-band contract.  All three must be supplied together.
+        A Gmsh Distance/Threshold field constructs a conservative target from
+        ``nearfield_mesh_size`` through the band, and the generated triangle
+        edges are then audited against it as a hard upper bound with a
+        two-percent mesher tolerance.  ``fracture_length_scale`` records the
+        requested and realized ``h/ell`` ratios.
+    nearfield_transition_width:
+        Distance over which the background size ramps from the near-field size
+        to the far-field target.  It defaults to ``nearfield_distance`` when the
+        fracture-band contract is enabled.
     """
 
     gmsh, MeshTri = _require_mesh_dependencies()
@@ -280,6 +375,14 @@ def generate_tunnel_mesh(
         raise ValueError("all mesh sizes must be finite and positive")
     if not isinstance(gmsh_algorithm, int) or gmsh_algorithm <= 0:
         raise ValueError("gmsh_algorithm must be a positive integer")
+    nearfield = _resolve_nearfield_parameters(
+        nearfield_distance=nearfield_distance,
+        nearfield_mesh_size=nearfield_mesh_size,
+        fracture_length_scale=fracture_length_scale,
+        nearfield_transition_width=nearfield_transition_width,
+    )
+    if nearfield is not None and nearfield[1] >= farfield_size:
+        raise ValueError("nearfield_mesh_size must be smaller than farfield_mesh_size")
 
     model_name = f"tunnelgeopt_{uuid4().hex}"
     initialized_here = False
@@ -330,6 +433,26 @@ def generate_tunnel_mesh(
             gmsh.model.setPhysicalName(1, physical_tags[WALL], WALL)
             gmsh.model.addPhysicalGroup(1, outer_lines, physical_tags[FARFIELD])
             gmsh.model.setPhysicalName(1, physical_tags[FARFIELD], FARFIELD)
+            if nearfield is not None:
+                distance, size, _, transition = nearfield
+                gmsh_target_size = size * _NEARFIELD_GMSH_TARGET_FACTOR
+                distance_field = gmsh.model.mesh.field.add("Distance")
+                gmsh.model.mesh.field.setNumbers(distance_field, "CurvesList", wall_lines)
+                threshold_field = gmsh.model.mesh.field.add("Threshold")
+                gmsh.model.mesh.field.setNumber(threshold_field, "InField", distance_field)
+                gmsh.model.mesh.field.setNumber(threshold_field, "SizeMin", gmsh_target_size)
+                gmsh.model.mesh.field.setNumber(
+                    threshold_field,
+                    "SizeMax",
+                    max(base_size, wall_size, farfield_size),
+                )
+                gmsh.model.mesh.field.setNumber(threshold_field, "DistMin", distance)
+                gmsh.model.mesh.field.setNumber(
+                    threshold_field,
+                    "DistMax",
+                    distance + transition,
+                )
+                gmsh.model.mesh.field.setAsBackgroundMesh(threshold_field)
             gmsh.model.mesh.generate(2)
 
             node_tags, coordinates, _ = gmsh.model.mesh.getNodes()
@@ -386,6 +509,56 @@ def generate_tunnel_mesh(
     if area.size == 0 or np.any(area <= 0.0) or not np.isfinite(quality).all():
         raise RuntimeError("generated mesh contains a degenerate or non-finite triangle")
 
+    nearfield_metadata: dict[str, Any] = {}
+    if nearfield is not None:
+        distance, size, length_scale, transition = nearfield
+        triangles = nodes[elements]
+        centroids = triangles.mean(axis=1)
+        centroid_wall_distance = _point_to_polyline_distance(centroids, boundary)
+        band_mask = centroid_wall_distance <= distance
+        if not np.any(band_mask):
+            raise RuntimeError("near-field audit selected no triangles")
+        edge_lengths = np.linalg.norm(triangles - np.roll(triangles, -1, axis=1), axis=2)
+        band_edge_max = float(edge_lengths[band_mask].max())
+        absolute_tolerance = float(
+            64.0
+            * np.finfo(np.float64).eps
+            * max(
+                characteristic_radius,
+                size,
+                1.0,
+            )
+        )
+        audit_limit = float(size * (1.0 + _NEARFIELD_AUDIT_RELATIVE_TOLERANCE) + absolute_tolerance)
+        if band_edge_max > audit_limit:
+            raise RuntimeError(
+                "near-field maximum edge audit failed: "
+                f"actual={band_edge_max:.17g}, limit={audit_limit:.17g}, "
+                f"requested={size:.17g}"
+            )
+        nearfield_metadata = {
+            "nearfield_enabled": True,
+            "nearfield_distance": distance,
+            "nearfield_mesh_size": size,
+            "nearfield_gmsh_target_mesh_size": size * _NEARFIELD_GMSH_TARGET_FACTOR,
+            "nearfield_gmsh_target_factor": _NEARFIELD_GMSH_TARGET_FACTOR,
+            "fracture_length_scale": length_scale,
+            "nearfield_transition_width": transition,
+            "nearfield_transition_end_distance": distance + transition,
+            "nearfield_audit_cell_selection": (
+                "triangle_centroid_distance_to_input_wall_polyline_le_nearfield_distance"
+            ),
+            "nearfield_audited_element_count": int(np.count_nonzero(band_mask)),
+            "nearfield_actual_maximum_edge": band_edge_max,
+            "nearfield_requested_h_over_ell": size / length_scale,
+            "nearfield_actual_maximum_h_over_ell": band_edge_max / length_scale,
+            "nearfield_audit_relative_tolerance": _NEARFIELD_AUDIT_RELATIVE_TOLERANCE,
+            "nearfield_audit_absolute_tolerance": absolute_tolerance,
+            "nearfield_audit_limit": audit_limit,
+            "nearfield_audit_passed": True,
+            "nearfield_gmsh_fields": ["Distance", "Threshold"],
+        }
+
     facet_markers = np.zeros(mesh.facets.shape[1], dtype=np.int32)
     facet_markers[wall_facets] = physical_tags[WALL]
     facet_markers[farfield_facets] = physical_tags[FARFIELD]
@@ -407,6 +580,7 @@ def generate_tunnel_mesh(
         "farfield_mesh_size": farfield_size,
         "gmsh_algorithm": gmsh_algorithm,
     }
+    metadata.update(nearfield_metadata)
     boundary_facets = {WALL: wall_facets, FARFIELD: farfield_facets}
     return TunnelMesh(
         mesh=mesh,

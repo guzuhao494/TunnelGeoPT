@@ -30,11 +30,15 @@
 > 几何泛化、破裂、损伤或岩爆能力。证据见
 > [`RESULT_SUMMARY.md`](artifacts/confirmation/linear-load-basis-v0.5.0/RESULT_SUMMARY.md)。
 
-> **论文 Stage-1 候选范围（2026-08-14）：等待显式确认。** 现有线弹性载荷基只作为
+> **论文 Stage-2 开发状态（2026-08-14）：kernel/schema/protocol 已实现，pilot
+> `NO-GO`。** 现有线弹性载荷基只作为
 > 后续方法引理和固定弹性骨架，不单独包装为论文创新。推荐主线是先验证二维准静态
 > 相场脆性断裂求解器，再检验“精确弹性基 + 只学习不可逆损伤残差”是否真能节省
-> 断裂轨迹标签。范围、反证和论文大纲见 [`RESEARCH_SCOPE.md`](paper/RESEARCH_SCOPE.md) 与
-> [`PAPER_OUTLINE.md`](paper/PAPER_OUTLINE.md)。
+> 断裂轨迹标签。当前已有本地 P1 AT2 调试内核、严格轨迹 schema、36-case/12-audit
+> 冻结开发协议和裂纹带网格审计，但求解器尚不能表达 P2/P3 的变远场应力或 P4
+> 分区卸荷，也没有累计边界功/反力/重试账本及本地-MOOSE 同题验证，所以禁止生成
+> 训练标签。范围、反证和论文大纲见 [`RESEARCH_SCOPE.md`](paper/RESEARCH_SCOPE.md)、
+> [`PAPER_OUTLINE.md`](paper/PAPER_OUTLINE.md) 与 [`PLAN.md`](PLAN.md)。
 
 v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久化的二维线弹性里程碑：程序可以为圆形、马蹄形和直墙拱形隧洞生成有限元网格，求解均质各向同性平面应变开挖增量，并将位移、应变、应力和应变能保存为独立 B-elastic 数据记录。
 
@@ -45,8 +49,9 @@ v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久
 | 已实现并测试 | A 层三类断面及 GeoPT 兼容 lifted 样本；B 层 Gmsh 网格、scikit-fem P1 平面应变求解、case/split 身份、严格持久化 schema、Kirsch/仿射 patch/残差/能量验证 |
 | 本机科学栈 | Windows Python 环境已实测 NumPy、SciPy、scikit-fem、Gmsh 的导入、网格和稀疏计算 |
 | GPU 实算 | Windows Python 3.12 + PyTorch `2.11.0+cu128` 已在 RTX 5070 Ti Laptop GPU 上完成 CUDA smoke，并完成 6 方法 × 3 种子的圆洞解析迁移训练；后者结果为 No-Go，只适用于解析圆洞筛查 |
-| WSL2 | Ubuntu 24.04、Python 3.12、Git 和同一 GPU 的可见性已通过；WSL 内访问 PyPI 超时，因此依赖安装、pytest 和 CUDA PyTorch 仍为 **blocked** |
-| 尚未实现 | 岩石损伤、裂纹萌生扩展、断裂耗散、动态破坏、微震/AE 波形、高保真 FDEM/DEM/相场样本和现场迁移 |
+| WSL2 | Ubuntu 24.04、Git 和同一 GPU 的可见性已通过；已安装官方 MOOSE conda 栈并在编译 `combined-opt`，官方 `crack2d_iso` 尚未宣告通过 |
+| C-fracture 调试层 | 本地 P1 AT2 spectral-split 内核、不可逆 active-set、独立 schema、冻结开发协议和裂纹带 Gmsh 网格已实现并测试；完整 P1-P4 生成器、MOOSE 同题交叉验证和 SENT/SENS 尚未完成 |
+| 尚未实现 | 可接受的高保真断裂标签集、动态破坏、微震/AE 波形、FDEM/DEM、实验校准和现场迁移 |
 
 因此，B 层当前是**静态、均质、各向同性、小应变线弹性**结果，不是岩爆、岩体破裂或现场预测结果。schema 明确不允许使用全零 `damage`、`velocity` 或 `dissipation` 字段冒充高保真标签。
 
@@ -67,8 +72,8 @@ v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久
               ├── B 层：解析解 + 线弹性 FEM（v0.2 已实现）
               │          网格、位移、应变、总/增量应力、应变能
               │
-              └── C 层：FDEM/DEM/相场（尚未实现）
-                         损伤、裂纹图、耗散能、动态过程、AE 源事件
+              └── C 层：准静态 AT2 调试内核（部分实现，标签生成 NO-GO）
+                         待补完整载荷、反力/累计功、重试和外部基准后再生成
 ```
 
 研究路线、schema 和验证边界分别见：
@@ -80,6 +85,10 @@ v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久
 - [`docs/VALIDATION.md`](docs/VALIDATION.md)
 - [`docs/SOLVER_ROADMAP.md`](docs/SOLVER_ROADMAP.md)
 - [`docs/MILESTONE_V0.2.md`](docs/MILESTONE_V0.2.md)
+- [`docs/FRACTURE_SCHEMA.md`](docs/FRACTURE_SCHEMA.md)
+- [`docs/FRACTURE_PHASE1_PROTOCOL.md`](docs/FRACTURE_PHASE1_PROTOCOL.md)
+- [`docs/FRACTURE_MESH.md`](docs/FRACTURE_MESH.md)
+- [`docs/FRACTURE_BENCHMARKS.md`](docs/FRACTURE_BENCHMARKS.md)
 
 ## 安装与测试（Windows PowerShell）
 
@@ -165,7 +174,9 @@ python -m pytest
 bash scripts/check_environment.sh validation/environment/wsl.json
 ```
 
-当前上述安装在 WSL 的 PyPI 网络步骤受阻；在网络恢复并完成依赖安装、pytest 和 CUDA smoke 前，不把 WSL 训练栈列为已验证。
+当前 WSL 已通过本机代理安装官方 MOOSE conda 依赖；MOOSE 编译、官方自测及
+TunnelGeoPT 同题交叉验证仍分别验收。官方自测只证明所钉住 MOOSE 版本能执行其
+自身回归用例，不能代替本地求解器等价性或隧洞断裂验证。
 
 ## 首个预注册学习比较：No-Go
 

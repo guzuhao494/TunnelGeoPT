@@ -167,7 +167,16 @@
 - [x] 将线弹性载荷基降级为方法引理/固定骨架，不再当作论文核心创新。
 - [x] 将旧 `configs/pilot.json` 判定为不可直接复用；新 Phase-1 删除动力、3D、
   节理、AE、随机非均质和旧 Stress-Lift 效果门。
-- [ ] 用户确认 Stage-1 范围后，创建独立 C-fracture schema 与新 pilot config。
+- [x] 用户以持续论文目标确认 Stage-1 范围；已进入独立 C-fracture schema 与新 pilot
+  config 的实现阶段，但尚未生成 36 条轨迹。
+- [x] 实现独立不可变 fracture trajectory schema、36-case/12-audit 开发协议和本地
+  P1 AT2 调试内核；专项测试通过，但三者尚未组成完整数据生成器。
+- [x] 完成一次独立实现审计并判定当前 `NO-GO`：P2/P3/P4、裂纹带网格、最终状态
+  一致性、累计功/反力、重试账本和外部交叉验证未闭合，禁止生成训练标签。
+- [ ] 完成配置到 `s, sigma_inf(s), wall_release_by_facet(s)` 的唯一加载适配器，覆盖
+  P1-P4 全部 41 个必需状态。
+- [x] 完成可选裂纹带 Gmsh Distance/Threshold 背景场及生成后实际最大边长和
+  `h/ell` 硬审计；默认 B-elastic 网格路径保持兼容，尚未运行协议规模网格。
 - [ ] MOOSE `crack2d_iso` 在 WSL 或可复现容器中实际运行通过，版本和环境哈希落盘。
 - [ ] 本地相场原型与 MOOSE 在完好弹性、预缺口拉伸/剪切上交叉验证。
 - [ ] 三网格、加载步、长度尺度、能量、残差与不可逆门全部通过。
