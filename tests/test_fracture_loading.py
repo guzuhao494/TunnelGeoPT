@@ -228,6 +228,13 @@ def test_state_arrays_and_ids_are_immutable_and_schedule_requires_positive_finit
     with pytest.raises(ValueError, match="read-only"):
         state.wall_release[0] = 0.0
     with pytest.raises(ValueError, match="read-only"):
+        schedule.wall_facet_endpoints_yz[0, 0, 0] = 0.0
+
+    inconsistent_endpoints = np.asarray(schedule.wall_facet_endpoints_yz).copy()
+    inconsistent_endpoints[0, 0] += np.asarray([0.01, 0.0])
+    with pytest.raises(FractureLoadError, match=r"wall_facet_(endpoints_yz|midpoints_yz)"):
+        replace(schedule, wall_facet_endpoints_yz=inconsistent_endpoints)
+    with pytest.raises(ValueError, match="read-only"):
         state.wall_facet_ids[0] = 999
     with pytest.raises(ValueError, match="cannot set WRITEABLE flag"):
         state.wall_release.setflags(write=True)

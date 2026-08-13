@@ -29,6 +29,7 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from .elasticity import compute_element_strain, plane_strain_lame_parameters
+from .fracture_loading import FractureLoadState, Phase1LoadSchedule
 from .mesh import FARFIELD, WALL, TunnelMesh
 
 FloatArray = NDArray[np.floating]
@@ -192,10 +193,25 @@ class DisplacementSolveResult:
     psi_negative: FloatArray
     elastic_energy: float
     external_work: float
+    internal_force: FloatArray
+    wall_nodal_force: FloatArray
+    dirichlet_dofs: IntArray
+    farfield_prescribed_displacement: FloatArray
     residual_norm: float
     equilibrium_residual: float
     iterations: int
     converged: bool
+
+    @property
+    def neumann_load_functional(self) -> float:
+        """Return ``f_wall . u``; this is not cumulative path work.
+
+        ``external_work`` remains as a compatibility alias for the historical
+        field name.  Quasi-static trajectory work must be integrated between
+        accepted states and include the far-field reaction contribution.
+        """
+
+        return self.external_work
 
 
 @dataclass(frozen=True)
@@ -214,6 +230,10 @@ class AT2StepResult:
     elastic_energy: float
     fracture_energy: float
     external_work: float
+    internal_force: FloatArray
+    wall_nodal_force: FloatArray
+    dirichlet_dofs: IntArray
+    farfield_prescribed_displacement: FloatArray
     total_potential_energy: float
     equilibrium_residual: float
     kkt_residual: float
@@ -226,6 +246,12 @@ class AT2StepResult:
     displacement_iterations: int
     damage_iterations: int
     converged: bool
+
+    @property
+    def neumann_load_functional(self) -> float:
+        """Return the instantaneous wall-load functional, not path work."""
+
+        return self.external_work
 
 
 @dataclass(frozen=True)
@@ -242,6 +268,39 @@ class AT2Result:
 
     @property
     def final(self) -> AT2StepResult:
+        return self.steps[-1]
+
+    @property
+    def converged(self) -> bool:
+        return bool(self.steps) and all(step.converged for step in self.steps)
+
+
+@dataclass(frozen=True)
+class ScheduledAT2StepResult(AT2StepResult):
+    """One development-only step driven by an audited Phase-1 load state."""
+
+    load_state: FractureLoadState
+
+
+@dataclass(frozen=True)
+class ScheduledAT2Result:
+    """Development-only scheduled trajectory with no adaptive retry or path work.
+
+    The contained ``external_work`` values are instantaneous Neumann load
+    functionals.  This result is not a label record and has no fracture-schema
+    or external-validation status.
+    """
+
+    nodes: FloatArray
+    elements: IntArray
+    steps: tuple[ScheduledAT2StepResult, ...]
+    material: AT2Material
+    load_path: AT2LoadPath
+    options: FractureSolverOptions
+    load_schedule: Phase1LoadSchedule
+
+    @property
+    def final(self) -> ScheduledAT2StepResult:
         return self.steps[-1]
 
     @property
@@ -689,11 +748,26 @@ def _integrated_wall_load(
     elements: IntArray,
     wall_facets: IntArray,
     sigma_inf: FloatArray,
+    *,
+    facet_multipliers: ArrayLike | None = None,
 ) -> FloatArray:
+    """Assemble wall nodal forces, optionally scaled facet by facet.
+
+    ``facet_multipliers`` is aligned with ``wall_facets``.  Leaving it unset
+    preserves the legacy uniform-wall assembly operation.
+    """
+
+    multipliers: FloatArray | None = None
+    if facet_multipliers is not None:
+        multipliers = np.asarray(facet_multipliers, dtype=np.float64)
+        if multipliers.shape != wall_facets.shape:
+            raise ValueError("facet_multipliers must align one-to-one with wall_facets")
+        if not np.isfinite(multipliers).all():
+            raise ValueError("facet_multipliers contains a non-finite value")
     load = np.zeros((nodes.shape[0], 2), dtype=np.float64)
     facets = np.asarray(mesh.facets, dtype=np.int64)
     f2t = np.asarray(mesh.f2t, dtype=np.int64)
-    for facet_index in wall_facets:
+    for wall_position, facet_index in enumerate(wall_facets):
         edge_nodes = facets[:, facet_index]
         adjacent = f2t[:, facet_index]
         adjacent = adjacent[adjacent >= 0]
@@ -709,8 +783,126 @@ def _integrated_wall_load(
         if float(normal @ (midpoint - centroid)) < 0.0:
             normal = -normal
         traction = sigma_inf @ normal
+        if multipliers is not None:
+            traction = float(multipliers[wall_position]) * traction
         load[edge_nodes] += 0.5 * length * traction
     return load.ravel()
+
+
+def _wall_release_aligned_to_mesh(
+    wall_facets: IntArray, load_state: FractureLoadState
+) -> FloatArray:
+    """Return release values in mesh marker order after strict ID matching."""
+
+    state_ids = np.asarray(load_state.wall_facet_ids, dtype=np.int64)
+    state_release = np.asarray(load_state.wall_release, dtype=np.float64)
+    if state_ids.shape != state_release.shape:
+        raise ValueError("load-state wall facet IDs and releases must align")
+    if state_ids.size != wall_facets.size or not np.array_equal(
+        np.sort(state_ids), np.sort(wall_facets)
+    ):
+        raise ValueError("load-state wall facet IDs do not match the solver wall marker set")
+    release_by_id = dict(zip(state_ids.tolist(), state_release.tolist(), strict=True))
+    aligned = np.asarray([release_by_id[int(facet_id)] for facet_id in wall_facets])
+    if np.any(aligned < 0.0) or np.any(aligned > 1.0):
+        raise ValueError("load-state wall release values must lie in [0, 1]")
+    return aligned
+
+
+def _validate_load_schedule_on_mesh(
+    mesh: Any,
+    nodes: FloatArray,
+    wall_facets: IntArray,
+    load_schedule: Phase1LoadSchedule,
+) -> None:
+    """Reject schedules compiled on any other wall-facet geometry."""
+
+    if not isinstance(load_schedule, Phase1LoadSchedule):
+        raise TypeError("load_schedule must be a Phase1LoadSchedule")
+    schedule_ids = np.asarray(load_schedule.wall_facet_ids, dtype=np.int64)
+    if schedule_ids.size != wall_facets.size or not np.array_equal(
+        np.sort(schedule_ids), np.sort(wall_facets)
+    ):
+        raise ValueError("load schedule wall facet IDs do not match the solver wall marker set")
+    schedule_row_by_id = {int(facet_id): row for row, facet_id in enumerate(schedule_ids.tolist())}
+    schedule_rows = np.asarray(
+        [schedule_row_by_id[int(facet_id)] for facet_id in wall_facets], dtype=np.int64
+    )
+    facets = np.asarray(mesh.facets, dtype=np.int64)
+    wall_edges = facets[:, wall_facets].T
+    start = nodes[wall_edges[:, 0]]
+    end = nodes[wall_edges[:, 1]]
+    lengths = np.linalg.norm(end - start, axis=1)
+    if np.any(lengths <= 0.0) or not np.isfinite(lengths).all():
+        raise ValueError("solver wall facets must have positive finite length")
+    midpoints = 0.5 * (start + end)
+    perimeter_centroid = np.sum(midpoints * lengths[:, None], axis=0) / float(lengths.sum())
+    scale = max(
+        float(np.max(np.abs(nodes), initial=0.0)),
+        float(np.max(np.ptp(nodes, axis=0), initial=0.0)),
+        1.0,
+    )
+    tolerance = 256.0 * np.finfo(float).eps * scale
+    swap = (start[:, 0] > end[:, 0]) | ((start[:, 0] == end[:, 0]) & (start[:, 1] > end[:, 1]))
+    endpoints = np.stack(
+        (
+            np.where(swap[:, None], end, start),
+            np.where(swap[:, None], start, end),
+        ),
+        axis=1,
+    )
+    scheduled_endpoints = np.asarray(load_schedule.wall_facet_endpoints_yz)[schedule_rows]
+    if not np.allclose(endpoints, scheduled_endpoints, rtol=0.0, atol=tolerance):
+        raise ValueError("load schedule wall facet endpoints do not match the solver mesh")
+    scheduled_midpoints = np.asarray(load_schedule.wall_facet_midpoints_yz)[schedule_rows]
+    if not np.allclose(midpoints, scheduled_midpoints, rtol=0.0, atol=tolerance):
+        raise ValueError("load schedule wall facet geometry does not match the solver mesh")
+    if not np.allclose(
+        perimeter_centroid,
+        load_schedule.wall_perimeter_centroid_yz,
+        rtol=0.0,
+        atol=tolerance,
+    ):
+        raise ValueError("load schedule wall perimeter centroid does not match the solver mesh")
+
+
+def _validate_load_state_on_schedule(
+    load_schedule: Phase1LoadSchedule, load_state: FractureLoadState
+) -> None:
+    """Require the state to be one permutation of ``schedule.state_at(s)``."""
+
+    if not isinstance(load_state, FractureLoadState):
+        raise TypeError("load_state must be a FractureLoadState")
+    expected = load_schedule.state_at(load_state.s)
+    for name in (
+        "ucs_scale",
+        "sigma1_over_UCS",
+        "sigma3_over_sigma1",
+        "principal_angle_deg",
+    ):
+        if getattr(load_state, name) != getattr(expected, name):
+            raise ValueError("load state is inconsistent with its load schedule")
+    if load_state.path_id != expected.path_id or load_state.wall_zone_ids != expected.wall_zone_ids:
+        raise ValueError("load state is inconsistent with its load schedule")
+    if not np.array_equal(
+        load_state.farfield_stress_tension_positive_yz,
+        expected.farfield_stress_tension_positive_yz,
+    ) or not np.array_equal(load_state.wall_zone_release, expected.wall_zone_release):
+        raise ValueError("load state is inconsistent with its load schedule")
+    state_ids = np.asarray(load_state.wall_facet_ids, dtype=np.int64)
+    expected_ids = np.asarray(expected.wall_facet_ids, dtype=np.int64)
+    if state_ids.size != expected_ids.size or not np.array_equal(
+        np.sort(state_ids), np.sort(expected_ids)
+    ):
+        raise ValueError("load state is inconsistent with its load schedule")
+    state_row_by_id = {int(facet_id): row for row, facet_id in enumerate(state_ids.tolist())}
+    state_rows = np.asarray(
+        [state_row_by_id[int(facet_id)] for facet_id in expected_ids], dtype=np.int64
+    )
+    if not np.array_equal(
+        np.asarray(load_state.wall_zone_weights)[state_rows], expected.wall_zone_weights
+    ) or not np.array_equal(np.asarray(load_state.wall_release)[state_rows], expected.wall_release):
+        raise ValueError("load state is inconsistent with its load schedule")
 
 
 def _strain_displacement_matrices(gradients: FloatArray) -> FloatArray:
@@ -847,12 +1039,83 @@ def _assemble_displacement_state(
     return internal, tangent, strain, stress, psi_positive, psi_negative, elastic_energy
 
 
-def _evaluate_fixed_damage_displacement_state(
-    mesh_like: TunnelMesh | Any,
+@dataclass(frozen=True)
+class _ResolvedDisplacementLoad:
+    """Current far-field condition and wall forces for one equilibrium solve."""
+
+    sigma_inf: FloatArray
+    affine_displacement: FloatArray
+    full_wall_nodal_force: FloatArray
+    wall_nodal_force: FloatArray
+
+
+def _resolve_legacy_displacement_load(
+    mesh: Any,
+    nodes: FloatArray,
+    elements: IntArray,
+    wall_facets: IntArray,
     material: AT2Material,
     sigma_inf: ArrayLike,
-    *,
     load_parameter: float,
+) -> _ResolvedDisplacementLoad:
+    parameter = float(load_parameter)
+    if not np.isfinite(parameter) or not 0.0 <= parameter <= 1.0:
+        raise ValueError("load_parameter must be finite and lie in [0, 1]")
+    stress = _coerce_sigma_inf(sigma_inf)
+    affine = _affine_displacement(nodes, _farfield_engineering_strain(stress, material))
+    full_wall_load = _integrated_wall_load(mesh, nodes, elements, wall_facets, stress)
+    return _ResolvedDisplacementLoad(
+        sigma_inf=stress,
+        affine_displacement=affine,
+        full_wall_nodal_force=full_wall_load,
+        wall_nodal_force=(1.0 - parameter) * full_wall_load,
+    )
+
+
+def _resolve_scheduled_displacement_load(
+    mesh: Any,
+    nodes: FloatArray,
+    elements: IntArray,
+    wall_facets: IntArray,
+    material: AT2Material,
+    load_schedule: Phase1LoadSchedule,
+    load_state: FractureLoadState,
+) -> _ResolvedDisplacementLoad:
+    _validate_load_schedule_on_mesh(mesh, nodes, wall_facets, load_schedule)
+    _validate_load_state_on_schedule(load_schedule, load_state)
+    stress = _coerce_sigma_inf(load_state.farfield_stress_tension_positive_yz)
+    affine = _affine_displacement(nodes, _farfield_engineering_strain(stress, material))
+    full_wall_load = _integrated_wall_load(mesh, nodes, elements, wall_facets, stress)
+    release = _wall_release_aligned_to_mesh(wall_facets, load_state)
+    uniform_tolerance = (
+        64.0 * np.finfo(float).eps * max(float(np.max(np.abs(release), initial=0.0)), 1.0)
+    )
+    if np.allclose(release, release[0], rtol=0.0, atol=uniform_tolerance):
+        # Preserve the legacy operation order exactly for every uniform path,
+        # most importantly the P1 regression against scalar release.
+        wall_load = (1.0 - float(release[0])) * full_wall_load
+    else:
+        wall_load = _integrated_wall_load(
+            mesh,
+            nodes,
+            elements,
+            wall_facets,
+            stress,
+            facet_multipliers=1.0 - release,
+        )
+    return _ResolvedDisplacementLoad(
+        sigma_inf=stress,
+        affine_displacement=affine,
+        full_wall_nodal_force=full_wall_load,
+        wall_nodal_force=wall_load,
+    )
+
+
+def _evaluate_resolved_fixed_damage_displacement_state(
+    mesh_like: TunnelMesh | Any,
+    material: AT2Material,
+    resolved_load: _ResolvedDisplacementLoad,
+    *,
     damage: ArrayLike,
     displacement: ArrayLike,
     options: FractureSolverOptions,
@@ -865,12 +1128,8 @@ def _evaluate_fixed_damage_displacement_state(
     from the preceding displacement solve, which used the pre-update damage.
     """
 
-    parameter = float(load_parameter)
-    if not np.isfinite(parameter) or not 0.0 <= parameter <= 1.0:
-        raise ValueError("load_parameter must be finite and lie in [0, 1]")
     mesh, nodes, elements = _mesh_arrays(mesh_like)
-    wall_facets, farfield_facets = _named_boundaries(mesh)
-    material_stress = _coerce_sigma_inf(sigma_inf)
+    _, farfield_facets = _named_boundaries(mesh)
     damage_values = np.asarray(damage, dtype=np.float64)
     if damage_values.ndim == 0:
         damage_values = np.full(nodes.shape[0], float(damage_values), dtype=np.float64)
@@ -888,7 +1147,13 @@ def _evaluate_fixed_damage_displacement_state(
 
     gradients, area, _ = _element_geometry(nodes, elements)
     matrices = _strain_displacement_matrices(gradients)
-    affine = _affine_displacement(nodes, _farfield_engineering_strain(material_stress, material))
+    affine = resolved_load.affine_displacement
+    if affine.shape != nodes.shape:
+        raise ValueError("resolved affine displacement does not match the mesh")
+    external_load = np.asarray(resolved_load.wall_nodal_force, dtype=np.float64)
+    full_wall_load = np.asarray(resolved_load.full_wall_nodal_force, dtype=np.float64)
+    if external_load.shape != (2 * nodes.shape[0],) or full_wall_load.shape != external_load.shape:
+        raise ValueError("resolved wall nodal forces do not match the mesh")
     farfield_nodes = np.unique(np.asarray(mesh.facets)[:, farfield_facets])
     displacement_values[farfield_nodes] = affine[farfield_nodes]
     fixed_dofs = np.column_stack((2 * farfield_nodes, 2 * farfield_nodes + 1)).ravel()
@@ -897,8 +1162,6 @@ def _evaluate_fixed_damage_displacement_state(
     if not free_dofs.size:
         raise RuntimeError("farfield constraints leave no free displacement degrees of freedom")
 
-    full_wall_load = _integrated_wall_load(mesh, nodes, elements, wall_facets, material_stress)
-    external_load = (1.0 - parameter) * full_wall_load
     state = _assemble_displacement_state(
         nodes,
         elements,
@@ -928,6 +1191,10 @@ def _evaluate_fixed_damage_displacement_state(
         psi_negative=state[5],
         elastic_energy=float(state[6]),
         external_work=float(external_load @ displacement_values.ravel()),
+        internal_force=state[0].copy(),
+        wall_nodal_force=external_load.copy(),
+        dirichlet_dofs=fixed_dofs.copy(),
+        farfield_prescribed_displacement=displacement_values.ravel()[fixed_dofs].copy(),
         residual_norm=residual_norm,
         equilibrium_residual=equilibrium_residual,
         iterations=iterations,
@@ -935,32 +1202,84 @@ def _evaluate_fixed_damage_displacement_state(
     )
 
 
-def solve_fixed_damage_displacement(
+def _evaluate_fixed_damage_displacement_state(
     mesh_like: TunnelMesh | Any,
     material: AT2Material,
     sigma_inf: ArrayLike,
     *,
     load_parameter: float,
     damage: ArrayLike,
-    initial_displacement: ArrayLike | None = None,
-    options: FractureSolverOptions | None = None,
+    displacement: ArrayLike,
+    options: FractureSolverOptions,
+    iterations: int = 0,
 ) -> DisplacementSolveResult:
-    """Solve total-field equilibrium for fixed nodal damage.
+    """Reassemble a legacy uniform-release state without taking a Newton step."""
 
-    At ``load_parameter=0`` the applied wall traction is ``Sigma_inf n``; at
-    one it is zero.  Far-field nodes always follow the affine displacement.
-    For ``damage=0`` and ``residual_stiffness=0``, the returned correction field
-    at one is the same mathematical linear problem as
-    :func:`tunnelgeopt.elasticity.solve_plane_strain_excavation`.
-    """
-
-    controls = options or FractureSolverOptions()
-    parameter = float(load_parameter)
-    if not np.isfinite(parameter) or not 0.0 <= parameter <= 1.0:
-        raise ValueError("load_parameter must be finite and lie in [0, 1]")
     mesh, nodes, elements = _mesh_arrays(mesh_like)
-    wall_facets, farfield_facets = _named_boundaries(mesh)
-    material_stress = _coerce_sigma_inf(sigma_inf)
+    wall_facets, _ = _named_boundaries(mesh)
+    resolved_load = _resolve_legacy_displacement_load(
+        mesh,
+        nodes,
+        elements,
+        wall_facets,
+        material,
+        sigma_inf,
+        load_parameter,
+    )
+    return _evaluate_resolved_fixed_damage_displacement_state(
+        mesh,
+        material,
+        resolved_load,
+        damage=damage,
+        displacement=displacement,
+        options=options,
+        iterations=iterations,
+    )
+
+
+def _evaluate_fixed_damage_displacement_at_load_state(
+    mesh_like: TunnelMesh | Any,
+    material: AT2Material,
+    load_schedule: Phase1LoadSchedule,
+    load_state: FractureLoadState,
+    *,
+    damage: ArrayLike,
+    displacement: ArrayLike,
+    options: FractureSolverOptions,
+    iterations: int = 0,
+) -> DisplacementSolveResult:
+    """Reassemble one scheduled ``(u, d)`` state without a Newton step."""
+
+    mesh, nodes, elements = _mesh_arrays(mesh_like)
+    wall_facets, _ = _named_boundaries(mesh)
+    resolved_load = _resolve_scheduled_displacement_load(
+        mesh, nodes, elements, wall_facets, material, load_schedule, load_state
+    )
+    return _evaluate_resolved_fixed_damage_displacement_state(
+        mesh,
+        material,
+        resolved_load,
+        damage=damage,
+        displacement=displacement,
+        options=options,
+        iterations=iterations,
+    )
+
+
+def _solve_resolved_fixed_damage_displacement(
+    mesh_like: TunnelMesh | Any,
+    material: AT2Material,
+    resolved_load: _ResolvedDisplacementLoad,
+    *,
+    damage: ArrayLike,
+    initial_displacement: ArrayLike | None = None,
+    options: FractureSolverOptions,
+) -> DisplacementSolveResult:
+    """Solve one already-resolved total-field equilibrium problem."""
+
+    controls = options
+    mesh, nodes, elements = _mesh_arrays(mesh_like)
+    _, farfield_facets = _named_boundaries(mesh)
     damage_values = np.asarray(damage, dtype=np.float64)
     if damage_values.ndim == 0:
         damage_values = np.full(nodes.shape[0], float(damage_values), dtype=np.float64)
@@ -974,8 +1293,9 @@ def solve_fixed_damage_displacement(
         raise ValueError("damage must be finite and lie in [0, 1]")
     gradients, area, _ = _element_geometry(nodes, elements)
     matrices = _strain_displacement_matrices(gradients)
-    farfield_strain = _farfield_engineering_strain(material_stress, material)
-    affine = _affine_displacement(nodes, farfield_strain)
+    affine = resolved_load.affine_displacement
+    if affine.shape != nodes.shape:
+        raise ValueError("resolved affine displacement does not match the mesh")
     if initial_displacement is None:
         displacement = affine.copy()
     else:
@@ -989,8 +1309,10 @@ def solve_fixed_damage_displacement(
     if not free_dofs.size:
         raise RuntimeError("farfield constraints leave no free displacement degrees of freedom")
     displacement[farfield_nodes] = affine[farfield_nodes]
-    full_wall_load = _integrated_wall_load(mesh, nodes, elements, wall_facets, material_stress)
-    external_load = (1.0 - parameter) * full_wall_load
+    full_wall_load = np.asarray(resolved_load.full_wall_nodal_force, dtype=np.float64)
+    external_load = np.asarray(resolved_load.wall_nodal_force, dtype=np.float64)
+    if full_wall_load.shape != (2 * nodes.shape[0],) or external_load.shape != full_wall_load.shape:
+        raise ValueError("resolved wall nodal forces do not match the mesh")
     scipy = _require_scipy()
     equilibrium_residual = np.inf
     residual_norm = np.inf
@@ -1058,11 +1380,10 @@ def solve_fixed_damage_displacement(
         if not accepted:
             break
 
-    final_result = _evaluate_fixed_damage_displacement_state(
+    final_result = _evaluate_resolved_fixed_damage_displacement_state(
         mesh,
         material,
-        material_stress,
-        load_parameter=parameter,
+        resolved_load,
         damage=damage_values,
         displacement=displacement,
         options=controls,
@@ -1075,6 +1396,108 @@ def solve_fixed_damage_displacement(
             f"equilibrium_residual={final_result.equilibrium_residual:.3e})"
         )
     return final_result
+
+
+def solve_fixed_damage_displacement(
+    mesh_like: TunnelMesh | Any,
+    material: AT2Material,
+    sigma_inf: ArrayLike,
+    *,
+    load_parameter: float,
+    damage: ArrayLike,
+    initial_displacement: ArrayLike | None = None,
+    options: FractureSolverOptions | None = None,
+) -> DisplacementSolveResult:
+    """Solve legacy uniform wall-release equilibrium for fixed nodal damage.
+
+    At ``load_parameter=0`` the applied wall traction is ``Sigma_inf n``; at
+    one it is zero.  Far-field nodes always follow the affine displacement.
+    For ``damage=0`` and ``residual_stiffness=0``, the returned correction field
+    at one is the same mathematical linear problem as
+    :func:`tunnelgeopt.elasticity.solve_plane_strain_excavation`.
+
+    ``external_work`` is retained for compatibility and equals the
+    instantaneous Neumann functional exposed as ``neumann_load_functional``;
+    it is not cumulative trajectory work.
+    """
+
+    controls = options or FractureSolverOptions()
+    mesh, nodes, elements = _mesh_arrays(mesh_like)
+    wall_facets, _ = _named_boundaries(mesh)
+    resolved_load = _resolve_legacy_displacement_load(
+        mesh,
+        nodes,
+        elements,
+        wall_facets,
+        material,
+        sigma_inf,
+        load_parameter,
+    )
+    return _solve_resolved_fixed_damage_displacement(
+        mesh,
+        material,
+        resolved_load,
+        damage=damage,
+        initial_displacement=initial_displacement,
+        options=controls,
+    )
+
+
+def solve_fixed_damage_displacement_at_load_state(
+    mesh_like: TunnelMesh | Any,
+    material: AT2Material,
+    load_schedule: Phase1LoadSchedule,
+    load_state: FractureLoadState,
+    *,
+    damage: ArrayLike,
+    initial_correction_displacement: ArrayLike | None = None,
+    options: FractureSolverOptions | None = None,
+) -> DisplacementSolveResult:
+    """Solve fixed-damage equilibrium for one audited Phase-1 load state.
+
+    ``load_schedule`` is mandatory: its facet IDs, midpoints and length-weighted
+    perimeter centroid are checked against the solver mesh before the state is
+    accepted.  Wall release is then aligned by actual facet ID before assembly.
+    When a prior correction ``w`` is supplied, the Newton initial value is formed as
+    ``w + epsilon_inf(current Sigma) x``.  Supplying a previous *total* field
+    is intentionally unsupported because its affine part may correspond to a
+    different far-field stress.
+
+    This development API does not execute adaptive retry, integrate path work,
+    write a fracture-schema record, or imply externally validated labels.
+    """
+
+    controls = options or FractureSolverOptions()
+    mesh, nodes, elements = _mesh_arrays(mesh_like)
+    wall_facets, farfield_facets = _named_boundaries(mesh)
+    resolved_load = _resolve_scheduled_displacement_load(
+        mesh, nodes, elements, wall_facets, material, load_schedule, load_state
+    )
+    initial_displacement: FloatArray | None = None
+    if initial_correction_displacement is not None:
+        correction = np.asarray(initial_correction_displacement, dtype=np.float64)
+        if correction.shape != nodes.shape or not np.isfinite(correction).all():
+            raise ValueError(
+                "initial_correction_displacement must be finite with shape [node_count, 2]"
+            )
+        farfield_nodes = np.unique(np.asarray(mesh.facets)[:, farfield_facets])
+        correction_scale = max(float(np.max(np.abs(correction), initial=0.0)), 1.0)
+        if not np.allclose(
+            correction[farfield_nodes],
+            0.0,
+            rtol=0.0,
+            atol=64.0 * np.finfo(float).eps * correction_scale,
+        ):
+            raise ValueError("initial correction must vanish on far-field Dirichlet nodes")
+        initial_displacement = correction + resolved_load.affine_displacement
+    return _solve_resolved_fixed_damage_displacement(
+        mesh,
+        material,
+        resolved_load,
+        damage=damage,
+        initial_displacement=initial_displacement,
+        options=controls,
+    )
 
 
 def at2_fracture_energy(mesh: TunnelMesh | Any, material: AT2Material, damage: ArrayLike) -> float:
@@ -1229,6 +1652,12 @@ def solve_at2_fracture(
             elastic_energy=evaluated_result.elastic_energy,
             fracture_energy=fracture_energy,
             external_work=evaluated_result.external_work,
+            internal_force=evaluated_result.internal_force.copy(),
+            wall_nodal_force=evaluated_result.wall_nodal_force.copy(),
+            dirichlet_dofs=evaluated_result.dirichlet_dofs.copy(),
+            farfield_prescribed_displacement=(
+                evaluated_result.farfield_prescribed_displacement.copy()
+            ),
             total_potential_energy=total_potential,
             equilibrium_residual=evaluated_result.equilibrium_residual,
             kkt_residual=damage_result.kkt_residual,
@@ -1260,6 +1689,172 @@ def solve_at2_fracture(
     )
 
 
+def solve_at2_fracture_schedule(
+    mesh: TunnelMesh | Any,
+    material: AT2Material,
+    load_schedule: Phase1LoadSchedule,
+    *,
+    load_path: AT2LoadPath | None = None,
+    options: FractureSolverOptions | None = None,
+) -> ScheduledAT2Result:
+    """Run a development-only AT2 trajectory from a Phase-1 load schedule.
+
+    Each scheduled state supplies both the current far-field stress and the
+    facet-aligned wall release.  Between load states the previous correction
+    field is carried to the current affine field, i.e. ``u_init = w_prev +
+    epsilon_inf(Sigma_current) x``.
+
+    There is deliberately no adaptive increment retry, cumulative-work
+    integration, fracture-schema serialization, or claim of label validity.
+    ``external_work`` on each step is only the instantaneous Neumann load
+    functional.  With ``raise_on_nonconvergence=True`` a failed step raises
+    instead of being accepted.
+    """
+
+    if not isinstance(load_schedule, Phase1LoadSchedule):
+        raise TypeError("load_schedule must be a Phase1LoadSchedule")
+    path = load_path or AT2LoadPath()
+    controls = options or FractureSolverOptions()
+    _, nodes, elements = _mesh_arrays(mesh)
+    damage_old = np.zeros(nodes.shape[0], dtype=np.float64)
+    history_old = np.zeros(elements.shape[0], dtype=np.float64)
+    correction_old = np.zeros_like(nodes)
+    accepted_steps: list[ScheduledAT2StepResult] = []
+
+    for parameter in path.load_parameters:
+        load_state = load_schedule.state_at(parameter)
+        stress = _coerce_sigma_inf(load_state.farfield_stress_tension_positive_yz)
+        affine = _affine_displacement(nodes, _farfield_engineering_strain(stress, material))
+        displacement_iterate = correction_old + affine
+        damage_iterate = damage_old.copy()
+        displacement_change = np.inf
+        damage_change = np.inf
+        displacement_iterations = 0
+        damage_iterations = 0
+        converged = False
+        displacement_result: DisplacementSolveResult | None = None
+        damage_result: DamageSolveResult | None = None
+        evaluated_result: DisplacementSolveResult | None = None
+        candidate_history = history_old.copy()
+        staggered_iterations = 0
+        for staggered_iterations in range(1, controls.max_staggered_iterations + 1):
+            previous_displacement = displacement_iterate.copy()
+            previous_damage = damage_iterate.copy()
+            displacement_result = solve_fixed_damage_displacement_at_load_state(
+                mesh,
+                material,
+                load_schedule,
+                load_state,
+                damage=damage_iterate,
+                initial_correction_displacement=displacement_iterate - affine,
+                options=controls,
+            )
+            displacement_iterations += displacement_result.iterations
+            displacement_iterate = displacement_result.displacement
+            candidate_history = update_history(history_old, displacement_result.psi_positive)
+            damage_system = assemble_at2_damage_system(mesh, material, candidate_history)
+            damage_result = solve_at2_damage(
+                damage_system,
+                damage_old=damage_old,
+                initial_damage=damage_iterate,
+                options=controls,
+            )
+            damage_iterations += damage_result.iterations
+            damage_iterate = damage_result.damage
+            evaluated_result = _evaluate_fixed_damage_displacement_at_load_state(
+                mesh,
+                material,
+                load_schedule,
+                load_state,
+                damage=damage_iterate,
+                displacement=displacement_iterate,
+                options=controls,
+                iterations=displacement_result.iterations,
+            )
+            candidate_history = update_history(history_old, evaluated_result.psi_positive)
+            displacement_change = _relative_change(displacement_iterate, previous_displacement)
+            damage_change = _relative_change(damage_iterate, previous_damage)
+            converged = (
+                displacement_result.converged
+                and evaluated_result.converged
+                and damage_result.converged
+                and evaluated_result.equilibrium_residual <= controls.equilibrium_tolerance
+                and damage_result.kkt_residual <= controls.kkt_tolerance
+                and displacement_change <= controls.staggered_tolerance
+                and damage_change <= controls.staggered_tolerance
+            )
+            if converged:
+                break
+
+        assert (
+            displacement_result is not None
+            and damage_result is not None
+            and evaluated_result is not None
+        )
+        if not converged and controls.raise_on_nonconvergence:
+            raise RuntimeError(
+                "scheduled AT2 staggered solve did not converge "
+                f"(path_id={load_state.path_id}, s={load_state.s:.6g}, "
+                f"iterations={staggered_iterations}, "
+                f"equilibrium={evaluated_result.equilibrium_residual:.3e}, "
+                f"kkt={damage_result.kkt_residual:.3e}, "
+                f"du={displacement_change:.3e}, dd={damage_change:.3e})"
+            )
+        fracture_energy = at2_fracture_energy(mesh, material, damage_iterate)
+        total_potential = (
+            evaluated_result.elastic_energy + fracture_energy - evaluated_result.external_work
+        )
+        step = ScheduledAT2StepResult(
+            load_parameter=load_state.s,
+            displacement=displacement_iterate.copy(),
+            correction_displacement=evaluated_result.correction_displacement.copy(),
+            damage=damage_iterate.copy(),
+            strain=evaluated_result.strain.copy(),
+            stress=evaluated_result.stress.copy(),
+            psi_positive=evaluated_result.psi_positive.copy(),
+            psi_negative=evaluated_result.psi_negative.copy(),
+            history=candidate_history.copy(),
+            elastic_energy=evaluated_result.elastic_energy,
+            fracture_energy=fracture_energy,
+            external_work=evaluated_result.external_work,
+            internal_force=evaluated_result.internal_force.copy(),
+            wall_nodal_force=evaluated_result.wall_nodal_force.copy(),
+            dirichlet_dofs=evaluated_result.dirichlet_dofs.copy(),
+            farfield_prescribed_displacement=(
+                evaluated_result.farfield_prescribed_displacement.copy()
+            ),
+            total_potential_energy=total_potential,
+            equilibrium_residual=evaluated_result.equilibrium_residual,
+            kkt_residual=damage_result.kkt_residual,
+            complementarity_residual=damage_result.complementarity_residual,
+            irreversibility_violation=damage_result.irreversibility_violation,
+            range_violation=damage_result.range_violation,
+            displacement_change=displacement_change,
+            damage_change=damage_change,
+            staggered_iterations=staggered_iterations,
+            displacement_iterations=displacement_iterations,
+            damage_iterations=damage_iterations,
+            converged=converged,
+            load_state=load_state,
+        )
+        accepted_steps.append(step)
+        if not converged:
+            break
+        correction_old = evaluated_result.correction_displacement.copy()
+        damage_old = damage_iterate.copy()
+        history_old = candidate_history.copy()
+
+    return ScheduledAT2Result(
+        nodes=nodes,
+        elements=elements,
+        steps=tuple(accepted_steps),
+        material=material,
+        load_path=path,
+        options=controls,
+        load_schedule=load_schedule,
+    )
+
+
 # Concise aliases for callers that already encode AT2 in their configuration.
 solve_damage = solve_at2_damage
 solve_fracture = solve_at2_fracture
@@ -1274,6 +1869,8 @@ __all__ = [
     "DamageSystem",
     "DisplacementSolveResult",
     "FractureSolverOptions",
+    "ScheduledAT2Result",
+    "ScheduledAT2StepResult",
     "SplitResponse",
     "assemble_at2_damage_system",
     "at2_fracture_energy",
@@ -1282,8 +1879,10 @@ __all__ = [
     "plane_strain_spectral_split",
     "solve_at2_damage",
     "solve_at2_fracture",
+    "solve_at2_fracture_schedule",
     "solve_damage",
     "solve_fixed_damage_displacement",
+    "solve_fixed_damage_displacement_at_load_state",
     "solve_fracture",
     "update_history",
 ]

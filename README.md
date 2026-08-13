@@ -36,9 +36,10 @@
 > 相场脆性断裂求解器，再检验“精确弹性基 + 只学习不可逆损伤残差”是否真能节省
 > 断裂轨迹标签。当前已有本地 P1 AT2 调试内核、严格轨迹 schema、36-case/12-audit
 > 冻结开发协议和裂纹带网格审计，但求解器尚不能表达 P2/P3 的变远场应力或 P4
-> 分区卸荷。v3 加载适配器已经冻结这些路径的唯一计算语义，独立的约束反力和
-> 壁面/远场路径功原语也已测试，但两者均未接入求解器与轨迹 schema；全局平衡、
-> 重试账本及本地-MOOSE 同题验证仍未闭合，所以禁止生成训练标签。固定版本 MOOSE
+> 分区卸荷。v3 加载适配器及 development-only scheduled API 已覆盖这些路径，
+> 求解器也会从最终同一 `(u,d)` 输出结点力；schema v2 则能从原始量重算反力、
+> 分项路径功和能量不平衡。但 scheduled 结果到 schema 的轨迹适配、自适应重试、
+> 全局平衡及本地-MOOSE 同题验证仍未闭合，所以禁止生成训练标签。固定版本 MOOSE
 > 的官方 `crack2d_iso` 自测已经独立通过，但它只验收
 > 外部参考环境，不能替代尚未完成的本地-MOOSE 同题比较。范围、反证和论文大纲见
 > [`RESEARCH_SCOPE.md`](paper/RESEARCH_SCOPE.md)、
@@ -54,7 +55,7 @@ v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久
 | 本机科学栈 | Windows Python 环境已实测 NumPy、SciPy、scikit-fem、Gmsh 的导入、网格和稀疏计算 |
 | GPU 实算 | Windows Python 3.12 + PyTorch `2.11.0+cu128` 已在 RTX 5070 Ti Laptop GPU 上完成 CUDA smoke，并完成 6 方法 × 3 种子的圆洞解析迁移训练；后者结果为 No-Go，只适用于解析圆洞筛查 |
 | WSL2 | Ubuntu 24.04、Git 和同一 GPU 的可见性已通过；官方 MOOSE conda 栈与 `combined-opt` 已构建，固定 `crack2d_iso` 自测以精确单测试过滤运行通过并留存哈希证据 |
-| C-fracture 调试层 | 本地 P1 AT2 spectral-split 内核、不可逆 active-set、独立 schema、冻结开发协议、裂纹带 Gmsh 网格、v3 P1-P4 加载适配器及反力/路径功原语已实现并测试；加载/功尚未接入求解器，完整生成器、MOOSE 同题交叉验证和 SENT/SENS 尚未完成 |
+| C-fracture 调试层 | 本地 P1 AT2 spectral-split 内核、不可逆 active-set、schema v2、冻结开发协议、裂纹带网格、v3 P1-P4 scheduled loading 及反力/路径功原语已实现并测试；轨迹适配/重试/全局平衡、完整生成器、MOOSE 同题交叉验证和 SENT/SENS 尚未完成 |
 | 尚未实现 | 可接受的高保真断裂标签集、动态破坏、微震/AE 波形、FDEM/DEM、实验校准和现场迁移 |
 
 因此，B 层当前是**静态、均质、各向同性、小应变线弹性**结果，不是岩爆、岩体破裂或现场预测结果。schema 明确不允许使用全零 `damage`、`velocity` 或 `dissipation` 字段冒充高保真标签。
@@ -93,6 +94,7 @@ v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久
 - [`docs/FRACTURE_PHASE1_PROTOCOL.md`](docs/FRACTURE_PHASE1_PROTOCOL.md)
 - [`docs/FRACTURE_MESH.md`](docs/FRACTURE_MESH.md)
 - [`docs/FRACTURE_WORK.md`](docs/FRACTURE_WORK.md)
+- [`docs/FRACTURE_SOLVER_LOADING.md`](docs/FRACTURE_SOLVER_LOADING.md)
 - [`docs/FRACTURE_BENCHMARKS.md`](docs/FRACTURE_BENCHMARKS.md)
 
 ## 安装与测试（Windows PowerShell）

@@ -11,9 +11,11 @@ from tunnelgeopt.fracture_schema import (
     ARRAY_KEYS,
     DAMAGE_CONVENTION,
     OPTIONAL_ARRAY_KEYS,
+    SCHEMA_VERSION,
     SI_UNITS,
     FractureSchemaValidationError,
     FractureTrajectory,
+    compute_load_state_sha256,
     load_fracture_trajectory,
     save_fracture_trajectory,
 )
@@ -35,7 +37,17 @@ def _trajectory(
     area = np.asarray([0.5, 0.5], dtype=dtype)
     centers = np.asarray(nodes[elements].mean(axis=1), dtype=dtype)
     load_parameter = np.asarray([0.0, 0.5, 1.0], dtype=dtype)
+    farfield_stress = np.asarray(
+        [[-10.0, -7.0, 0.0], [-10.0, -7.0, 0.0], [-10.0, -7.0, 0.0]],
+        dtype=dtype,
+    )
+    wall_release_by_facet = np.repeat(load_parameter[:, None], wall_facets.shape[0], axis=1)
     u = np.stack([value * nodes * 0.01 for value in load_parameter]).astype(dtype)
+    farfield_dirichlet_dofs = np.asarray([0, 1, 4, 5, 6, 7], dtype=np.int64)
+    flattened_u = u.reshape(3, -1)
+    farfield_prescribed_displacement = flattened_u[:, farfield_dirichlet_dofs]
+    wall_nodal_force = np.zeros_like(flattened_u)
+    farfield_reaction_on_rock = np.zeros((3, farfield_dirichlet_dofs.size), dtype=dtype)
     damage_level = np.asarray([0.0, 0.1, 0.2], dtype=dtype)
     damage = np.repeat(damage_level[:, None], nodes.shape[0], axis=1)
     strain = np.zeros((3, 2, 3), dtype=dtype)
@@ -53,8 +65,35 @@ def _trajectory(
     fracture_energy = fracture_toughness * crack_density
     degradation = (1.0 - damage_level) ** 2 + residual_stiffness
     elastic_energy = degradation * np.asarray([0.0, 1.0, 2.0], dtype=dtype) + 0.5
-    external_work = np.asarray([0.0, 0.2, 0.4], dtype=dtype)
-    total_potential = elastic_energy + fracture_energy - external_work
+    recoverable_energy = elastic_energy + fracture_energy
+    farfield_work_increment = np.asarray(
+        [
+            0.0,
+            recoverable_energy[1] - recoverable_energy[0],
+            recoverable_energy[2] - recoverable_energy[1],
+        ],
+        dtype=dtype,
+    )
+    farfield_reaction_on_rock[1, 2] = 2.0 * farfield_work_increment[1] / 0.005
+    farfield_reaction_on_rock[2, 2] = (
+        2.0 * farfield_work_increment[2] / 0.005 - farfield_reaction_on_rock[1, 2]
+    )
+    internal_nodal_force = np.zeros_like(flattened_u)
+    internal_nodal_force[:, farfield_dirichlet_dofs] = farfield_reaction_on_rock
+    neumann_load_functional = np.zeros(3, dtype=dtype)
+    wall_work_increment = np.zeros(3, dtype=dtype)
+    cumulative_external_work = np.cumsum(farfield_work_increment).astype(dtype)
+    total_potential = recoverable_energy - neumann_load_functional
+
+    load_state_hashes = [
+        compute_load_state_sha256(
+            load_parameter[index : index + 1],
+            farfield_stress[index],
+            wall_release_by_facet[index],
+            wall_facets,
+        )
+        for index in range(load_parameter.size)
+    ]
 
     attempt_ledger = [
         {
@@ -75,6 +114,11 @@ def _trajectory(
             "damage_irreversibility_violation": 0.0,
             "damage_range_violation": 0.0,
             "relative_energy_imbalance": 0.0,
+            "load_state_sha256": load_state_hashes[0],
+            "neumann_load_functional": 0.0,
+            "wall_work_increment": 0.0,
+            "farfield_work_increment": 0.0,
+            "cumulative_external_work": 0.0,
         },
         {
             "step_index": 1,
@@ -94,6 +138,11 @@ def _trajectory(
             "damage_irreversibility_violation": 0.0,
             "damage_range_violation": 0.0,
             "relative_energy_imbalance": 0.1,
+            "load_state_sha256": None,
+            "neumann_load_functional": None,
+            "wall_work_increment": None,
+            "farfield_work_increment": None,
+            "cumulative_external_work": None,
         },
         {
             "step_index": 1,
@@ -107,12 +156,17 @@ def _trajectory(
             "active_set_iterations": 5,
             "staggered_iterations": 2,
             "step_halvings": 1,
-            "equilibrium_relative_residual": 1.0e-8,
+            "equilibrium_relative_residual": 0.0,
             "kkt_relative_residual": 1.0e-8,
             "complementarity_relative_residual": 1.0e-8,
             "damage_irreversibility_violation": 0.0,
             "damage_range_violation": 0.0,
-            "relative_energy_imbalance": 0.01,
+            "relative_energy_imbalance": 0.0,
+            "load_state_sha256": load_state_hashes[1],
+            "neumann_load_functional": 0.0,
+            "wall_work_increment": 0.0,
+            "farfield_work_increment": float(farfield_work_increment[1]),
+            "cumulative_external_work": float(cumulative_external_work[1]),
         },
         {
             "step_index": 2,
@@ -126,12 +180,17 @@ def _trajectory(
             "active_set_iterations": 5,
             "staggered_iterations": 2,
             "step_halvings": 0,
-            "equilibrium_relative_residual": 1.0e-8,
+            "equilibrium_relative_residual": 0.0,
             "kkt_relative_residual": 1.0e-8,
             "complementarity_relative_residual": 1.0e-8,
             "damage_irreversibility_violation": 0.0,
             "damage_range_violation": 0.0,
-            "relative_energy_imbalance": 0.02,
+            "relative_energy_imbalance": 0.0,
+            "load_state_sha256": load_state_hashes[2],
+            "neumann_load_functional": 0.0,
+            "wall_work_increment": 0.0,
+            "farfield_work_increment": float(farfield_work_increment[2]),
+            "cumulative_external_work": float(cumulative_external_work[2]),
         },
     ]
 
@@ -146,13 +205,23 @@ def _trajectory(
 
     return FractureTrajectory(
         nodes=nodes,
+        node_ids=np.asarray([10, 11, 12, 13], dtype=np.int64),
+        displacement_dof_ids=np.arange(8, dtype=np.int64).reshape(4, 2),
+        damage_dof_ids=np.arange(20, 24, dtype=np.int64),
         elements=elements,
         wall_facets=wall_facets,
         farfield_facets=farfield_facets,
+        farfield_dirichlet_dofs=farfield_dirichlet_dofs,
         area=area,
         centers=centers,
         load_parameter=load_parameter,
+        farfield_stress=farfield_stress,
+        wall_release_by_facet=wall_release_by_facet,
         u=u,
+        internal_nodal_force=internal_nodal_force,
+        wall_nodal_force=wall_nodal_force,
+        farfield_prescribed_displacement=farfield_prescribed_displacement,
+        farfield_reaction_on_rock=farfield_reaction_on_rock,
         damage=damage,
         strain=strain,
         stress=stress,
@@ -162,21 +231,23 @@ def _trajectory(
         history=history,
         elastic_energy=np.asarray(elastic_energy, dtype=dtype),
         fracture_energy=np.asarray(fracture_energy, dtype=dtype),
-        external_work=external_work,
+        neumann_load_functional=neumann_load_functional,
+        wall_work_increment=wall_work_increment,
+        farfield_work_increment=farfield_work_increment,
+        cumulative_external_work=cumulative_external_work,
         total_potential_energy=np.asarray(total_potential, dtype=dtype),
-        reaction=np.asarray([0.0, 1.0, 2.0], dtype=dtype),
         damage_area=np.asarray(damage_area, dtype=dtype),
         crack_density_integral=np.asarray(crack_density, dtype=dtype),
         damage_connectivity=np.asarray([0.0, 0.5, 1.0], dtype=dtype),
         displacement_residual=np.asarray([0.0, 1.0e-9, 1.0e-9], dtype=dtype),
         damage_residual=np.asarray([0.0, 1.0e-9, 1.0e-9], dtype=dtype),
-        equilibrium_relative_residual=np.asarray([0.0, 1.0e-8, 1.0e-8], dtype=dtype),
+        equilibrium_relative_residual=np.zeros(3, dtype=dtype),
         kkt_relative_residual=np.asarray([0.0, 1.0e-8, 1.0e-8], dtype=dtype),
         complementarity_relative_residual=np.asarray([0.0, 1.0e-8, 1.0e-8], dtype=dtype),
         damage_irreversibility_violation=np.zeros(3, dtype=dtype),
         damage_range_violation=np.zeros(3, dtype=dtype),
         history_monotonicity_violation=np.zeros(3, dtype=dtype),
-        relative_energy_imbalance=np.asarray([0.0, 0.01, 0.02], dtype=dtype),
+        relative_energy_imbalance=np.zeros(3, dtype=dtype),
         newton_iterations=np.asarray([0, 6, 4], dtype=np.int64),
         active_set_iterations=np.asarray([0, 8, 5], dtype=np.int64),
         staggered_iterations=np.asarray([0, 3, 2], dtype=np.int64),
@@ -191,6 +262,8 @@ def _trajectory(
         load_path_id="load-path-p1",
         config_hash=CONFIG_HASH,
         solver_hash=SOLVER_HASH,
+        equilibrium_force_normalization_floor=1.0e-12,
+        energy_balance_normalization_floor=1.0e-12,
         material={
             "young_modulus": 30.0e9,
             "poisson_ratio": 0.2,
@@ -281,6 +354,8 @@ def test_roundtrip_verifies_file_semantic_array_and_mesh_hashes(
     assert len(metadata["arrays_file_sha256"]) == 64
     assert len(metadata["content_sha256"]) == 64
     assert len(metadata["mesh_content_sha256"]) == 64
+    assert len(metadata["identity_content_sha256"]) == 64
+    assert metadata["schema_version"] == SCHEMA_VERSION == 2
     assert set(metadata["array_manifest"]) == set(ARRAY_KEYS)
 
     loaded = load_fracture_trajectory(paths.trajectory_dir)
@@ -289,6 +364,155 @@ def test_roundtrip_verifies_file_semantic_array_and_mesh_hashes(
     for name in ARRAY_KEYS:
         assert np.array_equal(getattr(loaded, name), getattr(trajectory, name))
         assert not getattr(loaded, name).flags.writeable
+
+
+def test_v1_metadata_is_explicitly_rejected_without_implicit_migration(
+    tmp_path, trajectory: FractureTrajectory
+) -> None:
+    paths = save_fracture_trajectory(tmp_path / "v1", trajectory)
+    metadata = json.loads(paths.meta.read_text(encoding="utf-8"))
+    metadata["schema_version"] = 1
+    paths.meta.write_text(json.dumps(metadata), encoding="utf-8")
+    with pytest.raises(FractureSchemaValidationError, match="unsupported"):
+        load_fracture_trajectory(paths.trajectory_dir)
+
+
+def test_work_reaction_and_total_potential_are_recomputed_from_raw_arrays(
+    trajectory: FractureTrajectory,
+) -> None:
+    trajectory.validate()
+    assert np.any(trajectory.cumulative_external_work[1:] != 0.0)
+    assert np.array_equal(trajectory.neumann_load_functional, np.zeros(3))
+    assert np.allclose(
+        trajectory.total_potential_energy,
+        trajectory.elastic_energy + trajectory.fracture_energy,
+    )
+    assert not np.allclose(
+        trajectory.total_potential_energy,
+        trajectory.elastic_energy
+        + trajectory.fracture_energy
+        - trajectory.cumulative_external_work,
+    )
+
+    bad_reaction = np.asarray(trajectory.farfield_reaction_on_rock).copy()
+    bad_reaction[1, 0] += 1.0
+    with pytest.raises(FractureSchemaValidationError, match="must equal .*internal_nodal_force"):
+        replace(trajectory, farfield_reaction_on_rock=bad_reaction).validate()
+
+    bad_internal = np.asarray(trajectory.internal_nodal_force).copy()
+    bad_internal[1, 2] += 1.0
+    with pytest.raises(FractureSchemaValidationError, match="recomputed free-DOF"):
+        replace(trajectory, internal_nodal_force=bad_internal).validate()
+
+    bad_prescribed = np.asarray(trajectory.farfield_prescribed_displacement).copy()
+    bad_prescribed[1, 0] += 1.0e-5
+    with pytest.raises(FractureSchemaValidationError, match="must equal u"):
+        replace(trajectory, farfield_prescribed_displacement=bad_prescribed).validate()
+
+    bad_work = np.asarray(trajectory.farfield_work_increment).copy()
+    bad_work[1] += 1.0
+    with pytest.raises(FractureSchemaValidationError, match="recomputed accepted-state"):
+        replace(trajectory, farfield_work_increment=bad_work).validate()
+
+    bad_cumulative = np.asarray(trajectory.cumulative_external_work).copy()
+    bad_cumulative[2] += 1.0
+    with pytest.raises(FractureSchemaValidationError, match="recomputed accepted-state"):
+        replace(trajectory, cumulative_external_work=bad_cumulative).validate()
+
+    bad_imbalance = np.asarray(trajectory.relative_energy_imbalance).copy()
+    bad_imbalance[1] = 1.0e-2
+    with pytest.raises(FractureSchemaValidationError, match="must be recomputed"):
+        replace(trajectory, relative_energy_imbalance=bad_imbalance).validate()
+
+    cumulative_potential = (
+        trajectory.elastic_energy + trajectory.fracture_energy - trajectory.cumulative_external_work
+    )
+    with pytest.raises(FractureSchemaValidationError, match="instantaneous"):
+        replace(trajectory, total_potential_energy=cumulative_potential).validate()
+
+
+def test_load_state_and_discrete_identity_are_order_bound(
+    trajectory: FractureTrajectory,
+) -> None:
+    changed_stress = np.asarray(trajectory.farfield_stress).copy()
+    changed_stress[1, 0] -= 1.0
+    with pytest.raises(FractureSchemaValidationError, match="load_state_sha256"):
+        replace(trajectory, farfield_stress=changed_stress).validate()
+
+    changed_release = np.asarray(trajectory.wall_release_by_facet).copy()
+    changed_release[1, 0] = 0.4
+    with pytest.raises(FractureSchemaValidationError, match="load_state_sha256"):
+        replace(trajectory, wall_release_by_facet=changed_release).validate()
+
+    reversed_facets = np.asarray(trajectory.wall_facets)[::-1].copy()
+    with pytest.raises(FractureSchemaValidationError, match="load_state_sha256"):
+        replace(trajectory, wall_facets=reversed_facets).validate()
+
+    duplicate_node_ids = np.asarray(trajectory.node_ids).copy()
+    duplicate_node_ids[1] = duplicate_node_ids[0]
+    with pytest.raises(FractureSchemaValidationError, match="unique non-negative"):
+        replace(trajectory, node_ids=duplicate_node_ids).validate()
+
+    swapped_displacement_ids = np.asarray(trajectory.displacement_dof_ids).copy()
+    swapped_displacement_ids[[0, 1]] = swapped_displacement_ids[[1, 0]]
+    with pytest.raises(FractureSchemaValidationError, match="node-major"):
+        replace(trajectory, displacement_dof_ids=swapped_displacement_ids).validate()
+
+    unsorted_dofs = np.asarray(trajectory.farfield_dirichlet_dofs)[::-1].copy()
+    with pytest.raises(FractureSchemaValidationError, match="strictly increasing"):
+        replace(trajectory, farfield_dirichlet_dofs=unsorted_dofs).validate()
+
+
+def test_rejected_attempts_cannot_publish_accepted_work_or_load_identity(
+    trajectory: FractureTrajectory,
+) -> None:
+    ledger = [dict(entry) for entry in trajectory.attempt_ledger]
+    ledger[1]["farfield_work_increment"] = 1.0
+    with pytest.raises(FractureSchemaValidationError, match="rejected attempt_ledger"):
+        replace(trajectory, attempt_ledger=ledger).validate()
+
+    ledger = [dict(entry) for entry in trajectory.attempt_ledger]
+    ledger[1]["load_state_sha256"] = "a" * 64
+    with pytest.raises(FractureSchemaValidationError, match="rejected attempt_ledger"):
+        replace(trajectory, attempt_ledger=ledger).validate()
+
+
+@pytest.mark.parametrize("floor", [0.0, -1.0, np.inf, np.nan])
+@pytest.mark.parametrize(
+    "field_name",
+    ["equilibrium_force_normalization_floor", "energy_balance_normalization_floor"],
+)
+def test_normalization_floors_are_explicit_positive_and_finite(
+    trajectory: FractureTrajectory, floor: float, field_name: str
+) -> None:
+    with pytest.raises(FractureSchemaValidationError, match="finite and strictly positive"):
+        replace(trajectory, **{field_name: floor}).validate()
+
+
+def test_free_dof_equilibrium_is_not_diluted_by_large_constraint_reactions(
+    trajectory: FractureTrajectory,
+) -> None:
+    internal = np.asarray(trajectory.internal_nodal_force).copy()
+    wall = np.asarray(trajectory.wall_nodal_force).copy()
+    reaction = np.asarray(trajectory.farfield_reaction_on_rock).copy()
+    residual = np.asarray(trajectory.equilibrium_relative_residual).copy()
+
+    constrained = np.asarray(trajectory.farfield_dirichlet_dofs)
+    # This constrained component has zero prescribed displacement at all steps,
+    # so making its reaction huge does not alter the independently recomputed work.
+    internal[:, constrained[0]] = 1.0e12
+    reaction[:, 0] = internal[:, constrained[0]] - wall[:, constrained[0]]
+    free_dof = int(np.flatnonzero(~np.isin(np.arange(internal.shape[1]), constrained))[0])
+    internal[1, free_dof] = wall[1, free_dof] + 1.0
+    residual[1] = 1.0
+
+    with pytest.raises(FractureSchemaValidationError, match="exceeds 1e-6"):
+        replace(
+            trajectory,
+            internal_nodal_force=internal,
+            farfield_reaction_on_rock=reaction,
+            equilibrium_relative_residual=residual,
+        ).validate()
 
 
 def test_optional_elastic_basis_is_hash_linked_and_decomposes_stress(tmp_path) -> None:
@@ -384,7 +608,7 @@ def test_arrays_corruption_and_metadata_tampering_fail_closed(
                 item,
                 equilibrium_relative_residual=np.asarray([0.0, 2.0e-6, 0.0], dtype=np.float64),
             ),
-            "exceeds 1e-6",
+            "recomputed free-DOF",
         ),
         (
             lambda item: replace(

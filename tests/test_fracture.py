@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import numpy as np
 import pytest
 
 pytest.importorskip("scipy")
 skfem = pytest.importorskip("skfem")
 
+import tunnelgeopt.fracture as fracture_module
 from tunnelgeopt.elasticity import (
     plane_strain_sigma_xx,
     plane_strain_stress,
@@ -15,6 +18,7 @@ from tunnelgeopt.fracture import (
     AT2LoadPath,
     AT2Material,
     FractureSolverOptions,
+    _evaluate_fixed_damage_displacement_at_load_state,
     _evaluate_fixed_damage_displacement_state,
     assemble_at2_damage_system,
     degradation,
@@ -22,10 +26,15 @@ from tunnelgeopt.fracture import (
     plane_strain_spectral_split,
     solve_at2_damage,
     solve_at2_fracture,
+    solve_at2_fracture_schedule,
     solve_fixed_damage_displacement,
+    solve_fixed_damage_displacement_at_load_state,
     update_history,
 )
-from tunnelgeopt.mesh import FARFIELD, WALL
+from tunnelgeopt.fracture_loading import compile_phase1_load_schedule
+from tunnelgeopt.fracture_validation import load_fracture_phase1_config
+from tunnelgeopt.fracture_work import BoundaryEquilibriumState
+from tunnelgeopt.mesh import FARFIELD, WALL, TunnelMesh
 
 
 def _square_annulus_mesh() -> object:
@@ -61,6 +70,41 @@ def _square_annulus_mesh() -> object:
     wall = boundary[np.all(np.isin(boundary_nodes, [4, 5, 6, 7]), axis=0)]
     farfield = boundary[np.all(np.isin(boundary_nodes, [0, 1, 2, 3]), axis=0)]
     return mesh.with_boundaries({WALL: wall, FARFIELD: farfield})
+
+
+def _square_annulus_tunnel_mesh() -> TunnelMesh:
+    mesh = _square_annulus_mesh()
+    wall = np.asarray(mesh.boundaries[WALL], dtype=np.int64)
+    farfield = np.asarray(mesh.boundaries[FARFIELD], dtype=np.int64)
+    return TunnelMesh(
+        mesh=mesh,
+        nodes=np.asarray(mesh.p.T, dtype=np.float64),
+        elements=np.asarray(mesh.t.T, dtype=np.int64),
+        boundary_facets={WALL: wall, FARFIELD: farfield},
+        facet_markers=np.zeros(mesh.facets.shape[1], dtype=np.int64),
+        cell_markers=np.zeros(mesh.t.shape[1], dtype=np.int64),
+        physical_tags={WALL: 1, FARFIELD: 2},
+        outer_bounds=(-2.0, 2.0, -2.0, 2.0),
+        metadata={"test_fixture": "square_annulus"},
+    )
+
+
+def _intact_material() -> AT2Material:
+    return AT2Material(
+        young_modulus=100.0,
+        poisson_ratio=0.25,
+        fracture_toughness=1.0e6,
+        length_scale=0.5,
+        residual_stiffness=0.0,
+    )
+
+
+def _strict_options() -> FractureSolverOptions:
+    return FractureSolverOptions(
+        equilibrium_tolerance=1.0e-10,
+        kkt_tolerance=1.0e-10,
+        staggered_tolerance=1.0e-9,
+    )
 
 
 def test_three_dimensional_plane_strain_spectral_reconstruction_and_energy() -> None:
@@ -344,3 +388,323 @@ def test_staggered_acceptance_reassembles_the_post_damage_state() -> None:
     assert continued.converged
     assert continued.staggered_iterations > 1
     assert continued.equilibrium_residual <= continuing_options.equilibrium_tolerance
+
+
+def test_p1_load_state_is_bitwise_identical_to_legacy_uniform_release() -> None:
+    mesh = _square_annulus_tunnel_mesh()
+    material = _intact_material()
+    options = _strict_options()
+    schedule = compile_phase1_load_schedule(load_fracture_phase1_config(), "p1", 1.0, mesh)
+
+    for parameter in (0.0, 0.25, 0.5, 0.75, 1.0):
+        state = schedule.state_at(parameter)
+        legacy = solve_fixed_damage_displacement(
+            mesh,
+            material,
+            state.farfield_stress_tension_positive_yz,
+            load_parameter=parameter,
+            damage=0.0,
+            options=options,
+        )
+        scheduled = solve_fixed_damage_displacement_at_load_state(
+            mesh, material, schedule, state, damage=0.0, options=options
+        )
+        for field in (
+            "displacement",
+            "correction_displacement",
+            "strain",
+            "stress",
+            "psi_positive",
+            "psi_negative",
+            "internal_force",
+            "wall_nodal_force",
+            "dirichlet_dofs",
+            "farfield_prescribed_displacement",
+        ):
+            assert np.array_equal(getattr(scheduled, field), getattr(legacy, field)), field
+        for field in (
+            "elastic_energy",
+            "external_work",
+            "residual_norm",
+            "equilibrium_residual",
+            "iterations",
+            "converged",
+        ):
+            assert getattr(scheduled, field) == getattr(legacy, field), field
+        assert scheduled.neumann_load_functional == scheduled.external_work
+
+
+def test_p1_scheduled_trajectory_is_bitwise_identical_to_legacy_trajectory() -> None:
+    mesh = _square_annulus_tunnel_mesh()
+    material = AT2Material(100.0, 0.25, 100.0, 0.5, residual_stiffness=0.0)
+    options = _strict_options()
+    path = AT2LoadPath((0.0, 0.5, 1.0))
+    schedule = compile_phase1_load_schedule(load_fracture_phase1_config(), "p1", 1.0, mesh)
+    state = schedule.state_at(0.0)
+    legacy = solve_at2_fracture(
+        mesh,
+        material,
+        state.farfield_stress_tension_positive_yz,
+        load_path=path,
+        options=options,
+    )
+    scheduled = solve_at2_fracture_schedule(
+        mesh, material, schedule, load_path=path, options=options
+    )
+
+    assert legacy.converged and scheduled.converged
+    for scheduled_step, legacy_step in zip(scheduled.steps, legacy.steps, strict=True):
+        for field in (
+            "displacement",
+            "correction_displacement",
+            "damage",
+            "strain",
+            "stress",
+            "psi_positive",
+            "psi_negative",
+            "history",
+            "internal_force",
+            "wall_nodal_force",
+            "dirichlet_dofs",
+            "farfield_prescribed_displacement",
+        ):
+            assert np.array_equal(getattr(scheduled_step, field), getattr(legacy_step, field)), (
+                field
+            )
+        for field in (
+            "load_parameter",
+            "elastic_energy",
+            "fracture_energy",
+            "external_work",
+            "total_potential_energy",
+            "equilibrium_residual",
+            "kkt_residual",
+            "complementarity_residual",
+            "irreversibility_violation",
+            "range_violation",
+            "displacement_change",
+            "damage_change",
+            "staggered_iterations",
+            "displacement_iterations",
+            "damage_iterations",
+            "converged",
+        ):
+            assert getattr(scheduled_step, field) == getattr(legacy_step, field), field
+
+
+@pytest.mark.parametrize("path_id, parameter", [("p2", 0.5), ("p3", 0.75)])
+def test_p2_p3_use_current_farfield_stress_and_uniform_release(
+    path_id: str, parameter: float
+) -> None:
+    mesh = _square_annulus_tunnel_mesh()
+    material = _intact_material()
+    options = _strict_options()
+    schedule = compile_phase1_load_schedule(load_fracture_phase1_config(), path_id, 1.0, mesh)
+    initial_state = schedule.state_at(0.0)
+    current_state = schedule.state_at(parameter)
+    scheduled = solve_fixed_damage_displacement_at_load_state(
+        mesh, material, schedule, current_state, damage=0.0, options=options
+    )
+    current_stress_legacy = solve_fixed_damage_displacement(
+        mesh,
+        material,
+        current_state.farfield_stress_tension_positive_yz,
+        load_parameter=float(current_state.wall_release[0]),
+        damage=0.0,
+        options=options,
+    )
+
+    assert not np.array_equal(
+        current_state.farfield_stress_tension_positive_yz,
+        initial_state.farfield_stress_tension_positive_yz,
+    )
+    assert np.array_equal(
+        scheduled.farfield_prescribed_displacement,
+        current_stress_legacy.farfield_prescribed_displacement,
+    )
+    assert np.array_equal(scheduled.displacement, current_stress_legacy.displacement)
+    assert np.array_equal(scheduled.wall_nodal_force, current_stress_legacy.wall_nodal_force)
+    if path_id == "p3":
+        assert current_state.farfield_stress_tension_positive_yz[0, 1] != 0.0
+
+
+def test_scheduled_trajectory_carries_previous_correction_to_current_affine(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mesh = _square_annulus_tunnel_mesh()
+    material = _intact_material()
+    schedule = compile_phase1_load_schedule(load_fracture_phase1_config(), "p2", 1.0, mesh)
+    captured_first_correction: dict[float, np.ndarray] = {}
+    original = fracture_module.solve_fixed_damage_displacement_at_load_state
+
+    def capture_initial_correction(*args: object, **kwargs: object) -> object:
+        load_state = args[3]
+        assert hasattr(load_state, "s")
+        parameter = float(load_state.s)  # type: ignore[attr-defined]
+        correction = np.asarray(kwargs["initial_correction_displacement"])
+        captured_first_correction.setdefault(parameter, correction.copy())
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(
+        fracture_module,
+        "solve_fixed_damage_displacement_at_load_state",
+        capture_initial_correction,
+    )
+    result = solve_at2_fracture_schedule(
+        mesh,
+        material,
+        schedule,
+        load_path=AT2LoadPath((0.0, 0.5)),
+        options=_strict_options(),
+    )
+
+    assert result.converged
+    assert np.array_equal(captured_first_correction[0.0], np.zeros_like(mesh.nodes))
+    assert np.array_equal(captured_first_correction[0.5], result.steps[0].correction_displacement)
+    assert not np.array_equal(
+        result.steps[0].farfield_prescribed_displacement,
+        result.steps[1].farfield_prescribed_displacement,
+    )
+
+
+def test_p4_nonuniform_release_differs_from_same_mean_and_aligns_by_facet_id() -> None:
+    mesh = _square_annulus_tunnel_mesh()
+    material = _intact_material()
+    options = _strict_options()
+    schedule = compile_phase1_load_schedule(load_fracture_phase1_config(), "p4", 1.0, mesh)
+    state = schedule.state_at(0.375)
+    mean_release = float(np.mean(state.wall_release))
+    nonuniform = solve_fixed_damage_displacement_at_load_state(
+        mesh, material, schedule, state, damage=0.0, options=options
+    )
+    uniform = solve_fixed_damage_displacement(
+        mesh,
+        material,
+        state.farfield_stress_tension_positive_yz,
+        load_parameter=mean_release,
+        damage=0.0,
+        options=options,
+    )
+
+    assert not np.allclose(nonuniform.wall_nodal_force, uniform.wall_nodal_force)
+    assert not np.allclose(nonuniform.displacement, uniform.displacement)
+
+    reverse = np.arange(state.wall_facet_ids.size - 1, -1, -1)
+    reordered_state = replace(
+        state,
+        wall_facet_ids=state.wall_facet_ids[reverse],
+        wall_zone_weights=state.wall_zone_weights[reverse],
+        wall_release=state.wall_release[reverse],
+    )
+    reordered = solve_fixed_damage_displacement_at_load_state(
+        mesh, material, schedule, reordered_state, damage=0.0, options=options
+    )
+    assert np.array_equal(reordered.wall_nodal_force, nonuniform.wall_nodal_force)
+    assert np.array_equal(reordered.displacement, nonuniform.displacement)
+
+    missing_facet_state = replace(
+        state,
+        wall_facet_ids=state.wall_facet_ids[:-1],
+        wall_zone_weights=state.wall_zone_weights[:-1],
+        wall_release=state.wall_release[:-1],
+    )
+    with pytest.raises(ValueError, match="inconsistent with its load schedule"):
+        solve_fixed_damage_displacement_at_load_state(
+            mesh, material, schedule, missing_facet_state, damage=0.0, options=options
+        )
+
+
+def test_load_schedule_rejects_same_facet_ids_from_different_wall_geometry() -> None:
+    mesh = _square_annulus_tunnel_mesh()
+    foreign_nodes = mesh.nodes.copy()
+    foreign_nodes[[4, 7], 0] *= 0.7
+    foreign_nodes[[5, 6], 0] *= 1.3
+    foreign_mesh = replace(mesh, nodes=foreign_nodes)
+    foreign_schedule = compile_phase1_load_schedule(
+        load_fracture_phase1_config(), "p4", 1.0, foreign_mesh
+    )
+    foreign_state = foreign_schedule.state_at(0.375)
+
+    assert np.array_equal(foreign_schedule.wall_facet_ids, mesh.boundary_facets[WALL])
+    with pytest.raises(ValueError, match="wall facet endpoints do not match"):
+        solve_fixed_damage_displacement_at_load_state(
+            mesh,
+            _intact_material(),
+            foreign_schedule,
+            foreign_state,
+            damage=0.0,
+            options=_strict_options(),
+        )
+
+
+def test_load_schedule_rejects_changed_wall_endpoints_with_same_midpoints() -> None:
+    mesh = _square_annulus_tunnel_mesh()
+    schedule = compile_phase1_load_schedule(load_fracture_phase1_config(), "p4", 1.0, mesh)
+    state = schedule.state_at(0.375)
+    changed = mesh.nodes.copy()
+    wall_facet_id = int(mesh.boundary_facets[WALL][0])
+    edge_nodes = np.asarray(mesh.mesh.facets)[:, wall_facet_id]
+    direction = changed[edge_nodes[1]] - changed[edge_nodes[0]]
+    delta = 0.1 * direction
+    changed[edge_nodes[0]] -= delta
+    changed[edge_nodes[1]] += delta
+    changed_mesh_object = mesh.mesh.copy()
+    changed_mesh_object.p[:, :] = changed.T
+    changed_mesh = replace(mesh, mesh=changed_mesh_object, nodes=changed)
+
+    original_midpoint = np.asarray(schedule.wall_facet_midpoints_yz)[0]
+    changed_midpoint = changed[edge_nodes].mean(axis=0)
+    assert changed_midpoint == pytest.approx(original_midpoint)
+    with pytest.raises(ValueError, match="wall facet endpoints do not match"):
+        solve_fixed_damage_displacement_at_load_state(
+            changed_mesh,
+            _intact_material(),
+            schedule,
+            state,
+            damage=0.0,
+            options=_strict_options(),
+        )
+
+
+def test_scheduled_final_forces_are_reassembled_from_the_same_u_d_state() -> None:
+    mesh = _square_annulus_tunnel_mesh()
+    material = AT2Material(100.0, 0.25, 100.0, 0.5, residual_stiffness=0.0)
+    options = _strict_options()
+    schedule = compile_phase1_load_schedule(load_fracture_phase1_config(), "p3", 1.0, mesh)
+    result = solve_at2_fracture_schedule(
+        mesh,
+        material,
+        schedule,
+        load_path=AT2LoadPath((0.0, 0.5, 1.0)),
+        options=options,
+    )
+    step = result.final
+    recomputed = _evaluate_fixed_damage_displacement_at_load_state(
+        mesh,
+        material,
+        schedule,
+        step.load_state,
+        damage=step.damage,
+        displacement=step.displacement,
+        options=options,
+    )
+    for field in (
+        "internal_force",
+        "wall_nodal_force",
+        "dirichlet_dofs",
+        "farfield_prescribed_displacement",
+        "strain",
+        "stress",
+    ):
+        assert np.array_equal(getattr(step, field), getattr(recomputed, field)), field
+    boundary_state = BoundaryEquilibriumState(
+        displacement=step.displacement,
+        internal_force=step.internal_force,
+        wall_nodal_force=step.wall_nodal_force,
+        dirichlet_dofs=step.dirichlet_dofs,
+        farfield_prescribed_displacement=step.farfield_prescribed_displacement,
+    )
+    assert np.linalg.norm(boundary_state.free_residual) == pytest.approx(
+        recomputed.residual_norm, rel=2.0e-14, abs=1.0e-15
+    )
+    assert step.neumann_load_functional == step.external_work

@@ -176,12 +176,17 @@
 - [x] 完成配置到 `s, sigma_inf(s), wall_release_by_facet(s)` 的唯一 v3 加载适配器；
   已冻结 `(y,z)` 坐标、主应力角/符号/插值顺序和 P4 实际壁面 facet 分区，并支持
   41 个必需状态及自适应重试所需的任意 `s in [0,1]`。
-- [ ] 将 v3 加载状态接入位移/损伤求解器，验证 P1 旧路径逐位回归、P2/P3 变远场
-  仿射位移与壁面力、P4 逐 facet 卸荷，并将全部接受子步写入轨迹。
+- [x] 将 v3 加载状态接入 development-only 位移/损伤求解器；P1 与旧路径逐位回归，
+  P2/P3 当前远场仿射场与 correction carry、P4 逐 facet 卸荷及 foreign-wall 拒绝均已测试。
+- [ ] 为 scheduled 求解增加 41 个必需输出、自适应减半、失败重试和全部接受子步账本。
 - [x] 冻结独立反力/路径功原语：约束反力符号、壁面与远场梯形功、拒绝尝试回滚、
   瞬时 Neumann 泛函和带显式物理尺度下限的增量能量诊断均已有专项测试。
-- [ ] 让求解器在同一收敛 `(u,d)` 状态输出内力/壁面力/约束反力，并把接受子步的
-  分项累计功、全局力矩平衡、重试账本和新版 trajectory schema 闭合。
+- [x] 让求解器在同一收敛 `(u,d)` 状态输出内力、壁面力、约束 DOF 与规定位移；
+  trajectory schema v2 已从这些原始量重算反力、自由 DOF 残差、分项功、累计功和
+  能量不平衡，并绑定完整几何/拓扑/DOF/加载身份。
+- [ ] 将 scheduled 求解结果适配并保存为 schema v2；保存前必须对每个接受步重放
+  `Phase1LoadSchedule.state_at(s)` 并逐位核对 stress/facet order/release，再接入分项
+  累计功、全局合力/力矩、重试账本和保存-重载-复验 E2E。
 - [x] 完成可选裂纹带 Gmsh Distance/Threshold 背景场及生成后实际最大边长和
   `h/ell` 硬审计；默认 B-elastic 网格路径保持兼容，尚未运行协议规模网格。
 - [x] 固定 MOOSE `crack2d_iso` reference self-test 在 WSL 中精确运行 1/1 通过，

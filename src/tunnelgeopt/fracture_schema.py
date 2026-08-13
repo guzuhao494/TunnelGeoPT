@@ -32,7 +32,7 @@ import numpy as np
 ARRAYS_FILENAME = "arrays.npz"
 META_FILENAME = "meta.json"
 SCHEMA_NAME = "tunnelgeopt.c_fracture_trajectory"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 FLOAT64 = np.dtype(np.float64)
 FLOAT32 = np.dtype(np.float32)
@@ -52,13 +52,23 @@ ENERGY_IMBALANCE_TOLERANCE = 5.0e-2
 
 SI_UNITS: dict[str, str] = {
     "nodes": "m",
+    "node_ids": "id",
+    "displacement_dof_ids": "id",
+    "damage_dof_ids": "id",
     "elements": "index",
     "wall_facets": "index",
     "farfield_facets": "index",
+    "farfield_dirichlet_dofs": "index",
     "area": "m^2",
     "centers": "m",
     "load_parameter": "1",
+    "farfield_stress": "Pa",
+    "wall_release_by_facet": "1",
     "u": "m",
+    "internal_nodal_force": "N/m",
+    "wall_nodal_force": "N/m",
+    "farfield_prescribed_displacement": "m",
+    "farfield_reaction_on_rock": "N/m",
     "damage": "1",
     "strain": "1",
     "stress": "Pa",
@@ -68,9 +78,13 @@ SI_UNITS: dict[str, str] = {
     "history": "J/m^3",
     "elastic_energy": "J/m",
     "fracture_energy": "J/m",
-    "external_work": "J/m",
+    "neumann_load_functional": "J/m",
+    "wall_work_increment": "J/m",
+    "farfield_work_increment": "J/m",
+    "cumulative_external_work": "J/m",
+    "equilibrium_force_normalization_floor": "N/m",
+    "energy_balance_normalization_floor": "J/m",
     "total_potential_energy": "J/m",
-    "reaction": "N/m",
     "damage_area": "m^2",
     "crack_density_integral": "m",
     "damage_connectivity": "1",
@@ -97,7 +111,13 @@ FLOAT_ARRAY_KEYS = (
     "area",
     "centers",
     "load_parameter",
+    "farfield_stress",
+    "wall_release_by_facet",
     "u",
+    "internal_nodal_force",
+    "wall_nodal_force",
+    "farfield_prescribed_displacement",
+    "farfield_reaction_on_rock",
     "damage",
     "strain",
     "stress",
@@ -107,9 +127,11 @@ FLOAT_ARRAY_KEYS = (
     "history",
     "elastic_energy",
     "fracture_energy",
-    "external_work",
+    "neumann_load_functional",
+    "wall_work_increment",
+    "farfield_work_increment",
+    "cumulative_external_work",
     "total_potential_energy",
-    "reaction",
     "damage_area",
     "crack_density_integral",
     "damage_connectivity",
@@ -124,9 +146,13 @@ FLOAT_ARRAY_KEYS = (
     "relative_energy_imbalance",
 )
 INDEX_ARRAY_KEYS = (
+    "node_ids",
+    "displacement_dof_ids",
+    "damage_dof_ids",
     "elements",
     "wall_facets",
     "farfield_facets",
+    "farfield_dirichlet_dofs",
     "newton_iterations",
     "active_set_iterations",
     "staggered_iterations",
@@ -155,6 +181,11 @@ ATTEMPT_LEDGER_KEYS = frozenset(
         "damage_irreversibility_violation",
         "damage_range_violation",
         "relative_energy_imbalance",
+        "load_state_sha256",
+        "neumann_load_functional",
+        "wall_work_increment",
+        "farfield_work_increment",
+        "cumulative_external_work",
     }
 )
 
@@ -201,6 +232,9 @@ _META_KEYS = frozenset(
         "completed",
         "accepted",
         "mesh_content_sha256",
+        "identity_content_sha256",
+        "equilibrium_force_normalization_floor",
+        "energy_balance_normalization_floor",
         "coordinate_order",
         "strain_component_order",
         "stress_component_order",
@@ -321,13 +355,23 @@ class FractureTrajectory:
     """
 
     nodes: np.ndarray
+    node_ids: np.ndarray
+    displacement_dof_ids: np.ndarray
+    damage_dof_ids: np.ndarray
     elements: np.ndarray
     wall_facets: np.ndarray
     farfield_facets: np.ndarray
+    farfield_dirichlet_dofs: np.ndarray
     area: np.ndarray
     centers: np.ndarray
     load_parameter: np.ndarray
+    farfield_stress: np.ndarray
+    wall_release_by_facet: np.ndarray
     u: np.ndarray
+    internal_nodal_force: np.ndarray
+    wall_nodal_force: np.ndarray
+    farfield_prescribed_displacement: np.ndarray
+    farfield_reaction_on_rock: np.ndarray
     damage: np.ndarray
     strain: np.ndarray
     stress: np.ndarray
@@ -337,9 +381,11 @@ class FractureTrajectory:
     history: np.ndarray
     elastic_energy: np.ndarray
     fracture_energy: np.ndarray
-    external_work: np.ndarray
+    neumann_load_functional: np.ndarray
+    wall_work_increment: np.ndarray
+    farfield_work_increment: np.ndarray
+    cumulative_external_work: np.ndarray
     total_potential_energy: np.ndarray
-    reaction: np.ndarray
     damage_area: np.ndarray
     crack_density_integral: np.ndarray
     damage_connectivity: np.ndarray
@@ -366,6 +412,8 @@ class FractureTrajectory:
     load_path_id: str
     config_hash: str
     solver_hash: str
+    equilibrium_force_normalization_floor: float
+    energy_balance_normalization_floor: float
     material: Mapping[str, Any]
     geometry: Mapping[str, Any]
     load_path: Mapping[str, Any]
@@ -743,6 +791,16 @@ def _validate_load_path(load_path: Mapping[str, Any]) -> None:
 
 
 def _validate_metadata(record: FractureTrajectory) -> tuple[dict[str, Any], dict[str, Any]]:
+    for name in (
+        "equilibrium_force_normalization_floor",
+        "energy_balance_normalization_floor",
+    ):
+        floor = getattr(record, name)
+        if isinstance(floor, bool) or not isinstance(floor, Real):
+            raise FractureSchemaValidationError(f"{name} must be numeric")
+        if not math.isfinite(float(floor)) or float(floor) <= 0.0:
+            raise FractureSchemaValidationError(f"{name} must be finite and strictly positive")
+
     material = _normalise_json(record.material, path="$.material")
     required_material = {
         "young_modulus",
@@ -874,6 +932,49 @@ def _validate_mesh(record: FractureTrajectory, dtype: np.dtype) -> tuple[np.ndar
     return triangles, twice_signed_area
 
 
+def _validate_discrete_identity(record: FractureTrajectory) -> np.ndarray:
+    """Validate row-stable node, field-DOF, and constrained-DOF identities."""
+
+    node_count = record.num_nodes
+    node_ids = _require_index_array("node_ids", record.node_ids, (node_count,))
+    displacement_ids = _require_index_array(
+        "displacement_dof_ids", record.displacement_dof_ids, (node_count, 2)
+    )
+    damage_ids = _require_index_array("damage_dof_ids", record.damage_dof_ids, (node_count,))
+    for name, values in (
+        ("node_ids", node_ids),
+        ("displacement_dof_ids", displacement_ids),
+        ("damage_dof_ids", damage_ids),
+    ):
+        if np.any(values < 0) or np.unique(values).size != values.size:
+            raise FractureSchemaValidationError(
+                f"{name} must contain unique non-negative field-local identifiers"
+            )
+    expected_displacement_ids = np.arange(2 * node_count, dtype=np.int64).reshape(node_count, 2)
+    if not np.array_equal(displacement_ids, expected_displacement_ids):
+        raise FractureSchemaValidationError(
+            "displacement_dof_ids must equal node-major [2*i, 2*i+1] identifiers"
+        )
+    dirichlet = _require_index_array(
+        "farfield_dirichlet_dofs",
+        record.farfield_dirichlet_dofs,
+        (None,),
+        upper_bound=2 * node_count,
+    )
+    if dirichlet.size == 0:
+        raise FractureSchemaValidationError("farfield_dirichlet_dofs must not be empty")
+    if dirichlet.size > 1 and np.any(np.diff(dirichlet) <= 0):
+        raise FractureSchemaValidationError(
+            "farfield_dirichlet_dofs must be unique and strictly increasing"
+        )
+    farfield_nodes = np.unique(record.farfield_facets)
+    if not np.all(np.isin(dirichlet // 2, farfield_nodes)):
+        raise FractureSchemaValidationError(
+            "farfield_dirichlet_dofs may reference only farfield-facet nodes"
+        )
+    return dirichlet
+
+
 def _p1_damage_integrals(
     nodes: np.ndarray,
     elements: np.ndarray,
@@ -918,6 +1019,7 @@ def _validate_state_arrays(
     record: FractureTrajectory,
     dtype: np.dtype,
     material: Mapping[str, Any],
+    dirichlet_dofs: np.ndarray,
 ) -> None:
     step_count = record.num_steps
     node_count = record.num_nodes
@@ -927,12 +1029,104 @@ def _validate_state_arrays(
     load = _require_float_array("load_parameter", record.load_parameter, (step_count,), dtype)
     if np.any(load < 0.0) or np.any(load > 1.0):
         raise FractureSchemaValidationError("load_parameter must lie in [0,1]")
+    if float(load[0]) != 0.0:
+        raise FractureSchemaValidationError(
+            "the first accepted state must define the s=0 path-work reference"
+        )
     if step_count > 1 and np.any(np.diff(load) <= 0.0):
         raise FractureSchemaValidationError(
             "load_parameter must be strictly increasing across accepted steps"
         )
 
-    _require_float_array("u", record.u, (step_count, node_count, 2), dtype)
+    _require_float_array("farfield_stress", record.farfield_stress, (step_count, 3), dtype)
+    wall_release = _require_float_array(
+        "wall_release_by_facet",
+        record.wall_release_by_facet,
+        (step_count, record.wall_facets.shape[0]),
+        dtype,
+    )
+    if np.any(wall_release < 0.0) or np.any(wall_release > 1.0):
+        raise FractureSchemaValidationError("wall_release_by_facet must lie in [0,1]")
+    if step_count > 1 and np.any(np.diff(wall_release.astype(np.float64), axis=0) < 0.0):
+        raise FractureSchemaValidationError(
+            "wall_release_by_facet must be monotone for every ordered wall facet"
+        )
+
+    u = _require_float_array("u", record.u, (step_count, node_count, 2), dtype)
+    internal_force = _require_float_array(
+        "internal_nodal_force",
+        record.internal_nodal_force,
+        (step_count, 2 * node_count),
+        dtype,
+    )
+    wall_force = _require_float_array(
+        "wall_nodal_force", record.wall_nodal_force, (step_count, 2 * node_count), dtype
+    )
+    prescribed = _require_float_array(
+        "farfield_prescribed_displacement",
+        record.farfield_prescribed_displacement,
+        (step_count, dirichlet_dofs.size),
+        dtype,
+    )
+    reaction = _require_float_array(
+        "farfield_reaction_on_rock",
+        record.farfield_reaction_on_rock,
+        (step_count, dirichlet_dofs.size),
+        dtype,
+    )
+    rtol, atol = _relative_tolerances(dtype)
+    flattened_u = u.reshape(step_count, 2 * node_count)
+    if not np.allclose(prescribed, flattened_u[:, dirichlet_dofs], rtol=rtol, atol=atol):
+        raise FractureSchemaValidationError(
+            "farfield_prescribed_displacement must equal u at farfield_dirichlet_dofs"
+        )
+
+    full_residual = internal_force.astype(np.float64) - wall_force.astype(np.float64)
+    expected_reaction = full_residual[:, dirichlet_dofs]
+    force_scale = max(
+        float(np.max(np.abs(internal_force))),
+        float(np.max(np.abs(wall_force))),
+        float(np.max(np.abs(expected_reaction))),
+        1.0,
+    )
+    if not np.allclose(
+        reaction,
+        expected_reaction,
+        rtol=rtol,
+        atol=atol * force_scale,
+    ):
+        raise FractureSchemaValidationError(
+            "farfield_reaction_on_rock must equal (internal_nodal_force - "
+            "wall_nodal_force) at farfield_dirichlet_dofs"
+        )
+
+    wall_nodes = np.unique(record.wall_facets)
+    nonwall_mask = np.ones(node_count, dtype=bool)
+    nonwall_mask[wall_nodes] = False
+    if np.any(nonwall_mask) and not np.allclose(
+        wall_force.reshape(step_count, node_count, 2)[:, nonwall_mask, :],
+        0.0,
+        rtol=0.0,
+        atol=atol * force_scale,
+    ):
+        raise FractureSchemaValidationError(
+            "wall_nodal_force may be nonzero only at nodes in ordered wall_facets"
+        )
+
+    free_mask = np.ones(2 * node_count, dtype=bool)
+    free_mask[dirichlet_dofs] = False
+    free_norm = np.linalg.norm(full_residual[:, free_mask], axis=1)
+    free_internal_norm = np.linalg.norm(internal_force[:, free_mask].astype(np.float64), axis=1)
+    free_wall_norm = np.linalg.norm(wall_force[:, free_mask].astype(np.float64), axis=1)
+    equilibrium_denominator = np.maximum.reduce(
+        [
+            free_internal_norm,
+            free_wall_norm,
+            np.full(step_count, float(record.equilibrium_force_normalization_floor)),
+        ]
+    )
+    expected_equilibrium_relative_residual = free_norm / equilibrium_denominator
+
     damage = _require_float_array("damage", record.damage, (step_count, node_count), dtype)
     if np.any(damage < 0.0) or np.any(damage > 1.0):
         raise FractureSchemaValidationError(
@@ -974,9 +1168,11 @@ def _validate_state_arrays(
     scalar_names = (
         "elastic_energy",
         "fracture_energy",
-        "external_work",
+        "neumann_load_functional",
+        "wall_work_increment",
+        "farfield_work_increment",
+        "cumulative_external_work",
         "total_potential_energy",
-        "reaction",
         "damage_area",
         "crack_density_integral",
         "damage_connectivity",
@@ -994,6 +1190,64 @@ def _validate_state_arrays(
         name: _require_float_array(name, getattr(record, name), (step_count,), dtype)
         for name in scalar_names
     }
+    expected_neumann = np.einsum(
+        "ti,ti->t", wall_force.astype(np.float64), flattened_u.astype(np.float64)
+    )
+    expected_wall_increment = np.zeros(step_count, dtype=np.float64)
+    expected_farfield_increment = np.zeros(step_count, dtype=np.float64)
+    if step_count > 1:
+        expected_wall_increment[1:] = 0.5 * np.einsum(
+            "ti,ti->t",
+            wall_force[:-1].astype(np.float64) + wall_force[1:].astype(np.float64),
+            flattened_u[1:].astype(np.float64) - flattened_u[:-1].astype(np.float64),
+        )
+        expected_farfield_increment[1:] = 0.5 * np.einsum(
+            "ti,ti->t",
+            reaction[:-1].astype(np.float64) + reaction[1:].astype(np.float64),
+            prescribed[1:].astype(np.float64) - prescribed[:-1].astype(np.float64),
+        )
+    expected_cumulative_work = np.cumsum(expected_wall_increment + expected_farfield_increment)
+    for name, expected in (
+        ("neumann_load_functional", expected_neumann),
+        ("wall_work_increment", expected_wall_increment),
+        ("farfield_work_increment", expected_farfield_increment),
+        ("cumulative_external_work", expected_cumulative_work),
+    ):
+        scale = max(float(np.max(np.abs(expected))), 1.0)
+        if not np.allclose(scalars[name], expected, rtol=rtol, atol=atol * scale):
+            raise FractureSchemaValidationError(
+                f"{name} does not match recomputed accepted-state boundary work"
+            )
+
+    total_recoverable_energy = scalars["elastic_energy"].astype(np.float64) + scalars[
+        "fracture_energy"
+    ].astype(np.float64)
+    energy_increment = np.zeros(step_count, dtype=np.float64)
+    if step_count > 1:
+        energy_increment[1:] = np.diff(total_recoverable_energy)
+    external_increment = expected_wall_increment + expected_farfield_increment
+    denominator = np.maximum.reduce(
+        [
+            np.abs(energy_increment),
+            np.abs(external_increment),
+            np.full(step_count, float(record.energy_balance_normalization_floor)),
+        ]
+    )
+    expected_energy_imbalance = np.abs(energy_increment - external_increment) / denominator
+    expected_energy_imbalance[0] = 0.0
+    if not np.allclose(
+        scalars["relative_energy_imbalance"],
+        expected_energy_imbalance,
+        rtol=rtol,
+        atol=atol,
+    ):
+        raise FractureSchemaValidationError(
+            "relative_energy_imbalance must be recomputed from recoverable-energy and "
+            "accepted boundary-work increments"
+        )
+    if np.any(expected_energy_imbalance > ENERGY_IMBALANCE_TOLERANCE):
+        raise FractureSchemaValidationError("relative_energy_imbalance exceeds 5%")
+
     for name in (
         "elastic_energy",
         "fracture_energy",
@@ -1014,6 +1268,15 @@ def _validate_state_arrays(
     if np.any(scalars["damage_connectivity"] < 0.0) or np.any(scalars["damage_connectivity"] > 1.0):
         raise FractureSchemaValidationError("damage_connectivity must lie in [0,1]")
 
+    if not np.allclose(
+        scalars["equilibrium_relative_residual"],
+        expected_equilibrium_relative_residual,
+        rtol=rtol,
+        atol=atol,
+    ):
+        raise FractureSchemaValidationError(
+            "equilibrium_relative_residual must equal the recomputed free-DOF force residual"
+        )
     if np.any(scalars["equilibrium_relative_residual"] > EQUILIBRIUM_RELATIVE_TOLERANCE):
         raise FractureSchemaValidationError("equilibrium relative residual exceeds 1e-6")
     if np.any(scalars["kkt_relative_residual"] > KKT_RELATIVE_TOLERANCE):
@@ -1025,8 +1288,6 @@ def _validate_state_arrays(
             raise FractureSchemaValidationError(f"{name} exceeds 1e-10")
     if np.any(scalars["history_monotonicity_violation"] > history_tolerance):
         raise FractureSchemaValidationError("history_monotonicity_violation exceeds tolerance")
-    if np.any(scalars["relative_energy_imbalance"] > ENERGY_IMBALANCE_TOLERANCE):
-        raise FractureSchemaValidationError("relative_energy_imbalance exceeds 5%")
     if np.any(
         scalars["damage_irreversibility_violation"] + STATE_MONOTONICITY_TOLERANCE
         < actual_irreversibility
@@ -1096,7 +1357,7 @@ def _validate_state_arrays(
             "elastic_energy does not match the explicit P1 AT2 element integral"
         )
     expected_potential = (
-        scalars["elastic_energy"] + scalars["fracture_energy"] - scalars["external_work"]
+        scalars["elastic_energy"] + scalars["fracture_energy"] - scalars["neumann_load_functional"]
     )
     if not np.allclose(
         scalars["total_potential_energy"],
@@ -1105,7 +1366,8 @@ def _validate_state_arrays(
         atol=atol * max(float(np.max(np.abs(expected_potential))), 1.0),
     ):
         raise FractureSchemaValidationError(
-            "total_potential_energy must equal elastic + fracture - external work"
+            "total_potential_energy must equal elastic + fracture - instantaneous "
+            "neumann_load_functional"
         )
 
     paired = (
@@ -1239,6 +1501,44 @@ def _validate_attempt_ledger(record: FractureTrajectory) -> None:
             raise FractureSchemaValidationError(
                 f"rejected attempt_ledger[{position}] needs failure_code and failure_message"
             )
+
+        work_names = (
+            "neumann_load_functional",
+            "wall_work_increment",
+            "farfield_work_increment",
+            "cumulative_external_work",
+        )
+        if entry["accepted"]:
+            state_hash = _require_sha256(
+                entry["load_state_sha256"],
+                f"attempt_ledger[{position}].load_state_sha256",
+            )
+            expected_state_hash = compute_load_state_sha256(
+                record.load_parameter[step : step + 1],
+                record.farfield_stress[step],
+                record.wall_release_by_facet[step],
+                record.wall_facets,
+            )
+            if state_hash != expected_state_hash:
+                raise FractureSchemaValidationError(
+                    f"attempt_ledger[{position}].load_state_sha256 does not bind the "
+                    "accepted load parameter, stress, and ordered wall-facet release"
+                )
+            rtol, atol = _relative_tolerances(record.dtype)
+            for name in work_names:
+                value = _ledger_float(entry, name, position)
+                expected_value = float(getattr(record, name)[step])
+                if not math.isclose(value, expected_value, rel_tol=rtol, abs_tol=atol):
+                    raise FractureSchemaValidationError(
+                        f"accepted attempt {name} for step {step} does not match the step array"
+                    )
+        elif entry["load_state_sha256"] is not None or any(
+            entry[name] is not None for name in work_names
+        ):
+            raise FractureSchemaValidationError(
+                f"rejected attempt_ledger[{position}] must not publish a load-state hash "
+                "or accepted-state work"
+            )
         grouped[step].append((attempt, entry))
         observed_order.append((step, attempt))
 
@@ -1340,7 +1640,8 @@ def validate_fracture_trajectory(
     _validate_conventions(trajectory)
     material, _ = _validate_metadata(trajectory)
     _validate_mesh(trajectory, dtype)
-    _validate_state_arrays(trajectory, dtype, material)
+    dirichlet_dofs = _validate_discrete_identity(trajectory)
+    _validate_state_arrays(trajectory, dtype, material, dirichlet_dofs)
 
     for name in (
         "newton_iterations",
@@ -1376,6 +1677,24 @@ def _semantic_array_sha256(arrays: Mapping[str, np.ndarray]) -> str:
     return digest.hexdigest()
 
 
+def compute_load_state_sha256(
+    load_parameter: np.ndarray,
+    farfield_stress: np.ndarray,
+    wall_release_by_facet: np.ndarray,
+    ordered_wall_facets: np.ndarray,
+) -> str:
+    """Bind one accepted coordinate to its stress and ordered wall-facet release."""
+
+    return _semantic_array_sha256(
+        {
+            "load_parameter": np.asarray(load_parameter),
+            "farfield_stress": np.asarray(farfield_stress),
+            "wall_release_by_facet": np.asarray(wall_release_by_facet),
+            "ordered_wall_facets": np.asarray(ordered_wall_facets),
+        }
+    )
+
+
 def compute_mesh_content_sha256(
     nodes: np.ndarray,
     elements: np.ndarray,
@@ -1390,6 +1709,32 @@ def compute_mesh_content_sha256(
             "elements": np.asarray(elements),
             "wall_facets": _normalise_facets(wall_facets),
             "farfield_facets": _normalise_facets(farfield_facets),
+        }
+    )
+
+
+def compute_identity_content_sha256(
+    nodes: np.ndarray,
+    node_ids: np.ndarray,
+    displacement_dof_ids: np.ndarray,
+    damage_dof_ids: np.ndarray,
+    elements: np.ndarray,
+    wall_facets: np.ndarray,
+    farfield_facets: np.ndarray,
+    farfield_dirichlet_dofs: np.ndarray,
+) -> str:
+    """Bind geometry/topology to exact row-ordered node, boundary, and DOF identities."""
+
+    return _semantic_array_sha256(
+        {
+            "nodes": np.asarray(nodes),
+            "node_ids": np.asarray(node_ids),
+            "displacement_dof_ids": np.asarray(displacement_dof_ids),
+            "damage_dof_ids": np.asarray(damage_dof_ids),
+            "elements": np.asarray(elements),
+            "wall_facets": np.asarray(wall_facets),
+            "farfield_facets": np.asarray(farfield_facets),
+            "farfield_dirichlet_dofs": np.asarray(farfield_dirichlet_dofs),
         }
     )
 
@@ -1430,6 +1775,20 @@ def _record_meta(
             trajectory.wall_facets,
             trajectory.farfield_facets,
         ),
+        "identity_content_sha256": compute_identity_content_sha256(
+            trajectory.nodes,
+            trajectory.node_ids,
+            trajectory.displacement_dof_ids,
+            trajectory.damage_dof_ids,
+            trajectory.elements,
+            trajectory.wall_facets,
+            trajectory.farfield_facets,
+            trajectory.farfield_dirichlet_dofs,
+        ),
+        "equilibrium_force_normalization_floor": float(
+            trajectory.equilibrium_force_normalization_floor
+        ),
+        "energy_balance_normalization_floor": float(trajectory.energy_balance_normalization_floor),
         "coordinate_order": list(trajectory.coordinate_order),
         "strain_component_order": list(trajectory.strain_component_order),
         "stress_component_order": list(trajectory.stress_component_order),
@@ -1630,6 +1989,20 @@ def _verify_manifest(arrays: Mapping[str, np.ndarray], metadata: Mapping[str, An
     )
     if metadata["mesh_content_sha256"] != mesh_hash:
         raise FractureSchemaValidationError("mesh_content_sha256 does not match the mesh arrays")
+    identity_hash = compute_identity_content_sha256(
+        arrays["nodes"],
+        arrays["node_ids"],
+        arrays["displacement_dof_ids"],
+        arrays["damage_dof_ids"],
+        arrays["elements"],
+        arrays["wall_facets"],
+        arrays["farfield_facets"],
+        arrays["farfield_dirichlet_dofs"],
+    )
+    if metadata["identity_content_sha256"] != identity_hash:
+        raise FractureSchemaValidationError(
+            "identity_content_sha256 does not match geometry/topology/node/DOF arrays"
+        )
 
 
 def load_fracture_trajectory(
@@ -1664,6 +2037,8 @@ def load_fracture_trajectory(
             load_path_id=metadata["load_path_id"],
             config_hash=metadata["config_hash"],
             solver_hash=metadata["solver_hash"],
+            equilibrium_force_normalization_floor=metadata["equilibrium_force_normalization_floor"],
+            energy_balance_normalization_floor=metadata["energy_balance_normalization_floor"],
             material=metadata["material"],
             geometry=metadata["geometry"],
             load_path=metadata["load_path"],
@@ -1719,6 +2094,8 @@ __all__ = [
     "FractureSchemaValidationError",
     "FractureTrajectory",
     "FractureTrajectoryPaths",
+    "compute_identity_content_sha256",
+    "compute_load_state_sha256",
     "compute_mesh_content_sha256",
     "fracture_trajectory_paths",
     "load_fracture_trajectory",

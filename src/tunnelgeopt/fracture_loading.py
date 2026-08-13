@@ -189,6 +189,7 @@ class Phase1LoadSchedule:
     path_id: str
     ucs_scale: float
     wall_facet_ids: IntArray
+    wall_facet_endpoints_yz: FloatArray
     wall_facet_midpoints_yz: FloatArray
     wall_perimeter_centroid_yz: FloatArray
     wall_zone_ids: tuple[str, ...]
@@ -211,6 +212,21 @@ class Phase1LoadSchedule:
         facet_ids = _readonly_int_array(self.wall_facet_ids, name="wall_facet_ids", ndim=1)
         if facet_ids.size == 0 or np.unique(facet_ids).size != facet_ids.size:
             raise FractureLoadError("wall_facet_ids must be non-empty and unique")
+        endpoints = _readonly_float_array(
+            self.wall_facet_endpoints_yz,
+            name="wall_facet_endpoints_yz",
+            ndim=3,
+            shape=(facet_ids.size, 2, 2),
+        )
+        if np.any(np.linalg.norm(endpoints[:, 1] - endpoints[:, 0], axis=1) <= 0.0):
+            raise FractureLoadError("wall_facet_endpoints_yz contains a zero-length facet")
+        endpoint_swap = (endpoints[:, 0, 0] > endpoints[:, 1, 0]) | (
+            (endpoints[:, 0, 0] == endpoints[:, 1, 0]) & (endpoints[:, 0, 1] > endpoints[:, 1, 1])
+        )
+        if np.any(endpoint_swap):
+            raise FractureLoadError(
+                "wall_facet_endpoints_yz must use canonical undirected endpoint order"
+            )
         midpoints = _readonly_float_array(
             self.wall_facet_midpoints_yz,
             name="wall_facet_midpoints_yz",
@@ -233,6 +249,26 @@ class Phase1LoadSchedule:
             raise FractureLoadError("wall_zone_weights must lie in [0, 1]")
         if not np.allclose(zone_weights.sum(axis=1), 1.0, rtol=0.0, atol=1e-14):
             raise FractureLoadError("wall_zone_weights must form a convex partition")
+        lengths = np.linalg.norm(endpoints[:, 1] - endpoints[:, 0], axis=1)
+        geometry_scale = max(float(np.max(np.abs(endpoints), initial=0.0)), 1.0)
+        geometry_tolerance = 256.0 * np.finfo(np.float64).eps * geometry_scale
+        expected_midpoints = endpoints.mean(axis=1)
+        if not np.allclose(midpoints, expected_midpoints, rtol=0.0, atol=geometry_tolerance):
+            raise FractureLoadError(
+                "wall_facet_midpoints_yz must equal the stored endpoint-pair midpoints"
+            )
+        expected_centroid = np.sum(expected_midpoints * lengths[:, None], axis=0) / float(
+            lengths.sum()
+        )
+        if not np.allclose(centroid, expected_centroid, rtol=0.0, atol=geometry_tolerance):
+            raise FractureLoadError(
+                "wall_perimeter_centroid_yz must be the length-weighted endpoint centroid"
+            )
+        expected_zone_weights = _wall_zone_weights(expected_midpoints, expected_centroid)
+        if not np.allclose(zone_weights, expected_zone_weights, rtol=0.0, atol=1e-14):
+            raise FractureLoadError(
+                "wall_zone_weights must be derived from the stored wall geometry"
+            )
 
         control_s = _readonly_float_array(self._control_s, name="control_s", ndim=1)
         if control_s.size < 2 or not np.array_equal(control_s, np.linspace(0.0, 1.0, 5)):
@@ -255,6 +291,7 @@ class Phase1LoadSchedule:
             raise FractureLoadError("zone release controls must be monotone")
 
         object.__setattr__(self, "wall_facet_ids", facet_ids)
+        object.__setattr__(self, "wall_facet_endpoints_yz", endpoints)
         object.__setattr__(self, "wall_facet_midpoints_yz", midpoints)
         object.__setattr__(self, "wall_perimeter_centroid_yz", centroid)
         object.__setattr__(self, "wall_zone_weights", zone_weights)
@@ -318,7 +355,7 @@ def _tension_positive_principal_tensor_yz(
     return np.asarray(stress, dtype=np.float64)
 
 
-def _extract_wall_geometry(mesh: Any) -> tuple[IntArray, FloatArray, FloatArray]:
+def _extract_wall_geometry(mesh: Any) -> tuple[IntArray, FloatArray, FloatArray, FloatArray]:
     try:
         nodes_raw = mesh.nodes
         boundary_facets = mesh.boundary_facets
@@ -359,8 +396,13 @@ def _extract_wall_geometry(mesh: Any) -> tuple[IntArray, FloatArray, FloatArray]
     radial_distance = np.linalg.norm(midpoints - perimeter_centroid, axis=1)
     if np.any(radial_distance <= 64.0 * np.finfo(np.float64).eps * scale):
         raise FractureLoadError("a wall facet midpoint coincides with the perimeter centroid")
+    swap = (start[:, 0] > end[:, 0]) | ((start[:, 0] == end[:, 0]) & (start[:, 1] > end[:, 1]))
+    first = np.where(swap[:, None], end, start)
+    second = np.where(swap[:, None], start, end)
+    endpoints = np.stack((first, second), axis=1)
     return (
         wall_ids,
+        np.asarray(endpoints, dtype=np.float64),
         np.asarray(midpoints, dtype=np.float64),
         np.asarray(perimeter_centroid, dtype=np.float64),
     )
@@ -435,13 +477,14 @@ def compile_phase1_load_schedule(
     resolved_ucs = _finite_scalar(ucs_scale, name="ucs_scale")
     if resolved_ucs <= 0.0:
         raise FractureLoadError("ucs_scale must be positive")
-    wall_ids, midpoints, centroid = _extract_wall_geometry(mesh)
+    wall_ids, endpoints, midpoints, centroid = _extract_wall_geometry(mesh)
     weights = _wall_zone_weights(midpoints, centroid)
     control_s, principal, releases = _path_controls(config, path_id)
     return Phase1LoadSchedule(
         path_id=path_id,
         ucs_scale=resolved_ucs,
         wall_facet_ids=wall_ids,
+        wall_facet_endpoints_yz=endpoints,
         wall_facet_midpoints_yz=midpoints,
         wall_perimeter_centroid_yz=centroid,
         wall_zone_ids=WALL_ZONE_IDS,
