@@ -125,6 +125,14 @@ def test_run_archives_exact_pass_and_sanitised_logs(
     manifest = json.loads((output / "artifact_manifest.json").read_text(encoding="utf-8"))
     assert set(manifest["files"]) == {"result.json", "stdout.log", "stderr.log"}
     assert str(root) not in (output / "stdout.log").read_text(encoding="utf-8")
+    local_user = Path.home().name
+    sanitised = module._sanitise(
+        f"INFO: cached topology hwloc_topo_{local_user}.xml",
+        moose_root=root,
+        repo_root=project,
+    )
+    assert local_user not in sanitised
+    assert "hwloc_topo_<USER>.xml" in sanitised
     with pytest.raises(module.BenchmarkContractError, match="already exists"):
         module.run_moose_reference(
             moose_root=root,

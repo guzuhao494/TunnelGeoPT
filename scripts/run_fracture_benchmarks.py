@@ -161,6 +161,15 @@ def _sanitise(text: str, *, moose_root: Path, repo_root: Path) -> str:
     home = str(Path.home())
     if home:
         cleaned = cleaned.replace(home, "<HOME>")
+    user_tokens = {
+        Path.home().name,
+        os.environ.get("USER", ""),
+        os.environ.get("USERNAME", ""),
+        os.environ.get("LOGNAME", ""),
+    }
+    for token in sorted(user_tokens, key=len, reverse=True):
+        if len(token) >= 3:
+            cleaned = cleaned.replace(token, "<USER>")
     return cleaned
 
 
