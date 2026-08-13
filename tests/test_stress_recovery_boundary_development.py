@@ -11,6 +11,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER_PATH = ROOT / "scripts" / "run_stress_recovery_boundary_development.py"
 CONFIG_PATH = ROOT / "configs" / "stress_recovery_boundary_development.json"
+PREDECESSOR_ARTIFACT = ROOT / "artifacts" / "development" / "stress-recovery-v0.5-dev"
+BOUNDARY_ARTIFACT = ROOT / "artifacts" / "development" / "stress-recovery-boundary-v0.5.1-dev"
 
 
 def _runner() -> ModuleType:
@@ -23,18 +25,63 @@ def _runner() -> ModuleType:
     return module
 
 
+def _assert_published_manifest(runner: ModuleType, artifact: Path) -> dict:
+    manifest = json.loads((artifact / "artifact_manifest.json").read_text(encoding="utf-8"))
+    recorded = manifest["files_sha256"]
+    assert set(recorded) == {
+        path.name
+        for path in artifact.iterdir()
+        if path.is_file() and path.name != "artifact_manifest.json"
+    }
+    assert {name: runner._file_sha256(artifact / name) for name in sorted(recorded)} == recorded
+    return manifest
+
+
 def test_config_and_selection_reuse_exact_v05_seen_cases() -> None:
     runner = _runner()
     config = runner.load_config(CONFIG_PATH)
     formal = runner.BASE._load_formal_config(config, CONFIG_PATH)
     plan = runner.BASE.build_seen_v03_plan(formal)
     selected = runner.BASE.select_cases(plan, config["selection"])
-    selected_ids = [case.case_group_id for case in selected]
-
-    _, _, predecessor = runner._predecessor(config, selected_ids)
+    predecessor_selection = json.loads(
+        (PREDECESSOR_ARTIFACT / "selection_manifest.json").read_text(encoding="utf-8")
+    )
+    semantic_selection = [
+        (
+            case.formal_partition,
+            case.section_family,
+            int(case.parent_index),
+            int(case.load_index),
+        )
+        for case in selected
+    ]
+    predecessor_semantics = [
+        (
+            row["formal_partition"],
+            row["section_family"],
+            int(row["parent_index"]),
+            int(row["load_index"]),
+        )
+        for row in predecessor_selection["selected_cases"]
+    ]
+    predecessor_ids = [row["case_group_id"] for row in predecessor_selection["selected_cases"]]
+    boundary_selection = json.loads(
+        (BOUNDARY_ARTIFACT / "selection_manifest.json").read_text(encoding="utf-8")
+    )
+    _, predecessor_hashes, predecessor = runner._predecessor(config, predecessor_ids)
 
     assert len(plan.cases) == 705
-    assert len(selected_ids) == 15
+    assert len(selected) == 15
+    assert semantic_selection == predecessor_semantics
+    assert len(predecessor_ids) == 15
+    assert len(set(predecessor_ids)) == 15
+    assert boundary_selection["selected_case_ids"] == predecessor_ids
+    assert boundary_selection["exact_predecessor_case_ids"] is True
+    assert boundary_selection["predecessor_evidence"]["artifact_tree_sha256"] == (
+        predecessor_hashes
+    )
+    _assert_published_manifest(runner, PREDECESSOR_ARTIFACT)
+    _assert_published_manifest(runner, BOUNDARY_ARTIFACT)
     assert predecessor["observed_ultrafine_wall_center_ratios"]["traction"] > 1.0
     assert predecessor["observed_ultrafine_wall_center_ratios"]["resultant"] > 1.0
 

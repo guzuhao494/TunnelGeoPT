@@ -15,6 +15,18 @@ CONFIG = ROOT / "configs" / "multifidelity_v04_development.json"
 EXPLORATORY_RECORD = (
     ROOT / "artifacts" / "analysis" / "v04-structured-prototype-stop" / "exploratory_record.json"
 )
+PUBLISHED_SOURCE_ROLES = frozenset({"dataset_manifest", "v03_decision"})
+UNPUBLISHED_SOURCE_ROLES = frozenset(
+    {
+        "public_inputs",
+        "train_dev_labels",
+        "seen_iid_labels",
+        "seen_geometry_ood_labels",
+        "seen_load_ood_labels",
+        "seen_joint_ood_labels",
+        "v03_checkpoint_manifest",
+    }
+)
 SPEC = importlib.util.spec_from_file_location("run_v04_development", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 runner = importlib.util.module_from_spec(SPEC)
@@ -32,8 +44,44 @@ def _write_config(tmp_path: Path, config: dict) -> Path:
     return path
 
 
+def _source_paths(config: dict) -> dict[str, Path]:
+    source = config["source_experiment"]
+    source_root = ROOT / source["root"]
+    return {role: source_root / record["path"] for role, record in source["files"].items()}
+
+
+def _authenticate_available_source_files(config: dict) -> set[str]:
+    records = config["source_experiment"]["files"]
+    paths = _source_paths(config)
+    assert set(records) == PUBLISHED_SOURCE_ROLES | UNPUBLISHED_SOURCE_ROLES
+    missing: set[str] = set()
+    for role, path in paths.items():
+        if not path.is_file():
+            missing.add(role)
+            continue
+        assert runner._file_sha256(path) == records[role]["sha256"], (
+            f"available v0.3 source blob failed frozen SHA-256 authentication: {role}"
+        )
+    assert not (missing & PUBLISHED_SOURCE_ROLES), (
+        "a source blob published in Git is absent from this checkout: "
+        f"{sorted(missing & PUBLISHED_SOURCE_ROLES)}"
+    )
+    assert missing <= UNPUBLISHED_SOURCE_ROLES
+    return missing
+
+
+def _require_complete_local_source_closure(config: dict) -> None:
+    missing = _authenticate_available_source_files(config)
+    if missing:
+        pytest.skip(
+            "v0.4 data-closure integration requires authenticated local source blobs that are "
+            f"intentionally not published in Git: {sorted(missing)}"
+        )
+
+
 def _inputs() -> tuple[dict, str, runner.DevelopmentData, dict, dict]:
     config, digest = runner.load_development_config(CONFIG)
+    _require_complete_local_source_closure(config)
     data, checkpoint_manifest, audit = runner.audit_and_load_inputs(config, digest)
     return config, digest, data, checkpoint_manifest, audit
 
@@ -291,9 +339,14 @@ def test_config_rejects_ablation_threshold_locked_and_authorization_drift(
         runner.load_development_config(_write_config(tmp_path, config))
 
 
-def test_source_hash_drift_is_rejected_before_any_label_use(tmp_path: Path) -> None:
+def test_published_source_blobs_are_present_and_all_available_sources_authenticate() -> None:
+    config, _ = runner.load_development_config(CONFIG)
+    _authenticate_available_source_files(config)
+
+
+def test_published_source_hash_drift_is_rejected_before_any_label_use(tmp_path: Path) -> None:
     config = deepcopy(_config())
-    config["source_experiment"]["files"]["public_inputs"]["sha256"] = "0" * 64
+    config["source_experiment"]["files"]["dataset_manifest"]["sha256"] = "0" * 64
     parsed, digest = runner.load_development_config(_write_config(tmp_path, config))
     with pytest.raises(runner.DevelopmentProtocolError, match="source artifact hash mismatch"):
         runner.audit_and_load_inputs(parsed, digest)
@@ -333,6 +386,8 @@ def test_exploratory_stop_record_is_conversation_only_and_not_replayable() -> No
 
 
 def test_validate_only_is_read_only_and_reports_stop_boundary(tmp_path: Path) -> None:
+    config, _ = runner.load_development_config(CONFIG)
+    _require_complete_local_source_closure(config)
     missing_output = tmp_path / "must-not-exist"
     result = runner.execute(
         config_path=CONFIG,
@@ -362,6 +417,8 @@ def test_real_run_is_rejected_before_output_or_preflight(tmp_path: Path) -> None
 def test_complete_tiny_chain_stays_stop_and_records_freeze_before_seen_open(
     tmp_path: Path,
 ) -> None:
+    config, _ = runner.load_development_config(CONFIG)
+    _require_complete_local_source_closure(config)
     output = tmp_path / "tiny"
     result = runner.execute(
         config_path=CONFIG,

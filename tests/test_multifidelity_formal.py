@@ -130,6 +130,26 @@ def test_implementation_manifest_has_exact_sources_environment_and_hashes(
     )
 
 
+def test_prepare_handles_missing_nvidia_smi(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def reject_host_probe(*args, **kwargs):
+        del args, kwargs
+        raise FileNotFoundError("nvidia-smi is intentionally absent")
+
+    monkeypatch.setattr(runner_module, "_run_readonly_command", reject_host_probe)
+    cuda = runner_module._cuda_environment()
+    assert cuda["driver_version"] is None
+    instance, _, _ = _tiny_runner(tmp_path)
+    result = instance.run_phase("prepare")
+    assert result["status"] == "completed"
+    implementation = json.loads(
+        (instance.paths.root / runner_module.IMPLEMENTATION_MANIFEST_FILENAME).read_text("utf-8")
+    )
+    assert implementation["environment"] == runner_module._environment_manifest("cpu")
+
+
 @pytest.mark.parametrize(
     "relative",
     [

@@ -245,7 +245,7 @@ def _cuda_environment() -> dict[str, Any]:
             ("nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"),
             description="NVIDIA driver version",
         )
-    except FormalRunError:
+    except (FormalRunError, OSError):
         driver = ""
     if driver:
         payload["driver_version"] = driver.splitlines()[0].strip()
