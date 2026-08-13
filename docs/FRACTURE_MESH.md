@@ -12,14 +12,22 @@ values are supplied together:
 
 `nearfield_transition_width` is optional.  It defaults to
 `nearfield_distance`.  The Gmsh background field uses `Distance` on every wall
-curve and `Threshold` with:
+curve and `Threshold` with a two-edge guard outside the audited band:
 
-- `DistMin = nearfield_distance`;
-- `DistMax = nearfield_distance + nearfield_transition_width`;
+- `guard_width = 2 * nearfield_mesh_size`;
+- `DistMin = nearfield_distance + guard_width`;
+- `DistMax = nearfield_distance + guard_width + nearfield_transition_width`;
 - a linear characteristic-length transition between those distances.
 
+The guard is necessary because a triangle with its centroid just inside the
+audited band can have vertices outside it.  Starting the transition at the
+audit boundary made such triangles sensitive to Gmsh version and platform.
+The guard keeps the public band within the constant-size field without changing
+which triangles the post-generation audit selects.
+
 Gmsh characteristic length is a target, not an edge-length guarantee.  The
-internal `SizeMin` is conservatively set to 0.5 times the public cap.  This
+internal `SizeMin` is conservatively set to 0.5 times the public cap, and wall
+point sizes are capped at that same target while refinement is enabled.  This
 factor is only a meshing control; it is not evidence that the requested cap was
 met.  The generated connectivity is always audited afterward.
 

@@ -45,6 +45,11 @@ _NEARFIELD_AUDIT_RELATIVE_TOLERANCE = 0.02
 # Gmsh's characteristic-length target.  The generated connectivity remains the
 # authority: exceeding the public cap still raises instead of being accepted.
 _NEARFIELD_GMSH_TARGET_FACTOR = 0.5
+# Keep the requested audit band inside the constant-size portion of the
+# background field.  Without this guard, triangles whose centroid is just
+# inside the band can straddle the coarsening transition; the outcome varies
+# between Gmsh builds even when the audit definition is unchanged.
+_NEARFIELD_GUARD_EDGE_MULTIPLIER = 2.0
 
 
 @dataclass(frozen=True)
@@ -383,6 +388,9 @@ def generate_tunnel_mesh(
     )
     if nearfield is not None and nearfield[1] >= farfield_size:
         raise ValueError("nearfield_mesh_size must be smaller than farfield_mesh_size")
+    gmsh_nearfield_target = (
+        nearfield[1] * _NEARFIELD_GMSH_TARGET_FACTOR if nearfield is not None else None
+    )
 
     model_name = f"tunnelgeopt_{uuid4().hex}"
     initialized_here = False
@@ -411,8 +419,14 @@ def generate_tunnel_mesh(
                 gmsh.model.geo.addPoint(float(y), float(z), 0.0, farfield_size)
                 for y, z in outer_coordinates
             ]
+            wall_point_size = (
+                min(wall_size, gmsh_nearfield_target)
+                if gmsh_nearfield_target is not None
+                else wall_size
+            )
             wall_points = [
-                gmsh.model.geo.addPoint(float(y), float(z), 0.0, wall_size) for y, z in boundary
+                gmsh.model.geo.addPoint(float(y), float(z), 0.0, wall_point_size)
+                for y, z in boundary
             ]
             outer_lines = [
                 gmsh.model.geo.addLine(outer_points[i], outer_points[(i + 1) % 4]) for i in range(4)
@@ -435,22 +449,28 @@ def generate_tunnel_mesh(
             gmsh.model.setPhysicalName(1, physical_tags[FARFIELD], FARFIELD)
             if nearfield is not None:
                 distance, size, _, transition = nearfield
-                gmsh_target_size = size * _NEARFIELD_GMSH_TARGET_FACTOR
+                assert gmsh_nearfield_target is not None
+                guard_width = size * _NEARFIELD_GUARD_EDGE_MULTIPLIER
+                transition_start = distance + guard_width
                 distance_field = gmsh.model.mesh.field.add("Distance")
                 gmsh.model.mesh.field.setNumbers(distance_field, "CurvesList", wall_lines)
                 threshold_field = gmsh.model.mesh.field.add("Threshold")
                 gmsh.model.mesh.field.setNumber(threshold_field, "InField", distance_field)
-                gmsh.model.mesh.field.setNumber(threshold_field, "SizeMin", gmsh_target_size)
+                gmsh.model.mesh.field.setNumber(
+                    threshold_field,
+                    "SizeMin",
+                    gmsh_nearfield_target,
+                )
                 gmsh.model.mesh.field.setNumber(
                     threshold_field,
                     "SizeMax",
                     max(base_size, wall_size, farfield_size),
                 )
-                gmsh.model.mesh.field.setNumber(threshold_field, "DistMin", distance)
+                gmsh.model.mesh.field.setNumber(threshold_field, "DistMin", transition_start)
                 gmsh.model.mesh.field.setNumber(
                     threshold_field,
                     "DistMax",
-                    distance + transition,
+                    transition_start + transition,
                 )
                 gmsh.model.mesh.field.setAsBackgroundMesh(threshold_field)
             gmsh.model.mesh.generate(2)
@@ -542,9 +562,16 @@ def generate_tunnel_mesh(
             "nearfield_mesh_size": size,
             "nearfield_gmsh_target_mesh_size": size * _NEARFIELD_GMSH_TARGET_FACTOR,
             "nearfield_gmsh_target_factor": _NEARFIELD_GMSH_TARGET_FACTOR,
+            "nearfield_guard_width": size * _NEARFIELD_GUARD_EDGE_MULTIPLIER,
+            "nearfield_guard_edge_multiplier": _NEARFIELD_GUARD_EDGE_MULTIPLIER,
             "fracture_length_scale": length_scale,
             "nearfield_transition_width": transition,
-            "nearfield_transition_end_distance": distance + transition,
+            "nearfield_transition_start_distance": (
+                distance + size * _NEARFIELD_GUARD_EDGE_MULTIPLIER
+            ),
+            "nearfield_transition_end_distance": (
+                distance + size * _NEARFIELD_GUARD_EDGE_MULTIPLIER + transition
+            ),
             "nearfield_audit_cell_selection": (
                 "triangle_centroid_distance_to_input_wall_polyline_le_nearfield_distance"
             ),

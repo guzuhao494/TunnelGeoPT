@@ -176,11 +176,14 @@ def test_nearfield_distance_threshold_refines_and_records_h_over_ell_audit(shape
     assert metadata["nearfield_enabled"] is True
     assert metadata["nearfield_gmsh_fields"] == ["Distance", "Threshold"]
     assert metadata["nearfield_distance"] == pytest.approx(0.70)
-    assert metadata["nearfield_transition_end_distance"] == pytest.approx(1.15)
+    assert metadata["nearfield_guard_width"] == pytest.approx(0.36)
+    assert metadata["nearfield_transition_start_distance"] == pytest.approx(1.06)
+    assert metadata["nearfield_transition_end_distance"] == pytest.approx(1.51)
     assert metadata["nearfield_audited_element_count"] == int(independent_band_mask.sum())
     assert metadata["nearfield_actual_maximum_edge"] == pytest.approx(independent_band_max)
     assert metadata["nearfield_actual_maximum_edge"] < 0.65 * coarse_band_max
     assert metadata["nearfield_actual_maximum_edge"] <= metadata["nearfield_audit_limit"]
+    assert metadata["nearfield_actual_maximum_edge"] <= 0.85 * metadata["nearfield_mesh_size"]
     assert metadata["nearfield_audit_passed"] is True
     assert metadata["nearfield_requested_h_over_ell"] == pytest.approx(0.25)
     assert metadata["nearfield_actual_maximum_h_over_ell"] == pytest.approx(
