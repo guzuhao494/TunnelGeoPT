@@ -1,0 +1,384 @@
+{
+  "schema_version": "0.1.0",
+  "config_name": "tunnelgeopt_auxiliary_pilot",
+  "status": "preregistered_not_run",
+  "scope": "auxiliary_development_only",
+  "seed": 20260813,
+  "claims": {
+    "high_fidelity_means": "synthetic_high_resolution_solver_labels_not_real_world_truth",
+    "sample_saving_threshold": 0.2,
+    "sample_saving_status": "go_no_go_threshold_not_a_result"
+  },
+  "normalization": {
+    "reference_length": "characteristic_radius_R",
+    "reference_stress": "ucs",
+    "reference_velocity": "compressional_wave_speed_cp",
+    "reference_time": "R_over_cp",
+    "fit_statistics_on": "train_only"
+  },
+  "geometry": {
+    "implementation_status": "current_geometry_generator_has_three_fixed_family_prototypes_plus_roughness_shape_ranges_below_are_future_parameterization_contract",
+    "roughness_amplitude_over_radius": {
+      "min": 0.0,
+      "max": 0.08,
+      "distribution": "uniform"
+    },
+    "far_field_boundary_distance_over_radius": {
+      "min": 8.0,
+      "max": 16.0,
+      "distribution": "uniform"
+    },
+    "section_families": [
+      {
+        "name": "circle",
+        "sampling_weight": 1.0,
+        "parameters": {
+          "height_over_diameter": {
+            "fixed": 1.0
+          }
+        }
+      },
+      {
+        "name": "horseshoe",
+        "sampling_weight": 1.0,
+        "parameters": {
+          "height_over_diameter": {
+            "min": 0.9,
+            "max": 1.3,
+            "distribution": "uniform"
+          },
+          "crown_radius_over_diameter": {
+            "min": 0.45,
+            "max": 0.7,
+            "distribution": "uniform"
+          },
+          "springline_height_over_diameter": {
+            "min": 0.25,
+            "max": 0.55,
+            "distribution": "uniform"
+          }
+        }
+      },
+      {
+        "name": "straight_wall_arch",
+        "sampling_weight": 1.0,
+        "parameters": {
+          "height_over_diameter": {
+            "min": 0.75,
+            "max": 1.25,
+            "distribution": "uniform"
+          },
+          "springline_height_over_diameter": {
+            "min": 0.05,
+            "max": 0.3,
+            "distribution": "uniform"
+          }
+        }
+      }
+    ]
+  },
+  "dimensionless_parameter_space": {
+    "in_situ_stress": {
+      "sigma1_over_ucs": {
+        "min": 0.25,
+        "max": 0.75,
+        "distribution": "uniform"
+      },
+      "sigma3_over_sigma1": {
+        "min": 0.25,
+        "max": 0.8,
+        "distribution": "uniform"
+      },
+      "intermediate_stress_b": {
+        "min": 0.0,
+        "max": 1.0,
+        "distribution": "uniform",
+        "definition": "(sigma2-sigma3)/(sigma1-sigma3)"
+      },
+      "sigma1_azimuth_over_pi": {
+        "min": -0.5,
+        "max": 0.5,
+        "distribution": "uniform"
+      }
+    },
+    "excavation_unloading": {
+      "traction_release_fraction": {
+        "min": 0.6,
+        "max": 1.0,
+        "distribution": "uniform"
+      },
+      "unloading_time_cp_over_radius": {
+        "min": 0.25,
+        "max": 10.0,
+        "distribution": "log_uniform"
+      },
+      "advance_length_over_radius": {
+        "min": 0.5,
+        "max": 2.0,
+        "distribution": "uniform"
+      }
+    },
+    "intact_rock": {
+      "youngs_modulus_over_ucs": {
+        "min": 250.0,
+        "max": 750.0,
+        "distribution": "log_uniform"
+      },
+      "poisson_ratio": {
+        "min": 0.18,
+        "max": 0.3,
+        "distribution": "uniform"
+      },
+      "tensile_strength_over_ucs": {
+        "min": 0.04,
+        "max": 0.12,
+        "distribution": "log_uniform"
+      },
+      "fracture_energy_over_ucs_radius": {
+        "min": 0.00002,
+        "max": 0.001,
+        "distribution": "log_uniform"
+      },
+      "heterogeneity_coefficient_of_variation": {
+        "min": 0.0,
+        "max": 0.25,
+        "distribution": "uniform"
+      },
+      "heterogeneity_correlation_length_over_radius": {
+        "min": 0.02,
+        "max": 0.16,
+        "distribution": "log_uniform"
+      }
+    },
+    "joints": {
+      "joint_family_count": {
+        "values": [
+          0,
+          1,
+          2
+        ],
+        "probabilities": [
+          0.4,
+          0.4,
+          0.2
+        ]
+      },
+      "joint_intensity_p21_times_radius": {
+        "min": 0.1,
+        "max": 2.0,
+        "distribution": "log_uniform",
+        "active_when": "joint_family_count>0"
+      },
+      "mean_trace_length_over_radius": {
+        "min": 0.2,
+        "max": 2.0,
+        "distribution": "log_uniform",
+        "active_when": "joint_family_count>0"
+      },
+      "mean_orientation_over_pi": {
+        "min": -0.5,
+        "max": 0.5,
+        "distribution": "uniform",
+        "active_when": "joint_family_count>0"
+      },
+      "orientation_dispersion_over_pi": {
+        "min": 0.01,
+        "max": 0.15,
+        "distribution": "log_uniform",
+        "active_when": "joint_family_count>0"
+      },
+      "normal_stiffness_times_radius_over_youngs_modulus": {
+        "min": 2.5,
+        "max": 50.0,
+        "distribution": "log_uniform",
+        "active_when": "joint_family_count>0"
+      },
+      "shear_to_normal_stiffness_ratio": {
+        "min": 0.25,
+        "max": 1.0,
+        "distribution": "uniform",
+        "active_when": "joint_family_count>0"
+      },
+      "joint_cohesion_over_ucs": {
+        "min": 0.0,
+        "max": 0.1,
+        "distribution": "uniform",
+        "active_when": "joint_family_count>0"
+      },
+      "joint_friction_coefficient": {
+        "min": 0.3,
+        "max": 0.9,
+        "distribution": "uniform",
+        "active_when": "joint_family_count>0"
+      }
+    }
+  },
+  "sampling": {
+    "continuous_method": "scrambled_sobol",
+    "stratify_by": "section_family",
+    "reject_invalid_before_solver": true,
+    "profiles": {
+      "small_smoke": {
+        "purpose": "pipeline_and_qc_only_no_effect_claim",
+        "base_cases_per_section": 6,
+        "total_base_cases": 18,
+        "low_fidelity_cases_per_section": 6,
+        "total_low_fidelity_cases": 18,
+        "high_fidelity_cases_per_section": 2,
+        "total_high_fidelity_cases": 6,
+        "lifted_dynamics_per_train_case": 8,
+        "query_points_per_lifted_sample": 2048,
+        "training_seeds": 1,
+        "estimated_resources_only": {
+          "cpu_core_hours": [
+            2,
+            50
+          ],
+          "gpu_hours": [
+            0.2,
+            2.0
+          ],
+          "storage_gb": [
+            1,
+            20
+          ]
+        }
+      },
+      "pilot": {
+        "purpose": "auxiliary_go_no_go_screen_not_main_experiment",
+        "base_cases_per_section": 128,
+        "total_base_cases": 384,
+        "low_fidelity_cases_per_section": 128,
+        "total_low_fidelity_cases": 384,
+        "high_fidelity_cases_per_section": 48,
+        "total_high_fidelity_cases": 144,
+        "lifted_dynamics_per_train_case": 32,
+        "query_points_per_lifted_sample": 8192,
+        "training_seeds": 5,
+        "high_fidelity_training_fractions": [
+          0.4,
+          0.6,
+          0.8,
+          1.0
+        ],
+        "estimated_resources_only": {
+          "cpu_core_hours": [
+            500,
+            5000
+          ],
+          "gpu_hours": [
+            12,
+            96
+          ],
+          "storage_gb": [
+            100,
+            1500
+          ]
+        }
+      }
+    }
+  },
+  "fidelity": {
+    "low": {
+      "role": "pretraining_and_development_not_locked_test_truth",
+      "target_elements_per_regularization_length": 2,
+      "max_cfl": 0.5,
+      "nonlinear_residual_tolerance": 0.0001
+    },
+    "high": {
+      "role": "locked_synthetic_label_reference",
+      "target_elements_per_regularization_length": 4,
+      "max_cfl": 0.35,
+      "nonlinear_residual_tolerance": 0.000001,
+      "mesh_refinement_audit_fraction": 0.1,
+      "max_key_scalar_change_under_refinement": 0.05
+    }
+  },
+  "pretraining": {
+    "implementation_layer": "geoPT_compatible_geometry_boundary_prior_only",
+    "candidate_prompt_mode": "stress_aligned",
+    "case_access": "train_only",
+    "inputs": [
+      "coordinates_over_characteristic_radius",
+      "section_vector_distance_over_characteristic_radius",
+      "section_normal",
+      "synthetic_dynamics_direction",
+      "synthetic_dynamics_magnitude"
+    ],
+    "targets": [
+      "three_step_vector_distance_over_characteristic_radius"
+    ],
+    "trajectory_steps": 3,
+    "negative_control": "shuffle_stress_aligned_dynamics_within_section_family",
+    "dimensionless_conditions_usage": "generation_and_future_context_only_do_not_pack_into_condition_Nx4"
+  },
+  "planned_high_fidelity_layer": {
+    "schema_status": "not_implemented",
+    "downstream_outputs": [
+      "displacement_over_characteristic_radius",
+      "velocity_over_cp",
+      "stress_tensor_over_ucs",
+      "damage",
+      "strain_energy_density_over_ucs",
+      "dissipated_energy_increment_over_ucs_radius_squared",
+      "equilibrium_residual",
+      "boundary_traction_residual",
+      "relative_energy_balance_error"
+    ]
+  },
+  "split": {
+    "unit": "case_group_id",
+    "hash": "sha256_of_canonical_parent_case",
+    "stratified_by": "section_family",
+    "fractions": {
+      "train": 0.7,
+      "dev": 0.15,
+      "locked_test": 0.15
+    },
+    "bind_to_same_split": [
+      "all_time_steps",
+      "all_meshes",
+      "all_fidelities",
+      "all_solver_restarts",
+      "all_augmentations",
+      "all_children_of_material_field_seed",
+      "all_children_of_joint_network_seed"
+    ]
+  },
+  "quality_control": {
+    "minimum_pass_fraction_per_section": 0.95,
+    "max_nonfinite_fraction": 0.0,
+    "max_normalized_equilibrium_residual": 0.01,
+    "max_normalized_boundary_traction_residual": 0.02,
+    "max_relative_energy_balance_error": 0.05,
+    "max_damage_irreversibility_violation_fraction": 0.001,
+    "max_negative_dissipation_fraction": 0.001,
+    "max_joint_penetration_over_characteristic_radius": 0.00001,
+    "min_scaled_jacobian": 0.2,
+    "max_symmetry_relative_error": 0.02,
+    "max_rotation_equivariance_relative_error": 0.03,
+    "critical_failures": [
+      "cross_split_duplicate_or_near_duplicate",
+      "test_case_seen_in_pretraining",
+      "normalization_fit_outside_train",
+      "same_parent_case_across_fidelities_in_different_splits",
+      "locked_test_used_for_model_selection"
+    ]
+  },
+  "preregistered_go_no_go": {
+    "status": "threshold_not_result",
+    "candidate": "tunnelgeopt_at_80_percent_high_fidelity_train_cases",
+    "reference": "scratch_at_100_percent_high_fidelity_train_cases",
+    "max_candidate_to_reference_high_fidelity_case_ratio": 0.8,
+    "max_upper_95_percent_ci_primary_error_ratio": 1.02,
+    "minimum_training_seeds": 5,
+    "minimum_seed_pass_fraction": 0.8,
+    "minimum_noninferior_section_count": 2,
+    "section_count": 3,
+    "max_single_section_error_ratio": 1.05,
+    "max_physics_violation_rate_increase_absolute": 0.01,
+    "require_directional_win_over_static_geometry_pretraining": true,
+    "require_shuffled_dynamics_to_fail_main_gate": true,
+    "passing_scope": "permission_to_start_next_validation_stage_only"
+  }
+}

@@ -1,0 +1,25 @@
+.venv/
+.venv-wsl/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Generated scientific data can become very large.
+data/generated/
+outputs/
+tmp/
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.zarr/
+
+# Local IDE and operating-system files.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

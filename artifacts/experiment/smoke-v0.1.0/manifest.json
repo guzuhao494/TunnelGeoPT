@@ -1,0 +1,20 @@
+{
+  "run_id": "smoke-v0.1.0",
+  "tier": "auxiliary/dev",
+  "execution_status": "passed",
+  "research_claim": "not_evaluated",
+  "objective": "Validate the environment, data contract, geometry generator, CLI, and Kirsch invariants.",
+  "baseline_relation": "No model baseline is trained in this run.",
+  "expected_report": "validation/smoke_report.json",
+  "observed": {
+    "cases": 6,
+    "unit_tests_passed": 29,
+    "generated_bytes": 102654,
+    "wall_time_seconds": 0.24051669999971637,
+    "kirsch_uniaxial_boundary_concentration_factor": 3.0,
+    "pilot_config_sha256": "a1dd3b2b5863c22e6098a5fe835bba61c2e439e3cba33b34c479913d1cccdb1a"
+  },
+  "stop_condition": "All unit tests, schema checks, CLI round-trip checks, and Kirsch invariants pass.",
+  "failure_mode": null,
+  "next_action": "Implement the low-fidelity elastic data layer and the four-way pretraining comparison."
+}

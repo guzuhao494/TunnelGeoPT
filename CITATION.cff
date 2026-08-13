@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the repository and GeoPT inspiration listed below."
+title: "TunnelGeoPT: Physics-aware synthetic pre-training data for hard-rock tunnels"
+type: software
+authors:
+  - name: "guzuhao494"
+version: 0.1.0
+date-released: 2026-08-13
+repository-code: "https://github.com/guzuhao494/TunnelGeoPT"
+license: MIT
+references:
+  - type: conference-paper
+    title: "GeoPT: Scaling Physics Simulation via Lifted Geometric Pre-Training"
+    authors:
+      - family-names: "Wu"
+        given-names: "Haixu"
+      - family-names: "Guo"
+        given-names: "Minghao"
+      - family-names: "Li"
+        given-names: "Zongyi"
+      - family-names: "Dou"
+        given-names: "Zhiyang"
+      - family-names: "Long"
+        given-names: "Mingsheng"
+      - family-names: "He"
+        given-names: "Kaiming"
+      - family-names: "Matusik"
+        given-names: "Wojciech"
+    year: 2026
+    collection-title: "Proceedings of the International Conference on Machine Learning"
+    url: "https://github.com/Physics-Scaling/GeoPT"

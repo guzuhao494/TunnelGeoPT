@@ -1,0 +1,141 @@
+{
+  "run_id": "smoke-v0.1.0",
+  "generated_at": "2026-08-13T06:55:37.418604+00:00",
+  "claim_type": "computed",
+  "claim_scope": "software/data-contract smoke only; no ML or fracture result",
+  "command": "python scripts/run_smoke.py --output-root outputs/smoke --report validation/smoke_report.json",
+  "pilot_config_sha256": "a1dd3b2b5863c22e6098a5fe835bba61c2e439e3cba33b34c479913d1cccdb1a",
+  "environment": {
+    "python": "3.13.5",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "numpy": "2.5.2"
+  },
+  "cases": [
+    {
+      "case_id": "circle_random",
+      "point_count": 240,
+      "checks": {
+        "shape_contract": true,
+        "finite": true,
+        "surface_step_zero": true,
+        "surface_distance_zero": true,
+        "trajectory_changes": true
+      },
+      "files": {
+        "condition_0.npy": "0e5a9de1e2dfd2134377d986f31989d793deb17f0ff5e7342fddbdf6fc2371ab",
+        "condition_1.npy": "bcb444ddbdd244ad135c36529b8f5f7a9749636cf6e3027758ead5aff08b3ea5",
+        "meta.json": "5d8c382b7438f9dafa60b2808514cdf9a9849f1b834f761a049a78b1e3b06911",
+        "supervise_0.npy": "069ac19029d5632dec257d1e6ffd1edddbc175edea95ad7af5b832750fd1f4ee",
+        "supervise_1.npy": "7ff15644890fc83b1288c31a42f5cc78f512b916a243173aabe2562ac753e62f",
+        "x.npy": "1f7bf4d9b03a55ff615f3525dbaf413194de8021ccc13017ec545f18f8751822"
+      }
+    },
+    {
+      "case_id": "circle_stress_aligned",
+      "point_count": 240,
+      "checks": {
+        "shape_contract": true,
+        "finite": true,
+        "surface_step_zero": true,
+        "surface_distance_zero": true,
+        "trajectory_changes": true
+      },
+      "files": {
+        "condition_0.npy": "1a7b27bbb6635381f389ac6704e134b4ad0c99133e047c939854b811f60ec630",
+        "condition_1.npy": "f2075a7a146eab7270cfdeac0d3835edb414ae28f1d044cf5b9e2b4061882c6e",
+        "meta.json": "af10db93920ba4a0c30faea89d940913a5ee75dc36d707011c397b704f382f01",
+        "supervise_0.npy": "b9dbe9ab355a21d1b26e5285a3d3e9f27acbccdc4cdf5d3b8eab8df6c4f88dac",
+        "supervise_1.npy": "b871209f88e807836080e99a5f83d9bcb1665eac22a3482a8ee61d9f1ef04553",
+        "x.npy": "684d9db74306ed8f8ba0f1be96929c91a9ba17b4e86cd6a8c24191771047811d"
+      }
+    },
+    {
+      "case_id": "horseshoe_random",
+      "point_count": 240,
+      "checks": {
+        "shape_contract": true,
+        "finite": true,
+        "surface_step_zero": true,
+        "surface_distance_zero": true,
+        "trajectory_changes": true
+      },
+      "files": {
+        "condition_0.npy": "e2cfea147409a02148b104eb3dca395cd6e211736c2ced07e403f754ef998b6d",
+        "condition_1.npy": "c1099ce0aeccedbdd5b078a8c04714f10a9fc14bd4a2eed8814f16c276c843f5",
+        "meta.json": "a0e9d58a59dc023fc44b4f35808df7ad949d0d665a431e883cec1985328a0094",
+        "supervise_0.npy": "4828442d3706bb9b3f9761b31c88e35ca88de57f114d3b944b022e1dbb0dd2ec",
+        "supervise_1.npy": "2ace2ec3382c571f88232aa62363c5c6da7dc1f8d783e687c67e49954d578beb",
+        "x.npy": "1e2d6a9486938efc7b038a1f60432e3b4dbd0750fc50396c20243da4f44fe399"
+      }
+    },
+    {
+      "case_id": "horseshoe_stress_aligned",
+      "point_count": 240,
+      "checks": {
+        "shape_contract": true,
+        "finite": true,
+        "surface_step_zero": true,
+        "surface_distance_zero": true,
+        "trajectory_changes": true
+      },
+      "files": {
+        "condition_0.npy": "ca10fca2a14fbbdf6a4ded66d40c2d31afc61b9e13286cf29325bced5f1d17e6",
+        "condition_1.npy": "a6462821883b5be58901b1bf26cecd7ee9df0115545a08bca2f2a4a4c8143e3e",
+        "meta.json": "859b1d164c09951e3529b162d6de7d1d3dc8d8567a31ba381afe481dcc747988",
+        "supervise_0.npy": "651c2076c7505662d7ed22dfceace9a8d10b22cd14da5d2a18c85eb16973f428",
+        "supervise_1.npy": "7f3e2acf78d4fb8a84ef0bd9a02f18b5ddfddf1e16edb007de477cbc338d0f28",
+        "x.npy": "63f1e602a09bdb5b77eb041116aa7fe3a5abd5fca06a08f7638862932bf4563f"
+      }
+    },
+    {
+      "case_id": "straight_wall_arch_random",
+      "point_count": 240,
+      "checks": {
+        "shape_contract": true,
+        "finite": true,
+        "surface_step_zero": true,
+        "surface_distance_zero": true,
+        "trajectory_changes": true
+      },
+      "files": {
+        "condition_0.npy": "f3e05f961214c08f81511fb76ed206a2f8c59deb4ddd8ae249eff4b4105064a5",
+        "condition_1.npy": "9a35eba079f544e95206eceb1c100d4842c21bacda1e9175d37b6af2224b3417",
+        "meta.json": "b641b69f6691899c2e8e0db97cde907dba2852f78bac77fae0595fcc69a0dd17",
+        "supervise_0.npy": "e2bffc4b94cc9be6c526d494bc0d4865ed11dc5e017ebc0ceb9b8e1ee47aa7c2",
+        "supervise_1.npy": "0b507e38f93ecc5de279a39ce0c6e362d0ded87e72a4d5b1a178c01cf144d84e",
+        "x.npy": "4610238cacc622096c4bfb6c857d68814e9b0726764b6f906ee443b9973f579c"
+      }
+    },
+    {
+      "case_id": "straight_wall_arch_stress_aligned",
+      "point_count": 240,
+      "checks": {
+        "shape_contract": true,
+        "finite": true,
+        "surface_step_zero": true,
+        "surface_distance_zero": true,
+        "trajectory_changes": true
+      },
+      "files": {
+        "condition_0.npy": "446ddb6e87bbecab602c0d53436a38bcbdf9b139548d389b8a6b6a01a47152dc",
+        "condition_1.npy": "4d5250f375ae58e7824e4039bcdee0a724e4eb1852930ed9896d3926d28cdb93",
+        "meta.json": "4aca8f2982b65a18164516924f00d6d92ba02b796406d5349380ab4d57c7b3ad",
+        "supervise_0.npy": "b0b6aa7755188c7a849c87fd67300c4ca9bf5572f2576f54b07f35afb899aea9",
+        "supervise_1.npy": "28692af594634d389f004f716ca6e1cf168da03a86223393a2d05789da6e7ae5",
+        "x.npy": "7bb305f94c6ece7ac499ac2782c96abc56ee09088cc17e33677b9ed04110d18f"
+      }
+    }
+  ],
+  "kirsch": {
+    "traction_free_radial_max_abs": 6.309604231922783e-15,
+    "traction_free_shear_max_abs": 6.4042811478272315e-15,
+    "uniaxial_boundary_concentration_factor": 3.0,
+    "passed": true
+  },
+  "resources": {
+    "wall_time_seconds": 0.24051669999971637,
+    "generated_bytes": 102654,
+    "generated_megabytes": 0.09789848327636719
+  },
+  "status": "passed"
+}

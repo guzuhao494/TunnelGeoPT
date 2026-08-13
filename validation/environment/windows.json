@@ -1,0 +1,61 @@
+﻿{
+    "generated_at":  "2026-08-13T14:55:25.8423361+08:00",
+    "script":  "check_environment.ps1",
+    "host":  {
+                 "os":  {
+                            "platform":  "Win32NT",
+                            "version":  "Microsoft Windows NT 10.0.26200.0",
+                            "is_64bit":  true
+                        },
+                 "powershell":  {
+                                    "edition":  "Desktop",
+                                    "version":  "5.1.26100.9168"
+                                }
+             },
+    "tools":  {
+                  "python":  {
+                                 "found":  true,
+                                 "launcher":  "python.exe",
+                                 "path":  "C:\\miniconda3\\python.exe",
+                                 "version":  "Python 3.13.5"
+                             },
+                  "git":  {
+                              "found":  true,
+                              "path":  "C:\\Program Files\\Git\\cmd\\git.exe",
+                              "version":  "git version 2.51.0.windows.1"
+                          }
+              },
+    "gpu":  {
+                "detected":  true,
+                "source":  "nvidia-smi",
+                "gpus":  [
+                             {
+                                 "name":  "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+                                 "driver_version":  "596.49",
+                                 "memory_mb":  12227
+                             }
+                         ]
+            },
+    "wsl":  {
+                "visible":  true,
+                "path":  "C:\\windows\\system32\\wsl.exe",
+                "distros":  [
+                                {
+                                    "name":  "Ubuntu",
+                                    "state":  "Stopped",
+                                    "version":  "2"
+                                }
+                            ],
+                "raw":  [
+                            "  NAME      STATE           VERSION",
+                            "",
+                            "* Ubuntu    Stopped         2",
+                            "",
+                            ""
+                        ]
+            },
+    "notes":  [
+                  "This report intentionally omits environment variables and credential-bearing settings.",
+                  "A tool being visible on PATH does not prove solver usability or license availability."
+              ]
+}
