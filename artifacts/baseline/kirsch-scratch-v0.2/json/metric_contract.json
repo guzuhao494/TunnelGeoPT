@@ -51,6 +51,7 @@
   "source": {
     "repository": "https://github.com/guzuhao494/TunnelGeoPT",
     "source_commit_before_run": "5e3be0238873c9e99fc598d8f81fbebc30ec9db9",
+    "implementation_commit_after_verification": "236631cfea2c27b657bd4e639b9e3bdbb5b0c81b",
     "implementation_branch": "codex/elastic-milestone"
   },
   "known_deviations": [
