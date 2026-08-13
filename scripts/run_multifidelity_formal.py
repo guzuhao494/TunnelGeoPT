@@ -19,6 +19,8 @@ import io
 import json
 import os
 import platform
+import re
+import subprocess
 import sys
 import time
 import tracemalloc
@@ -35,24 +37,20 @@ from tunnelgeopt.multifidelity_learning import (
     LearningBatch,
     LearningContractError,
     TrainingContract,
-    aggregate_case_errors_by_parent,
     build_training_contract,
     case_weighted_stress_error,
     checkpoint_payload,
-    hierarchical_paired_bootstrap,
     load_formal_model_from_checkpoint,
-    make_model,
     method_arrays,
     mismatched_coarse_indices,
     nested_geometry_subsets,
     predict,
     reconstruct_fine_prediction,
-    save_formal_checkpoint_atomic,
-    train_formal_with_dev_selection,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "configs" / "multifidelity_formal.json"
+DEFAULT_EXCLUSIONS = ROOT / "configs" / "multifidelity_seen_identity_exclusions.json"
 DEFAULT_OUTPUT = ROOT / "artifacts" / "experiment" / "mf-residual-formal-v0.3.0"
 PHASES = ("prepare", "generate", "train", "evaluate", "analyze")
 SECTION_NAMES = ("circle", "horseshoe", "straight_wall_arch")
@@ -75,6 +73,66 @@ STATE_FILENAME = "formal_run_state.json"
 ACCESS_LOG_FILENAME = "access_audit.jsonl"
 REGISTRY_FILENAME = "checkpoint_registry.json"
 CHECKPOINT_MANIFEST_FILENAME = "checkpoint_manifest.json"
+IMPLEMENTATION_MANIFEST_FILENAME = "implementation_manifest.json"
+TRAINING_WORKER_CONTRACT_FILENAME = "training_worker_contract.json"
+TRAINING_WORKER_AUDIT_FILENAME = "training_worker_audit.json"
+TRAINING_WORKER_PROGRESS_FILENAME = "training_progress.jsonl"
+TRAINING_WORKER_SCHEMA = "tunnelgeopt.formal_training_worker_contract.v1"
+TRAINING_WORKER_ALLOWED_KEYS = frozenset(
+    {
+        "schema",
+        "run_id",
+        "config_sha256",
+        "backend",
+        "device",
+        "public_inputs",
+        "train_dev_labels",
+        "checkpoint_output_dir",
+        "split_salt",
+        "fine_train_fractions",
+        "nested_parent_counts",
+        "model",
+        "optimization",
+        "checkpoint_specifications",
+    }
+)
+TRAINING_WORKER_ALLOWED_IMPORTS = frozenset(
+    {
+        "tunnelgeopt",
+        "tunnelgeopt.cases",
+        "tunnelgeopt.elastic_schema",
+        "tunnelgeopt.elastic_validation",
+        "tunnelgeopt.elasticity",
+        "tunnelgeopt.geometry",
+        "tunnelgeopt.kirsch",
+        "tunnelgeopt.lift",
+        "tunnelgeopt.mesh",
+        "tunnelgeopt.multifidelity_learning",
+        "tunnelgeopt.schema",
+    }
+)
+IMPLEMENTATION_SOURCE_PATHS = (
+    "scripts/run_multifidelity_formal.py",
+    "scripts/run_multifidelity_train_worker.py",
+    "src/tunnelgeopt/formal_generation.py",
+    "src/tunnelgeopt/formal_analysis.py",
+    "src/tunnelgeopt/__init__.py",
+    "src/tunnelgeopt/cases.py",
+    "src/tunnelgeopt/elastic_schema.py",
+    "src/tunnelgeopt/elastic_validation.py",
+    "src/tunnelgeopt/multifidelity.py",
+    "src/tunnelgeopt/multifidelity_learning.py",
+    "src/tunnelgeopt/geometry.py",
+    "src/tunnelgeopt/mesh.py",
+    "src/tunnelgeopt/elasticity.py",
+    "src/tunnelgeopt/field_sampling.py",
+    "src/tunnelgeopt/kirsch.py",
+    "src/tunnelgeopt/lift.py",
+    "src/tunnelgeopt/schema.py",
+    "configs/multifidelity_formal.json",
+    "configs/multifidelity_formal_approval.json",
+    "configs/multifidelity_seen_identity_exclusions.json",
+)
 EXACT_METHOD_FRACTIONS = {
     "scratch": (1.0,),
     "direct_coarse": (1.0,),
@@ -125,11 +183,106 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _run_readonly_command(arguments: Sequence[str], *, description: str) -> str:
+    completed = subprocess.run(
+        list(arguments),
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip()
+        raise FormalRunError(f"could not inspect {description}: {detail}")
+    return completed.stdout.strip()
+
+
+def _git_output(*arguments: str, description: str) -> str:
+    return _run_readonly_command(("git", *arguments), description=description)
+
+
+def _sanitize_remote_url(value: str) -> str:
+    remote = value.strip()
+    # Strip userinfo from HTTP(S) remotes and user names from SCP-style SSH.
+    remote = re.sub(r"^(https?://)[^/@]+@", r"\1", remote, flags=re.IGNORECASE)
+    remote = re.sub(r"^(ssh://)[^/@]+@", r"\1", remote, flags=re.IGNORECASE)
+    remote = re.sub(r"^[^/@:]+@([^:]+):", r"ssh://\1/", remote)
+    return remote
+
+
+def _module_version(name: str) -> str | None:
+    try:
+        module = __import__(name)
+    except ImportError:
+        return None
+    value = getattr(module, "__version__", None)
+    return None if value is None else str(value)
+
+
+def _cuda_environment() -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "torch": None,
+        "cuda_runtime": None,
+        "cuda_available": False,
+        "device_name": None,
+        "device_total_memory_bytes": None,
+        "driver_version": None,
+    }
+    try:
+        import torch
+    except ImportError:
+        torch = None
+    if torch is not None:
+        payload["torch"] = str(torch.__version__)
+        payload["cuda_runtime"] = None if torch.version.cuda is None else str(torch.version.cuda)
+        payload["cuda_available"] = bool(torch.cuda.is_available())
+        if torch.cuda.is_available():
+            properties = torch.cuda.get_device_properties(0)
+            payload["device_name"] = str(properties.name)
+            payload["device_total_memory_bytes"] = int(properties.total_memory)
+    try:
+        driver = _run_readonly_command(
+            ("nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"),
+            description="NVIDIA driver version",
+        )
+    except FormalRunError:
+        driver = ""
+    if driver:
+        payload["driver_version"] = driver.splitlines()[0].strip()
+    return payload
+
+
+def _environment_manifest(device_requested: str) -> dict[str, Any]:
+    cuda = _cuda_environment()
+    return {
+        "python": sys.version,
+        "platform": platform.platform(),
+        "numpy": np.__version__,
+        "scipy": _module_version("scipy"),
+        "skfem": _module_version("skfem"),
+        "gmsh": _module_version("gmsh"),
+        "torch": cuda["torch"],
+        "cuda_runtime": cuda["cuda_runtime"],
+        "cuda_available": cuda["cuda_available"],
+        "device_requested": str(device_requested),
+        "device_name": cuda["device_name"],
+        "device_total_memory_bytes": cuda["device_total_memory_bytes"],
+        "driver_version": cuda["driver_version"],
+    }
+
+
 def _require_sha256(value: Any, name: str) -> str:
     digest = str(value)
     if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
         raise FormalRunError(f"{name} must be a lowercase SHA-256 digest")
     return digest
+
+
+def _require_git_commit(value: Any, name: str) -> str:
+    commit = str(value)
+    if len(commit) != 40 or any(character not in "0123456789abcdef" for character in commit):
+        raise FormalRunError(f"{name} is not a lowercase 40-hex Git commit")
+    return commit
 
 
 def _atomic_json(path: Path, value: Any) -> str:
@@ -494,6 +647,7 @@ class FormalExperimentRunner:
         config_path: Path,
         approval_path: Path,
         output_dir: Path,
+        exclusions_path: Path | None = None,
         backend: str = "formal",
         device: str = "cuda",
     ) -> None:
@@ -501,6 +655,7 @@ class FormalExperimentRunner:
             raise ValueError("backend must be 'formal' or 'tiny-mock'")
         self.config_path = Path(config_path).resolve()
         self.approval_path = Path(approval_path).resolve()
+        self.exclusions_path = None if exclusions_path is None else Path(exclusions_path).resolve()
         self.paths = RunnerPaths(Path(output_dir).resolve())
         self.backend = backend
         self.tiny_mock = backend == "tiny-mock"
@@ -514,6 +669,212 @@ class FormalExperimentRunner:
             config_sha256=self.config_sha256,
             tiny_mock=self.tiny_mock,
         )
+        self.forbidden_identities = self._load_identity_exclusions()
+        self._prepared_implementation: dict[str, Any] | None = None
+
+    def _source_hashes(self) -> dict[str, str]:
+        hashes: dict[str, str] = {}
+        for relative in IMPLEMENTATION_SOURCE_PATHS:
+            path = ROOT / relative
+            if not path.is_file():
+                raise FormalRunError(f"critical implementation source is missing: {relative}")
+            hashes[relative] = _file_sha256(path)
+        return hashes
+
+    def _implementation_manifest(self) -> dict[str, Any]:
+        if self.tiny_mock:
+            source_hashes = self._source_hashes()
+            return {
+                "schema": "tunnelgeopt.formal_implementation_manifest.v1",
+                "run_id": self.config["run_id"],
+                "config_sha256": self.config_sha256,
+                "effect_claim_allowed": False,
+                "recorded_at_utc": _now(),
+                "source_provenance": {
+                    "git_head": "0" * 40,
+                    "upstream_ref": "tiny-mock/no-upstream-required",
+                    "upstream_head": "0" * 40,
+                    "head_matches_upstream": False,
+                    "worktree_clean_before_prepare": False,
+                    "remote_url_sanitized": "tiny-mock://not-applicable",
+                    "all_sources_tracked": False,
+                    "source_sha256": source_hashes,
+                },
+                "environment": _environment_manifest(self.device),
+            }
+        git_head = _git_output("rev-parse", "HEAD", description="git HEAD")
+        upstream_ref = _git_output(
+            "rev-parse",
+            "--abbrev-ref",
+            "--symbolic-full-name",
+            "@{upstream}",
+            description="git upstream ref",
+        )
+        upstream_head = _git_output("rev-parse", "@{upstream}", description="git upstream HEAD")
+        status = _git_output(
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=all",
+            description="git worktree status",
+        )
+        worktree_clean = not bool(status)
+        head_matches_upstream = git_head == upstream_head
+        tracked = set(
+            _git_output(
+                "ls-files", "--", *IMPLEMENTATION_SOURCE_PATHS, description="tracked sources"
+            ).splitlines()
+        )
+        all_sources_tracked = tracked == set(IMPLEMENTATION_SOURCE_PATHS)
+        remote_name = upstream_ref.split("/", 1)[0]
+        remote_url = _git_output(
+            "remote", "get-url", remote_name, description="upstream remote URL"
+        )
+        if not self.tiny_mock and not worktree_clean:
+            raise FormalRunError("formal prepare requires a clean git worktree")
+        if not self.tiny_mock and not head_matches_upstream:
+            raise FormalRunError("formal prepare requires HEAD equal to its configured upstream")
+        if not self.tiny_mock and not all_sources_tracked:
+            raise FormalRunError("formal prepare requires every critical source to be tracked")
+        source_hashes = self._source_hashes()
+        runtime_inputs = {
+            "configs/multifidelity_formal.json": self.config_path,
+            "configs/multifidelity_formal_approval.json": self.approval_path,
+            "configs/multifidelity_seen_identity_exclusions.json": self.exclusions_path,
+        }
+        if any(
+            path is None or _file_sha256(path) != source_hashes[relative]
+            for relative, path in runtime_inputs.items()
+        ):
+            raise FormalRunError("formal runtime inputs differ from the tracked frozen sources")
+        environment = _environment_manifest(self.device)
+        required_strings = set(environment) - {"cuda_available", "device_total_memory_bytes"}
+        if (
+            environment["cuda_available"] is not True
+            or not str(environment["device_requested"]).startswith("cuda")
+            or not isinstance(environment["device_total_memory_bytes"], int)
+            or environment["device_total_memory_bytes"] <= 0
+            or any(
+                not isinstance(environment[name], str) or not environment[name].strip()
+                for name in required_strings
+            )
+        ):
+            raise FormalRunError("formal prepare requires complete CUDA/package provenance")
+        return {
+            "schema": "tunnelgeopt.formal_implementation_manifest.v1",
+            "run_id": self.config["run_id"],
+            "config_sha256": self.config_sha256,
+            "effect_claim_allowed": not self.tiny_mock,
+            "recorded_at_utc": _now(),
+            "source_provenance": {
+                "git_head": _require_git_commit(git_head, "git HEAD"),
+                "upstream_ref": upstream_ref,
+                "upstream_head": _require_git_commit(upstream_head, "git upstream HEAD"),
+                "head_matches_upstream": head_matches_upstream,
+                "worktree_clean_before_prepare": worktree_clean,
+                "remote_url_sanitized": _sanitize_remote_url(remote_url),
+                "all_sources_tracked": all_sources_tracked,
+                "source_sha256": source_hashes,
+            },
+            "environment": environment,
+        }
+
+    def _verify_implementation_unchanged(self) -> None:
+        path = self.paths.root / IMPLEMENTATION_MANIFEST_FILENAME
+        if not path.is_file():
+            raise FormalAbstain("implementation provenance manifest is missing")
+        implementation = _read_json(path, "implementation provenance manifest")
+        provenance = implementation.get("source_provenance")
+        if not isinstance(provenance, Mapping):
+            raise FormalAbstain("implementation source provenance is missing")
+        expected = provenance.get("source_sha256")
+        if not isinstance(expected, Mapping) or set(expected) != set(IMPLEMENTATION_SOURCE_PATHS):
+            raise FormalAbstain("implementation source set changed after prepare")
+        if self._source_hashes() != dict(expected):
+            raise FormalAbstain("critical source hash changed after prepare")
+        if _environment_manifest(self.device) != implementation.get("environment"):
+            raise FormalAbstain("implementation environment changed after prepare")
+        if self.tiny_mock:
+            return
+        runtime_inputs = {
+            "configs/multifidelity_formal.json": self.config_path,
+            "configs/multifidelity_formal_approval.json": self.approval_path,
+            "configs/multifidelity_seen_identity_exclusions.json": self.exclusions_path,
+        }
+        if any(
+            path is None or _file_sha256(path) != expected[relative]
+            for relative, path in runtime_inputs.items()
+        ):
+            raise FormalAbstain("runtime frozen input changed after prepare")
+        head = _git_output("rev-parse", "HEAD", description="git HEAD revalidation")
+        if head != provenance.get("git_head"):
+            raise FormalAbstain("git HEAD changed after prepare")
+        upstream = _git_output(
+            "rev-parse", "@{upstream}", description="git upstream HEAD revalidation"
+        )
+        if upstream != head or upstream != provenance.get("upstream_head"):
+            raise FormalAbstain("git upstream no longer matches the prepared HEAD")
+        dirty_tracked = subprocess.run(
+            ("git", "diff", "--quiet", "--", *IMPLEMENTATION_SOURCE_PATHS),
+            cwd=ROOT,
+            check=False,
+        ).returncode
+        staged_tracked = subprocess.run(
+            ("git", "diff", "--cached", "--quiet", "--", *IMPLEMENTATION_SOURCE_PATHS),
+            cwd=ROOT,
+            check=False,
+        ).returncode
+        if dirty_tracked != 0 or staged_tracked != 0:
+            raise FormalAbstain("critical tracked source changed after prepare")
+
+    def _load_identity_exclusions(self) -> Any:
+        from tunnelgeopt.formal_generation import FrozenIdentityExclusions
+
+        if self.tiny_mock and self.exclusions_path is None:
+            return FrozenIdentityExclusions()
+        if self.exclusions_path is None or not self.exclusions_path.is_file():
+            raise FormalRunError("formal seen-identity exclusions artifact is required")
+        payload = _read_json(self.exclusions_path, "seen-identity exclusions")
+        required = {
+            "schema",
+            "geometry_group_ids",
+            "boundary_float64_sha256",
+            "case_group_ids",
+            "load_group_ids",
+            "source_artifact_sha256",
+            "source_record_count",
+        }
+        if not required.issubset(payload):
+            raise FormalRunError("seen-identity exclusions field set is incomplete")
+        identities = FrozenIdentityExclusions(
+            geometry_group_ids=frozenset(map(str, payload["geometry_group_ids"])),
+            boundary_float64_sha256=frozenset(map(str, payload["boundary_float64_sha256"])),
+            case_group_ids=frozenset(map(str, payload["case_group_ids"])),
+            load_group_ids=frozenset(map(str, payload["load_group_ids"])),
+            source_artifact_sha256=str(payload["source_artifact_sha256"]),
+            source_record_count=int(payload["source_record_count"]),
+        )
+        if not self.tiny_mock and not any(
+            (
+                identities.geometry_group_ids,
+                identities.boundary_float64_sha256,
+                identities.case_group_ids,
+                identities.load_group_ids,
+            )
+        ):
+            raise FormalRunError("formal seen-identity exclusions may not be empty")
+        if not self.tiny_mock and identities.source_record_count <= 0:
+            raise FormalRunError("formal seen-identity exclusions source count must be positive")
+        canonical_digest = _sha256_value(payload)
+        expected_canonical = self.approval.get("seen_identity_exclusions_canonical_sha256")
+        expected_file = self.approval.get("seen_identity_exclusions_file_sha256")
+        if not self.tiny_mock and (
+            expected_canonical != canonical_digest
+            or expected_file != _file_sha256(self.exclusions_path)
+        ):
+            raise FormalRunError("seen-identity exclusions are not bound to formal approval")
+        self.exclusions_canonical_sha256 = canonical_digest
+        self.exclusions_file_sha256 = _file_sha256(self.exclusions_path)
+        return identities
 
     def _dataset_paths(self) -> tuple[Path, Path, Path]:
         """Return manifest/public/train paths without exposing a sealed path."""
@@ -531,13 +892,8 @@ class FormalExperimentRunner:
         values = training_data_paths(self.paths.data)
         public = Path(values.public_inputs_path)
         train = Path(values.train_dev_fine_labels_path)
-        manifest_candidates = (
-            self.paths.data / DATASET_MANIFEST_FILENAME,
-            self.paths.data / "manifest.json",
-            self.paths.data / "formal_manifest.json",
-        )
-        manifest = next((path for path in manifest_candidates if path.is_file()), None)
-        if manifest is None:
+        manifest = Path(values.dataset_manifest_path)
+        if not manifest.is_file():
             raise FormalRunError("formal dataset manifest is missing")
         return manifest, public, train
 
@@ -548,6 +904,17 @@ class FormalExperimentRunner:
         return public, train
 
     def _trusted_sealed_path(self, partition: str) -> Path:
+        state = self._load_state()
+        phase = next(
+            (name for name in PHASES if state["phases"][name]["status"] == "in_progress"),
+            "none",
+        )
+        self._event(
+            state,
+            "trusted_sealed_path_resolved",
+            partition=partition,
+            phase=phase,
+        )
         if self.tiny_mock:
             return self.paths.data / SEALED_FILENAMES[partition]
         try:
@@ -579,6 +946,15 @@ class FormalExperimentRunner:
         if required:
             raise FormalRunError(f"dataset manifest omits file digest for {path.name}")
         return None
+
+    def _opaque_sealed_digest(self, manifest: Mapping[str, Any], partition: str) -> str:
+        stores = manifest.get("opaque_sealed_stores")
+        if not isinstance(stores, Mapping):
+            raise FormalRunError("dataset manifest omits opaque sealed store identities")
+        opaque_id = _sha256_value({"run_id": self.config["run_id"], "partition": partition})
+        if opaque_id not in stores:
+            raise FormalRunError(f"opaque sealed store identity is missing for {partition}")
+        return _require_sha256(stores[opaque_id], f"opaque sealed digest for {partition}")
 
     def _initial_state(self) -> dict[str, Any]:
         return {
@@ -650,8 +1026,12 @@ class FormalExperimentRunner:
             return state, False
         phase_index = PHASES.index(phase)
         for predecessor in PHASES[:phase_index]:
-            if state["phases"][predecessor]["status"] != "completed":
+            predecessor_record = state["phases"][predecessor]
+            if predecessor_record["status"] != "completed":
                 raise FormalRunError(f"phase {phase!r} requires completed {predecessor!r}")
+            self._verify_artifacts(predecessor_record.get("artifacts", {}))
+        if phase != "prepare":
+            self._verify_implementation_unchanged()
         if phase == "evaluate" and record["status"] == "in_progress":
             reason = "evaluation was interrupted after a sealed partition may have been opened"
             if reason not in state["abstain_reasons"]:
@@ -682,6 +1062,10 @@ class FormalExperimentRunner:
         return {"phase": phase, "status": "completed", "artifacts": dict(artifacts)}
 
     def run_phase(self, phase: str) -> dict[str, Any]:
+        # Formal provenance must observe the caller's clean checkout before
+        # state/access artifacts are created inside the repository output.
+        if phase == "prepare" and not self.paths.state.exists():
+            self._prepared_implementation = self._implementation_manifest()
         state, execute = self._begin_phase(phase)
         if not execute:
             return {"phase": phase, "status": "already_completed"}
@@ -694,6 +1078,15 @@ class FormalExperimentRunner:
         }
         try:
             artifacts = handlers[phase](state)
+        except FormalAbstain as exc:
+            state = self._load_state()
+            record = state["phases"][phase]
+            record["status"] = "abstained"
+            record["last_error"] = f"{type(exc).__name__}: {exc}"
+            if str(exc) not in state["abstain_reasons"]:
+                state["abstain_reasons"].append(str(exc))
+            self._event(state, "phase_abstained", phase=phase, reason=str(exc))
+            raise
         except Exception as exc:
             state = self._load_state()
             if phase != "evaluate":
@@ -720,7 +1113,16 @@ class FormalExperimentRunner:
         )
         if not authorized:
             state["denied_premature_sealed_accesses"] += 1
-            self._event(state, "sealed_access_denied", partition=partition)
+            active_phase = next(
+                (name for name in PHASES if state["phases"][name]["status"] == "in_progress"),
+                "none",
+            )
+            self._event(
+                state,
+                "sealed_access_denied",
+                partition=partition,
+                phase=active_phase,
+            )
             raise SealedAccessError("sealed labels cannot be opened before frozen evaluation")
         if int(state["sealed_partition_open_counts"][partition]) != 0:
             reason = f"sealed partition {partition} would be opened more than once"
@@ -733,10 +1135,15 @@ class FormalExperimentRunner:
         except OSError as exc:
             raise FormalAbstain(f"could not open sealed partition {partition}: {exc}") from exc
         state["sealed_partition_open_counts"][partition] = 1
+        active_phase = next(
+            (name for name in PHASES if state["phases"][name]["status"] == "in_progress"),
+            "none",
+        )
         self._event(
             state,
             "sealed_partition_opened",
             partition=partition,
+            phase=active_phase,
             bytes=len(payload),
             sha256=_sha256_bytes(payload),
         )
@@ -744,6 +1151,12 @@ class FormalExperimentRunner:
 
     def _run_prepare(self, state: dict[str, Any]) -> dict[str, str]:
         self.paths.root.mkdir(parents=True, exist_ok=True)
+        implementation = self._prepared_implementation
+        if implementation is None:
+            raise FormalRunError("implementation provenance was not captured before output writes")
+        self._prepared_implementation = None
+        implementation_path = self.paths.root / IMPLEMENTATION_MANIFEST_FILENAME
+        implementation_sha256 = _atomic_json(implementation_path, implementation)
         snapshot = {
             "schema": "tunnelgeopt.multifidelity.formal_prepare.v1",
             "run_id": self.config["run_id"],
@@ -751,6 +1164,14 @@ class FormalExperimentRunner:
             "effect_claim_allowed": not self.tiny_mock,
             "config_sha256": self.config_sha256,
             "approval_sha256": _file_sha256(self.approval_path),
+            "seen_identity_exclusions": (
+                None
+                if self.exclusions_path is None
+                else {
+                    "canonical_sha256": self.exclusions_canonical_sha256,
+                    "file_sha256": self.exclusions_file_sha256,
+                }
+            ),
             "prepared_at_utc": _now(),
             "environment": {
                 "python": sys.version,
@@ -760,14 +1181,22 @@ class FormalExperimentRunner:
             },
             "formal_data_generated": False,
             "locked_labels_opened": False,
+            "implementation_manifest_file_sha256": implementation_sha256,
         }
         config_snapshot = self.paths.root / "frozen_config_snapshot.json"
         approval_snapshot = self.paths.root / "execution_approval_snapshot.json"
         prepare_manifest = self.paths.root / "prepare_manifest.json"
         hashes = {
+            IMPLEMENTATION_MANIFEST_FILENAME: implementation_sha256,
             "frozen_config_snapshot.json": _atomic_json(config_snapshot, self.config),
             "execution_approval_snapshot.json": _atomic_json(approval_snapshot, self.approval),
         }
+        if self.exclusions_path is not None:
+            exclusions_snapshot = self.paths.root / "seen_identity_exclusions_snapshot.json"
+            hashes["seen_identity_exclusions_snapshot.json"] = _atomic_json(
+                exclusions_snapshot,
+                _read_json(self.exclusions_path, "seen-identity exclusions"),
+            )
         snapshot["snapshot_hashes"] = dict(hashes)
         hashes["prepare_manifest.json"] = _atomic_json(prepare_manifest, snapshot)
         return hashes
@@ -776,12 +1205,18 @@ class FormalExperimentRunner:
         if not self.tiny_mock:
             try:
                 from tunnelgeopt.formal_generation import (
+                    FormalGenerationError,
                     build_formal_generation_plan,
                     generate_formal_dataset,
                 )
             except ImportError as exc:  # pragma: no cover - integration guard
                 raise FormalRunError("formal generation module is unavailable") from exc
-            plan = build_formal_generation_plan(self.config)
+            try:
+                plan = build_formal_generation_plan(
+                    self.config, forbidden_identities=self.forbidden_identities
+                )
+            except FormalGenerationError as exc:
+                raise FormalRunError(f"formal generation planning failed: {exc}") from exc
             if plan.formal_eligible is not True:
                 raise FormalRunError("formal generation plan is not eligible")
 
@@ -791,21 +1226,57 @@ class FormalExperimentRunner:
                     {"at_utc": _now(), **dict(event)},
                 )
 
-            result = generate_formal_dataset(
-                self.config,
-                self.paths.data,
-                resume=True,
-                progress_callback=progress,
-            )
-            if not result.manifest_path.is_file():
+            try:
+                result = generate_formal_dataset(
+                    self.config,
+                    self.paths.data,
+                    forbidden_identities=self.forbidden_identities,
+                    resume=True,
+                    progress_callback=progress,
+                )
+            except FormalGenerationError as exc:
+                manifest_path = self.paths.data / DATASET_MANIFEST_FILENAME
+                if manifest_path.is_file():
+                    manifest = _read_json(manifest_path, "generation ABSTAIN manifest")
+                    if (
+                        manifest.get("generation_status") == "ABSTAIN"
+                        and manifest.get("config_sha256") == self.config_sha256
+                        and manifest.get("run_id") == self.config["run_id"]
+                    ):
+                        digest = _file_sha256(manifest_path)
+                        persisted = self._load_state()
+                        reason = f"trusted generation validity gate ABSTAIN: {exc}"
+                        persisted["phases"]["generate"].update(
+                            {
+                                "status": "abstained",
+                                "artifacts": {
+                                    f"data/{DATASET_MANIFEST_FILENAME}": digest,
+                                },
+                                "last_error": f"FormalGenerationError: {exc}",
+                            }
+                        )
+                        if reason not in persisted["abstain_reasons"]:
+                            persisted["abstain_reasons"].append(reason)
+                        self._event(
+                            persisted,
+                            "generation_abstain_evidence_frozen",
+                            reason=reason,
+                            manifest_sha256=digest,
+                        )
+                        raise FormalAbstain(reason) from exc
+                raise FormalRunError(
+                    f"formal generation failed without ABSTAIN evidence: {exc}"
+                ) from exc
+            result_manifest_path = Path(result.manifest_path)
+            if not result_manifest_path.is_file():
                 raise FormalRunError("trusted generator did not write its manifest")
             artifacts: dict[str, str] = {}
             allowed_paths = {
-                Path(result.manifest_path).resolve(),
+                result_manifest_path.resolve(),
                 Path(result.public_inputs_path).resolve(),
                 Path(result.train_dev_labels_path).resolve(),
             }
-            for path_value, expected_digest in result.file_hashes.items():
+            for path_value, expected_digest in result.public_file_hashes.items():
                 path = Path(path_value)
                 if not path.is_absolute():
                     path = self.paths.data / path
@@ -815,7 +1286,7 @@ class FormalExperimentRunner:
                 if digest != _require_sha256(expected_digest, str(path_value)):
                     raise FormalRunError("trusted generator returned a stale file digest")
                 artifacts[path.relative_to(self.paths.root).as_posix()] = digest
-            manifest_path = Path(result.manifest_path)
+            manifest_path = result_manifest_path
             artifacts[manifest_path.relative_to(self.paths.root).as_posix()] = _file_sha256(
                 manifest_path
             )
@@ -987,6 +1458,10 @@ class FormalExperimentRunner:
                 case_group_ids=public["case_group_ids"][indices],
                 fine_stress=fine_array[indices],
                 ultrafine_audit_passed=np.asarray([True]),
+                audit_case_group_ids=np.asarray([], dtype="U160"),
+                audit_section_families=np.asarray([], dtype="U32"),
+                audit_partitions=np.asarray([], dtype="U32"),
+                audit_relative_errors=np.asarray([], dtype=np.float64),
             )
         manifest = self._validate_generated_dataset(public, metadata, file_hashes)
         _atomic_json(self.paths.data / DATASET_MANIFEST_FILENAME, manifest)
@@ -1065,7 +1540,16 @@ class FormalExperimentRunner:
             "effect_claim_allowed": not self.tiny_mock,
             "generated_at_utc": _now(),
             "public_case_count": len(case_ids),
-            "files": dict(sorted(file_hashes.items())),
+            "files": {
+                filename: file_hashes[filename]
+                for filename in (PUBLIC_FILENAME, TRAIN_DEV_FILENAME)
+            },
+            "opaque_sealed_stores": {
+                _sha256_value(
+                    {"run_id": self.config["run_id"], "partition": partition}
+                ): file_hashes[filename]
+                for partition, filename in SEALED_FILENAMES.items()
+            },
             "partitions": partition_records,
             "identity_checks": {
                 "unique_case_group_ids": True,
@@ -1206,189 +1690,244 @@ class FormalExperimentRunner:
             "eligible_section_geometry_counts": dict(selection.eligible_section_geometry_counts),
         }
 
-    def _mock_checkpoint(
-        self,
-        path: Path,
-        *,
-        contract: TrainingContract,
-        seed: int,
-        training_fingerprint: str,
-    ) -> str:
-        payload = {
-            "format_version": 2,
-            "checkpoint_scope": "tiny-mock-formal-contract-v2",
-            "effect_claim_allowed": False,
-            "method": contract.method,
-            "fine_fraction": contract.selection.fine_fraction,
-            "seed": int(seed),
-            "config_sha256": contract.config_sha256,
-            "selection_sha256": contract.selection.selection_sha256,
-            "training_contract_sha256": contract.contract_sha256,
-            "train_geometry_ids": list(contract.selection.train_geometry_ids),
-            "train_case_ids": list(contract.selection.train_case_ids),
-            "training_fingerprint": training_fingerprint,
-            "mock_coefficients": [
-                int(contract.contract_sha256[index : index + 8], 16) / 0xFFFFFFFF
-                for index in (0, 8, 16)
+    def _training_worker_payload(self) -> dict[str, Any]:
+        manifest_path, public_path, labels_path = self._dataset_paths()
+        manifest = _read_json(manifest_path, "formal dataset manifest")
+        if manifest.get("config_sha256") != self.config_sha256 or manifest.get("backend") not in (
+            None,
+            self.backend,
+        ):
+            raise FormalRunError("dataset manifest belongs to a different run")
+        input_hashes: dict[str, str] = {}
+        for role, path in (("public_inputs", public_path), ("train_dev_labels", labels_path)):
+            expected = self._manifest_file_digest(manifest, path)
+            if not path.is_file() or _file_sha256(path) != expected:
+                raise FormalAbstain(f"training input hash mismatch: {path.name}")
+            input_hashes[role] = expected
+        learning = self.config["learning"]
+        return {
+            "schema": TRAINING_WORKER_SCHEMA,
+            "run_id": self.config["run_id"],
+            "config_sha256": self.config_sha256,
+            "backend": self.backend,
+            "device": self.device,
+            "public_inputs": {"path": str(public_path), "sha256": input_hashes["public_inputs"]},
+            "train_dev_labels": {
+                "path": str(labels_path),
+                "sha256": input_hashes["train_dev_labels"],
+            },
+            "checkpoint_output_dir": str(self.paths.checkpoints),
+            "split_salt": self.config["identity_and_split"]["split_salt"],
+            "fine_train_fractions": list(learning["fine_train_fractions"]),
+            "nested_parent_counts": dict(learning["nested_parent_counts"]),
+            "model": dict(learning["model"]),
+            "optimization": dict(learning["optimization"]),
+            "checkpoint_specifications": [
+                dict(value) for value in _expected_checkpoint_specs(self.config)
             ],
         }
-        return _atomic_json(path, payload)
 
-    def _run_train(self, state: dict[str, Any]) -> dict[str, str]:
-        _, batch, dataset_manifest = self._load_training_inputs()
-        if any(int(value) != 0 for value in state["sealed_partition_open_counts"].values()):
-            raise FormalAbstain("training cannot proceed after any sealed label was opened")
-        subsets = self._nested_subsets(batch)
-        specifications = _expected_checkpoint_specs(self.config)
-        self.paths.checkpoints.mkdir(parents=True, exist_ok=True)
+    def _verify_training_worker(
+        self,
+        *,
+        contract_path: Path,
+        contract_payload: Mapping[str, Any],
+        command: Sequence[str],
+    ) -> tuple[dict[str, Any], dict[str, Any], tuple[dict[str, Any], ...]]:
+        audit_path = self.paths.checkpoints / TRAINING_WORKER_AUDIT_FILENAME
         manifest_path = self.paths.checkpoints / CHECKPOINT_MANIFEST_FILENAME
-        if manifest_path.exists():
-            checkpoint_manifest = _read_json(manifest_path, "partial checkpoint manifest")
-            if (
-                checkpoint_manifest.get("config_sha256") != self.config_sha256
-                or checkpoint_manifest.get("backend") != self.backend
-            ):
-                raise FormalAbstain("partial checkpoint manifest belongs to another run")
-        else:
-            checkpoint_manifest = {
-                "schema": "tunnelgeopt.multifidelity.checkpoint_manifest.v1",
-                "run_id": self.config["run_id"],
-                "config_sha256": self.config_sha256,
-                "backend": self.backend,
-                "expected_checkpoint_count": 35,
-                "checkpoints": {},
-                "contracts": {},
-            }
-        _, public_path, train_labels_path = self._dataset_paths()
-        training_fingerprint = _sha256_value(
-            {
-                "public_sha256": self._manifest_file_digest(dataset_manifest, public_path),
-                "train_dev_sha256": self._manifest_file_digest(dataset_manifest, train_labels_path),
-            }
+        audit = _read_json(audit_path, "training worker audit")
+        manifest = _read_json(manifest_path, "worker checkpoint manifest")
+        expected_paths = {
+            "worker_contract": str(contract_path.resolve()),
+            "public_inputs": str(Path(contract_payload["public_inputs"]["path"]).resolve()),
+            "train_dev_labels": str(Path(contract_payload["train_dev_labels"]["path"]).resolve()),
+            "checkpoint_output_dir": str(self.paths.checkpoints.resolve()),
+        }
+        worker_argv = audit.get("argv")
+        argv_matches = (
+            isinstance(worker_argv, list)
+            and len(worker_argv) == 4
+            and Path(str(worker_argv[0])).name.lower() == Path(command[0]).name.lower()
+            and Path(str(worker_argv[1])).name == Path(command[1]).name
+            and worker_argv[2:] == list(command[2:])
         )
-        optimization = self.config["learning"]["optimization"]
-        model_config = self.config["learning"]["model"]
-        for index, specification in enumerate(specifications):
-            method = specification["method"]
-            fraction = float(specification["fraction"])
-            seed = int(specification["seed"])
-            key = specification["checkpoint_key"]
-            contract = build_training_contract(
-                batch,
-                method=method,
-                config_sha256=self.config_sha256,
-                train_geometry_selector=subsets[fraction],
-                expected_fine_fraction=fraction,
-            )
-            record = self._contract_record(contract)
-            existing_contract = checkpoint_manifest["contracts"].get(key)
-            if existing_contract is not None and existing_contract != record:
-                raise FormalAbstain(f"training contract drift on resume: {key}")
-            checkpoint_manifest["contracts"][key] = record
-            suffix = ".json" if self.tiny_mock else ".pt"
-            relative = f"{key}{suffix}"
-            checkpoint_path = self.paths.checkpoints / relative
-            existing = checkpoint_manifest["checkpoints"].get(key)
-            if existing is not None:
-                if (
-                    existing.get("file") != relative
-                    or not checkpoint_path.is_file()
-                    or _file_sha256(checkpoint_path) != existing.get("sha256")
-                    or existing.get("contract_sha256") != contract.contract_sha256
-                ):
-                    raise FormalAbstain(f"checkpoint drift on resume: {key}")
-                continue
+        if (
+            audit.get("passed") is not True
+            or audit.get("entrypoint") != "isolated_training_worker"
+            or audit.get("contract_sha256") != _file_sha256(contract_path)
+            or audit.get("received_contract_keys") != sorted(TRAINING_WORKER_ALLOWED_KEYS)
+            or audit.get("received_paths") != expected_paths
+            or not argv_matches
+            or set(audit.get("imported_tunnelgeopt_modules", ())) != TRAINING_WORKER_ALLOWED_IMPORTS
+            or audit.get("unexpected_tunnelgeopt_modules") != []
+        ):
+            raise FormalAbstain("training worker isolation audit failed")
+        specifications = _expected_checkpoint_specs(self.config)
+        if [dict(value) for value in specifications] != list(
+            contract_payload["checkpoint_specifications"]
+        ):
+            raise FormalAbstain("training worker checkpoint specification contract drifted")
+        expected_keys = {str(value["checkpoint_key"]) for value in specifications}
+        if (
+            manifest.get("config_sha256") != self.config_sha256
+            or manifest.get("backend") != self.backend
+            or manifest.get("training_worker_contract_sha256") != _file_sha256(contract_path)
+            or manifest.get("expected_checkpoint_count") != 35
+            or set(manifest.get("checkpoints", {})) != expected_keys
+            or set(manifest.get("contracts", {})) != expected_keys
+            or manifest.get("training_worker_audit_sha256") != _file_sha256(audit_path)
+        ):
+            raise FormalAbstain("training worker checkpoint manifest failed authentication")
+        by_key = {str(value["checkpoint_key"]): value for value in specifications}
+        for key in sorted(expected_keys):
+            specification = by_key[key]
+            checkpoint = manifest["checkpoints"][key]
+            contract = manifest["contracts"][key]
+            path = (self.paths.checkpoints / str(checkpoint.get("file"))).resolve()
+            if path.parent != self.paths.checkpoints.resolve():
+                raise FormalAbstain(f"worker checkpoint escaped output directory: {key}")
+            if (
+                not path.is_file()
+                or _file_sha256(path) != checkpoint.get("sha256")
+                or checkpoint.get("method") != specification["method"]
+                or float(checkpoint.get("fine_fraction", -1.0)) != float(specification["fraction"])
+                or int(checkpoint.get("seed", -1)) != int(specification["seed"])
+                or checkpoint.get("format_version") != 2
+                or checkpoint.get("contract_sha256") != contract.get("contract_sha256")
+                or checkpoint.get("selection_sha256") != contract.get("selection_sha256")
+                or contract.get("config_sha256") != self.config_sha256
+                or contract.get("method") != specification["method"]
+                or float(contract.get("fine_fraction", -1.0)) != float(specification["fraction"])
+            ):
+                raise FormalAbstain(f"worker checkpoint record failed verification: {key}")
             if self.tiny_mock:
-                digest = self._mock_checkpoint(
-                    checkpoint_path,
-                    contract=contract,
-                    seed=seed,
-                    training_fingerprint=training_fingerprint,
-                )
-                best_epoch = 0
-                epochs_run = 1
-                best_dev_error = 0.0
+                saved = _read_json(path, "tiny worker checkpoint")
+                if (
+                    saved.get("training_contract_sha256") != contract["contract_sha256"]
+                    or saved.get("selection_sha256") != contract["selection_sha256"]
+                    or saved.get("config_sha256") != self.config_sha256
+                ):
+                    raise FormalAbstain(f"tiny worker checkpoint envelope failed: {key}")
             else:
-                if not self.device.startswith("cuda"):
-                    raise FormalRunError("formal training requires an explicit CUDA device")
-                model = make_model(model_config, seed=seed, device=self.device)
-
-                def progress(values: Mapping[str, Any], *, checkpoint_key: str = key) -> None:
-                    _append_jsonl(
-                        self.paths.root / "training_progress.jsonl",
-                        {
-                            "at_utc": _now(),
-                            "checkpoint_key": checkpoint_key,
-                            **dict(values),
-                        },
-                    )
-
-                outcome = train_formal_with_dev_selection(
-                    model,
-                    batch,
-                    contract,
-                    seed=seed,
-                    device=self.device,
-                    learning_rate=float(optimization["learning_rate"]),
-                    weight_decay=float(optimization["weight_decay"]),
-                    batch_size=int(optimization["case_batch_size"]),
-                    max_epochs=int(optimization["max_epochs"]),
-                    patience=int(optimization["early_stopping_patience"]),
-                    min_delta=float(optimization["early_stopping_min_delta"]),
-                    progress=progress,
-                )
-                digest = save_formal_checkpoint_atomic(
-                    outcome,
-                    checkpoint_path,
-                    contract=contract,
-                    seed=seed,
-                    model_config=model_config,
-                )
-                payload = checkpoint_payload(
-                    checkpoint_path,
+                saved = checkpoint_payload(
+                    path,
                     expected_config_sha256=self.config_sha256,
-                    expected_selection_sha256=contract.selection.selection_sha256,
+                    expected_selection_sha256=str(contract["selection_sha256"]),
                     require_formal=True,
                 )
-                if payload["training_contract_sha256"] != contract.contract_sha256:
-                    raise FormalRunError("saved checkpoint contract verification failed")
-                best_epoch = int(payload["best_epoch"])
-                epochs_run = int(payload["epochs_run"])
-                best_dev_error = float(payload["best_dev_error"])
-            checkpoint_manifest["checkpoints"][key] = {
-                "file": relative,
-                "sha256": digest,
-                "method": method,
-                "fine_fraction": fraction,
-                "seed": seed,
-                "format_version": 2,
-                "contract_sha256": contract.contract_sha256,
-                "selection_sha256": contract.selection.selection_sha256,
-                "best_epoch": best_epoch,
-                "epochs_run": epochs_run,
-                "best_dev_error": best_dev_error,
-            }
-            checkpoint_manifest["completed_checkpoint_count"] = len(
-                checkpoint_manifest["checkpoints"]
+                if saved.get("training_contract_sha256") != contract["contract_sha256"]:
+                    raise FormalAbstain(f"formal worker checkpoint envelope failed: {key}")
+        return manifest, audit, specifications
+
+    def _run_train(self, state: dict[str, Any]) -> dict[str, str]:
+        if any(int(value) != 0 for value in state["sealed_partition_open_counts"].values()):
+            raise FormalAbstain("training cannot proceed after any sealed label was opened")
+        self.paths.checkpoints.mkdir(parents=True, exist_ok=True)
+        worker_payload = self._training_worker_payload()
+        serialized = _canonical_bytes(worker_payload).decode("utf-8").lower()
+        if any(
+            token in serialized
+            for token in (
+                "formal_dataset_manifest",
+                "execution_approval",
+                "locked_iid",
+                "locked_geometry_ood",
+                "locked_load_ood",
+                "locked_joint_ood",
+                "sealed_locked",
             )
-            _atomic_json(manifest_path, checkpoint_manifest)
+        ):
+            raise FormalRunError("orchestrator attempted to disclose evaluator data to trainer")
+        contract_path = self.paths.checkpoints / TRAINING_WORKER_CONTRACT_FILENAME
+        contract_sha256 = _atomic_json(contract_path, worker_payload)
+        command = [
+            sys.executable,
+            str((ROOT / "scripts" / "run_multifidelity_train_worker.py").resolve()),
+            "--contract",
+            str(contract_path.resolve()),
+        ]
+        self._event(
+            state,
+            "training_worker_started",
+            worker_argv=command,
+            worker_contract_sha256=contract_sha256,
+            received_path_roles=[
+                "worker_contract",
+                "public_inputs",
+                "train_dev_labels",
+                "checkpoint_output_dir",
+            ],
+        )
+        completed = subprocess.run(
+            command,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if completed.returncode != 0:
+            detail = completed.stderr.strip() or completed.stdout.strip()
+            raise FormalRunError(
+                f"isolated training worker failed with exit {completed.returncode}: {detail}"
+            )
+        manifest, worker_audit, specifications = self._verify_training_worker(
+            contract_path=contract_path,
+            contract_payload=worker_payload,
+            command=command,
+        )
+        access_events = _read_access_events(self.paths.access_log)
+        path_resolutions = sum(
+            event.get("event") == "trusted_sealed_path_resolved" and event.get("phase") == "train"
+            for event in access_events
+        )
+        sealed_opens = sum(
+            event.get("event") == "sealed_partition_opened" and event.get("phase") == "train"
+            for event in access_events
+        )
+        denied_accesses = sum(
+            event.get("event") == "sealed_access_denied" and event.get("phase") == "train"
+            for event in access_events
+        )
+        training_access_audit = {
+            "schema": "tunnelgeopt.formal_training_access_audit.v2",
+            "process_isolated": True,
+            "worker_argv": list(worker_audit["argv"]),
+            "worker_contract_sha256": contract_sha256,
+            "worker_received_contract_keys": list(worker_audit["received_contract_keys"]),
+            "worker_received_paths": dict(worker_audit["received_paths"]),
+            "worker_imported_tunnelgeopt_modules": list(
+                worker_audit["imported_tunnelgeopt_modules"]
+            ),
+            "worker_unexpected_tunnelgeopt_modules": list(
+                worker_audit["unexpected_tunnelgeopt_modules"]
+            ),
+            "sealed_path_resolution_calls": path_resolutions,
+            "sealed_open_calls": sealed_opens,
+            "denied_sealed_access_calls": denied_accesses,
+            "trainer_input_api": "redacted_contract_public_train_dev_subprocess",
+            "passed": worker_audit["passed"] is True
+            and path_resolutions == sealed_opens == denied_accesses == 0,
+        }
+        if training_access_audit["passed"] is not True:
+            raise FormalAbstain("isolated trainer touched or received evaluator-only data")
+        manifest["training_access_audit"] = training_access_audit
+        manifest_path = self.paths.checkpoints / CHECKPOINT_MANIFEST_FILENAME
+        _atomic_json(manifest_path, manifest)
+        checkpoint_ids: list[str] = []
+        for index, specification in enumerate(specifications):
+            key = str(specification["checkpoint_key"])
+            record = manifest["checkpoints"][key]
+            checkpoint_ids.append(str(record["sha256"]))
             self._event(
                 state,
                 "checkpoint_frozen",
                 checkpoint_key=key,
                 checkpoint_index=index,
-                checkpoint_sha256=digest,
-                contract_sha256=contract.contract_sha256,
+                checkpoint_sha256=record["sha256"],
+                contract_sha256=record["contract_sha256"],
             )
-        if set(checkpoint_manifest["checkpoints"]) != {
-            specification["checkpoint_key"] for specification in specifications
-        }:
-            raise FormalRunError("checkpoint set does not exactly match the frozen design")
-        checkpoint_ids = tuple(
-            checkpoint_manifest["checkpoints"][specification["checkpoint_key"]]["sha256"]
-            for specification in specifications
-        )
-        registry = CheckpointRegistry(checkpoint_ids)
+        registry = CheckpointRegistry(tuple(checkpoint_ids))
         if registry.checkpoint_count != 35:
             raise FormalRunError("checkpoint registry must contain exactly 35 identities")
         registry_payload = {
@@ -1403,15 +1942,33 @@ class FormalExperimentRunner:
         registry_hash = _atomic_json(registry_path, registry_payload)
         self._event(
             state,
+            "training_worker_completed",
+            worker_pid=worker_audit["worker_pid"],
+            checkpoint_count=35,
+            import_audit=worker_audit["unexpected_tunnelgeopt_modules"],
+            received_paths=worker_audit["received_paths"],
+        )
+        self._event(
+            state,
             "checkpoint_registry_frozen",
             checkpoint_count=35,
             registry_hash=registry.registry_hash,
             file_sha256=registry_hash,
         )
-        return {
+        artifacts = {
+            f"checkpoints/{TRAINING_WORKER_CONTRACT_FILENAME}": contract_sha256,
+            f"checkpoints/{TRAINING_WORKER_AUDIT_FILENAME}": _file_sha256(
+                self.paths.checkpoints / TRAINING_WORKER_AUDIT_FILENAME
+            ),
             f"checkpoints/{CHECKPOINT_MANIFEST_FILENAME}": _file_sha256(manifest_path),
             f"checkpoints/{REGISTRY_FILENAME}": registry_hash,
         }
+        progress_path = self.paths.checkpoints / TRAINING_WORKER_PROGRESS_FILENAME
+        if progress_path.is_file():
+            artifacts[f"checkpoints/{TRAINING_WORKER_PROGRESS_FILENAME}"] = _file_sha256(
+                progress_path
+            )
+        return artifacts
 
     def _load_frozen_registry(
         self,
@@ -1570,8 +2127,49 @@ class FormalExperimentRunner:
             "evaluated_at_utc": _now(),
             "partitions": {},
         }
+        fine_ultrafine_audit = {
+            "case_group_ids": [],
+            "section_families": [],
+            "partitions": [],
+            "relative_errors": [],
+        }
+        _, train_dev_path = self._training_paths()
+        train_dev_archive = _load_npz(train_dev_path, "train/dev fine labels")
+        audit_fields = {
+            "audit_case_group_ids",
+            "audit_section_families",
+            "audit_partitions",
+            "audit_relative_errors",
+        }
+        if not self.tiny_mock and not audit_fields.issubset(train_dev_archive):
+            raise FormalAbstain("train/dev fine-ultrafine audit fields are missing")
+        if audit_fields.issubset(train_dev_archive):
+            audit_lengths = {np.asarray(train_dev_archive[name]).size for name in audit_fields}
+            if len(audit_lengths) != 1:
+                raise FormalAbstain("train/dev fine-ultrafine audit arrays misalign")
+            train_dev_audit_errors = np.asarray(
+                train_dev_archive["audit_relative_errors"], dtype=np.float64
+            )
+            train_dev_audit_partitions = [
+                str(value) for value in train_dev_archive["audit_partitions"]
+            ]
+            if (
+                not np.isfinite(train_dev_audit_errors).all()
+                or np.any(train_dev_audit_errors < 0.0)
+                or any(value not in {"train_id", "dev_id"} for value in train_dev_audit_partitions)
+            ):
+                raise FormalAbstain("train/dev fine-ultrafine audit values are invalid")
+            fine_ultrafine_audit["case_group_ids"].extend(
+                str(value) for value in train_dev_archive["audit_case_group_ids"]
+            )
+            fine_ultrafine_audit["section_families"].extend(
+                str(value) for value in train_dev_archive["audit_section_families"]
+            )
+            fine_ultrafine_audit["partitions"].extend(train_dev_audit_partitions)
+            fine_ultrafine_audit["relative_errors"].extend(train_dev_audit_errors.tolist())
         tracemalloc.start()
         for partition_index, partition in enumerate(LOCKED_PARTITIONS):
+            partition_started = time.perf_counter()
             sealed = self.open_sealed_partition(partition)
             # The sealed reader persists its open count independently.  Merge
             # that durable audit state before adding per-checkpoint counts.
@@ -1582,6 +2180,34 @@ class FormalExperimentRunner:
                 np.asarray(sealed["ultrafine_audit_passed"]).all()
             ):
                 raise FormalAbstain(f"fine-ultrafine locked audit failed for {partition}")
+            if not self.tiny_mock and not audit_fields.issubset(sealed):
+                raise FormalAbstain(
+                    f"sealed fine-ultrafine audit fields are missing for {partition}"
+                )
+            if audit_fields.issubset(sealed):
+                audit_lengths = {np.asarray(sealed[name]).size for name in audit_fields}
+                if len(audit_lengths) != 1:
+                    raise FormalAbstain(
+                        f"sealed fine-ultrafine audit arrays misalign for {partition}"
+                    )
+                audit_errors = np.asarray(sealed["audit_relative_errors"], dtype=np.float64)
+                if not np.isfinite(audit_errors).all() or np.any(audit_errors < 0.0):
+                    raise FormalAbstain(
+                        f"sealed fine-ultrafine audit errors are invalid for {partition}"
+                    )
+                audit_partitions = [str(value) for value in sealed["audit_partitions"]]
+                if any(value != partition for value in audit_partitions):
+                    raise FormalAbstain(
+                        f"sealed fine-ultrafine audit partition mismatch for {partition}"
+                    )
+                fine_ultrafine_audit["case_group_ids"].extend(
+                    str(value) for value in sealed["audit_case_group_ids"]
+                )
+                fine_ultrafine_audit["section_families"].extend(
+                    str(value) for value in sealed["audit_section_families"]
+                )
+                fine_ultrafine_audit["partitions"].extend(audit_partitions)
+                fine_ultrafine_audit["relative_errors"].extend(audit_errors.tolist())
             expected_indices = np.flatnonzero(public["partitions"] == partition)
             if "indices" in sealed:
                 indices = np.asarray(sealed["indices"], dtype=np.int64)
@@ -1602,8 +2228,7 @@ class FormalExperimentRunner:
                 raise FormalAbstain(f"sealed indices do not match public {partition} rows")
             if not np.array_equal(sealed["case_group_ids"], public["case_group_ids"][indices]):
                 raise FormalAbstain(f"sealed case identities do not align for {partition}")
-            sealed_path = self._trusted_sealed_path(partition)
-            sealed_hash = self._manifest_file_digest(dataset_manifest, sealed_path)
+            sealed_hash = self._opaque_sealed_digest(dataset_manifest, partition)
             access_events = _read_access_events(self.paths.access_log)
             opened = [
                 event
@@ -1646,6 +2271,7 @@ class FormalExperimentRunner:
                 },
                 "fine_oracle_case_errors": np.zeros(indices.size, dtype=np.float64).tolist(),
                 "checkpoints": {},
+                "checkpoint_evaluation_counts": {},
                 "sealed_file_open_count": 1,
             }
             for specification in specifications:
@@ -1708,6 +2334,7 @@ class FormalExperimentRunner:
                 if new_count != 1:
                     raise FormalAbstain(f"checkpoint evaluated more than once: {count_key}")
                 state["checkpoint_evaluation_counts"][count_key] = new_count
+                partition_metrics["checkpoint_evaluation_counts"][key] = new_count
                 partition_metrics["checkpoints"][key] = {
                     "method": specification["method"],
                     "fine_fraction": float(specification["fraction"]),
@@ -1730,6 +2357,29 @@ class FormalExperimentRunner:
                 }
             if len(partition_metrics["checkpoints"]) != 35:
                 raise FormalAbstain(f"not every checkpoint was evaluated on {partition}")
+            residual_by_seed = {
+                str(seed): {
+                    "traction_discrepancy_by_case": partition_metrics["checkpoints"][
+                        _checkpoint_key("residual_coarse", 0.5, int(seed))
+                    ]["wall_offset"]["traction_case_values"],
+                    "resultant_discrepancy_by_case": partition_metrics["checkpoints"][
+                        _checkpoint_key("residual_coarse", 0.5, int(seed))
+                    ]["wall_offset"]["resultant_case_values"],
+                }
+                for seed in self.config["learning"]["training_seeds"]
+            }
+            partition_metrics["wall_offset_physics"] = {
+                "coarse_only": {
+                    "traction_discrepancy_by_case": coarse_d_t.tolist(),
+                    "resultant_discrepancy_by_case": coarse_d_r.tolist(),
+                },
+                "residual_coarse_0.5": {"by_seed": residual_by_seed},
+            }
+            _, current_peak = tracemalloc.get_traced_memory()
+            partition_metrics["resource_usage"] = {
+                "runtime_seconds": time.perf_counter() - partition_started,
+                "peak_memory_bytes": int(current_peak),
+            }
             metric_payload["partitions"][partition] = partition_metrics
             self._event(
                 state,
@@ -1765,240 +2415,204 @@ class FormalExperimentRunner:
                 for key, value in partition_value["checkpoints"].items()
             },
         }
+        metric_payload["fine_ultrafine_audit"] = fine_ultrafine_audit
+        selected_audit_ids = dataset_manifest.get("fine_ultrafine_selection", {}).get(
+            "selected_case_ids"
+        )
+        if not self.tiny_mock and list(fine_ultrafine_audit["case_group_ids"]) != list(
+            selected_audit_ids or ()
+        ):
+            raise FormalAbstain(
+                "unsealed fine-ultrafine values do not match the preselected manifest order"
+            )
+        checkpoint_manifest = _read_json(
+            self.paths.checkpoints / CHECKPOINT_MANIFEST_FILENAME,
+            "checkpoint manifest",
+        )
+        generation_resource = dataset_manifest.get(
+            "resource_usage", dataset_manifest.get("generation_resource_usage", {})
+        )
+        if isinstance(generation_resource, Mapping) and "generation" in generation_resource:
+            generation_resource = generation_resource["generation"]
+        metric_payload["resource_usage"] = {
+            "generation": dict(generation_resource)
+            if isinstance(generation_resource, Mapping)
+            else {},
+            "training": {
+                key: {
+                    "runtime_seconds": value.get("runtime_seconds"),
+                    "peak_memory_bytes": value.get("peak_memory_bytes"),
+                }
+                for key, value in checkpoint_manifest["checkpoints"].items()
+            },
+            "evaluation": {
+                partition: value["resource_usage"]
+                for partition, value in metric_payload["partitions"].items()
+            },
+        }
         metrics_path = self.paths.evaluation / "sealed_metrics.json"
         digest = _atomic_json(metrics_path, metric_payload)
         return {"evaluation/sealed_metrics.json": digest}
 
-    def _method_seed_errors(
+    def _formal_analysis_access_state(
         self,
-        partition: Mapping[str, Any],
         *,
-        method: str,
-        fraction: float,
-    ) -> tuple[np.ndarray, tuple[int, ...]]:
-        seeds = tuple(int(value) for value in self.config["learning"]["training_seeds"])
-        rows = []
-        for seed in seeds:
-            key = _checkpoint_key(method, fraction, seed)
-            record = partition["checkpoints"].get(key)
-            if record is None:
-                raise FormalAbstain(f"missing checkpoint metrics: {key}")
-            rows.append(np.asarray(record["case_errors"], dtype=np.float64))
-        return np.stack(rows), seeds
-
-    def _bootstrap_comparison(
-        self,
-        candidate_case: np.ndarray,
-        reference_case: np.ndarray,
-        geometry_ids: Sequence[str],
-        sections: Sequence[str],
-        seeds: Sequence[int],
-        *,
-        bootstrap_seed: int,
-    ) -> dict[str, float]:
-        candidate_parent, parent_ids, parent_sections = aggregate_case_errors_by_parent(
-            candidate_case, geometry_ids, sections
-        )
-        reference_parent, reference_ids, reference_sections = aggregate_case_errors_by_parent(
-            reference_case, geometry_ids, sections
-        )
-        if parent_ids != reference_ids or parent_sections != reference_sections:
-            raise FormalAbstain("paired bootstrap parent identities do not align")
-        bootstrap = self.config["evaluation"]["bootstrap"]
-        return hierarchical_paired_bootstrap(
-            candidate_parent,
-            reference_parent,
-            seeds,
-            parent_ids,
-            parent_sections,
-            replicates=int(bootstrap["replicates"]),
-            confidence=float(bootstrap["one_sided_upper_confidence_level"]),
-            bootstrap_seed=int(bootstrap_seed),
-        )
-
-    @staticmethod
-    def _section_balanced_seed_values(
-        case_values: np.ndarray,
-        geometry_ids: Sequence[str],
-        sections: Sequence[str],
-    ) -> np.ndarray:
-        parent_values, _, parent_sections = aggregate_case_errors_by_parent(
-            case_values, geometry_ids, sections
-        )
-        if parent_values.ndim == 1:
-            parent_values = parent_values[None, :]
-        section_array = np.asarray(parent_sections, dtype=object)
-        present_sections = tuple(sorted({str(value) for value in parent_sections}))
-        return np.mean(
-            np.stack(
-                [
-                    parent_values[:, section_array == section].mean(axis=1)
-                    for section in present_sections
-                ],
-                axis=1,
-            ),
-            axis=1,
-        )
-
-    @classmethod
-    def _ratio_by_seed(
-        cls,
-        candidate: np.ndarray,
-        reference: np.ndarray,
-        geometry_ids: Sequence[str],
-        sections: Sequence[str],
-    ) -> list[float]:
-        if candidate.shape != reference.shape or candidate.ndim != 2:
-            raise FormalRunError("seed ratio arrays must align [seed, case]")
-        candidate_values = cls._section_balanced_seed_values(candidate, geometry_ids, sections)
-        reference_values = cls._section_balanced_seed_values(reference, geometry_ids, sections)
-        denominator = reference_values
-        if np.any(denominator <= 0.0):
-            raise FormalAbstain("seed reference error is zero")
-        return (candidate_values / denominator).tolist()
-
-    @classmethod
-    def _point_ratio(
-        cls,
-        candidate: np.ndarray,
-        reference: np.ndarray,
-        geometry_ids: Sequence[str],
-        sections: Sequence[str],
-    ) -> float:
-        candidate_value = float(
-            cls._section_balanced_seed_values(candidate, geometry_ids, sections).mean()
-        )
-        reference_value = float(
-            cls._section_balanced_seed_values(reference, geometry_ids, sections).mean()
-        )
-        if reference_value <= 0.0:
-            raise FormalAbstain("point-ratio reference error is zero")
-        return candidate_value / reference_value
-
-    def _dataset_validity_failures(self, manifest: Mapping[str, Any]) -> list[str]:
-        """Map generator/QC evidence to preregistered ABSTAIN conditions."""
-
-        failures: list[str] = []
-        identity = manifest.get("identity_checks")
-        if (
-            not isinstance(identity, Mapping)
-            or not identity
-            or not all(value is True for value in identity.values())
-        ):
-            failures.append("dataset identity/leakage checks are missing or failed")
-        qc = manifest.get("quality_control", manifest.get("audit_summary"))
-        if not isinstance(qc, Mapping):
-            return [*failures, "dataset solver/mesh/fine-ultrafine QC is missing"]
-        if int(qc.get("nonfinite_count", -1)) != 0:
-            failures.append("dataset QC reports non-finite values")
-        minimum = float(
-            self.config["quality_control"]["solver_and_mesh"][
-                "minimum_valid_case_fraction_per_partition_section"
-            ]
-        )
-        fractions = qc.get(
-            "valid_case_fraction_by_partition_section",
-            qc.get("partition_section_valid_fractions"),
-        )
-        if isinstance(fractions, Mapping):
-            flat: list[float] = []
-            for value in fractions.values():
-                if isinstance(value, Mapping):
-                    flat.extend(float(item) for item in value.values())
-                else:
-                    flat.append(float(value))
-            if not flat or min(flat) < minimum:
-                failures.append("solver/mesh valid case fraction is below the frozen 95% gate")
-        elif float(qc.get("minimum_valid_case_fraction_per_partition_section", -1.0)) < minimum:
-            failures.append("solver/mesh valid case fraction evidence is missing or below gate")
-        fine_ultrafine = qc.get("fine_ultrafine", qc.get("fine_ultrafine_audit"))
-        if isinstance(fine_ultrafine, Mapping):
-            frozen = self.config["quality_control"]["fine_ultrafine"]
-            median = float(fine_ultrafine.get("overall_median", np.inf))
-            p95 = float(fine_ultrafine.get("overall_p95", np.inf))
-            section_medians = fine_ultrafine.get(
-                "section_medians", fine_ultrafine.get("median_by_section", {})
-            )
-            if median > float(frozen["max_overall_median"]):
-                failures.append("formal fine-ultrafine overall median exceeds gate")
-            if p95 > float(frozen["max_overall_p95"]):
-                failures.append("formal fine-ultrafine overall p95 exceeds gate")
-            if (
-                not isinstance(section_medians, Mapping)
-                or set(section_medians) != set(SECTION_NAMES)
-                or max(float(value) for value in section_medians.values())
-                > float(frozen["max_any_section_median"])
-            ):
-                failures.append("formal fine-ultrafine per-section median evidence fails")
-        elif qc.get("fine_ultrafine_independent_gate_passed") is not True:
-            failures.append("formal fine-ultrafine audit evidence is missing or failed")
-        return failures
-
-    def _wall_gate_result(
-        self,
-        partition_name: str,
-        partition: Mapping[str, Any],
-        geometry_ids: Sequence[str],
-        sections: Sequence[str],
+        metrics: Mapping[str, Any],
+        dataset_manifest: Mapping[str, Any],
+        state: Mapping[str, Any],
     ) -> dict[str, Any]:
-        residual_records = [
-            partition["checkpoints"][_checkpoint_key("residual_coarse", 0.5, int(seed))]
-            for seed in self.config["learning"]["training_seeds"]
+        checkpoint_manifest_path = self.paths.checkpoints / CHECKPOINT_MANIFEST_FILENAME
+        registry_path = self.paths.checkpoints / REGISTRY_FILENAME
+        checkpoint_manifest = _read_json(checkpoint_manifest_path, "checkpoint manifest")
+        registry = _read_json(registry_path, "checkpoint registry")
+        events = _read_access_events(self.paths.access_log)
+        training_audit = checkpoint_manifest.get("training_access_audit", {})
+        training_path_resolutions = sum(
+            event.get("event") == "trusted_sealed_path_resolved" and event.get("phase") == "train"
+            for event in events
+        )
+        training_sealed_opens = sum(
+            event.get("event") == "sealed_partition_opened" and event.get("phase") == "train"
+            for event in events
+        )
+        worker_paths = training_audit.get("worker_received_paths", {})
+        worker_argv = training_audit.get("worker_argv", [])
+        worker_isolation_passed = (
+            isinstance(training_audit, Mapping)
+            and training_audit.get("schema") == "tunnelgeopt.formal_training_access_audit.v2"
+            and training_audit.get("passed") is True
+            and training_audit.get("process_isolated") is True
+            and training_audit.get("worker_received_contract_keys")
+            == sorted(TRAINING_WORKER_ALLOWED_KEYS)
+            and isinstance(worker_paths, Mapping)
+            and set(worker_paths)
+            == {
+                "worker_contract",
+                "public_inputs",
+                "train_dev_labels",
+                "checkpoint_output_dir",
+            }
+            and isinstance(worker_argv, list)
+            and len(worker_argv) == 4
+            and Path(str(worker_argv[1])).name == "run_multifidelity_train_worker.py"
+            and worker_argv[2] == "--contract"
+            and training_audit.get("worker_unexpected_tunnelgeopt_modules") == []
+        )
+        trainer_received_locked_path = not (
+            worker_isolation_passed
+            and int(training_audit.get("sealed_path_resolution_calls", -1)) == 0
+            and training_path_resolutions == 0
+        )
+        registry_event_indices = [
+            index
+            for index, event in enumerate(events)
+            if event.get("event") == "checkpoint_registry_frozen"
         ]
-        candidate_d_t = np.stack(
-            [
-                np.asarray(record["wall_offset"]["traction_case_values"])
-                for record in residual_records
-            ]
+        sealed_open_indices = [
+            index
+            for index, event in enumerate(events)
+            if event.get("event") == "sealed_partition_opened"
+        ]
+        opened_before_registry = not registry_event_indices or any(
+            index < registry_event_indices[-1] for index in sealed_open_indices
         )
-        candidate_d_r = np.stack(
-            [
-                np.asarray(record["wall_offset"]["resultant_case_values"])
-                for record in residual_records
-            ]
+        prepare_complete_indices = [
+            index
+            for index, event in enumerate(events)
+            if event.get("event") == "phase_completed" and event.get("phase") == "prepare"
+        ]
+        generate_start_indices = [
+            index
+            for index, event in enumerate(events)
+            if event.get("event") == "phase_started" and event.get("phase") == "generate"
+        ]
+        config_frozen_before_generation = (
+            self.approval.get("config_frozen") is True
+            and bool(prepare_complete_indices)
+            and bool(generate_start_indices)
+            and prepare_complete_indices[0] < generate_start_indices[0]
         )
-        coarse_d_t = np.tile(
-            np.asarray(partition["coarse_wall_offset"]["traction_case_values"]),
-            (candidate_d_t.shape[0], 1),
-        )
-        coarse_d_r = np.tile(
-            np.asarray(partition["coarse_wall_offset"]["resultant_case_values"]),
-            (candidate_d_r.shape[0], 1),
-        )
-        values = {
-            "candidate_D_t": float(
-                self._section_balanced_seed_values(candidate_d_t, geometry_ids, sections).mean()
-            ),
-            "candidate_D_r": float(
-                self._section_balanced_seed_values(candidate_d_r, geometry_ids, sections).mean()
-            ),
-            "coarse_D_t": float(
-                self._section_balanced_seed_values(coarse_d_t, geometry_ids, sections).mean()
-            ),
-            "coarse_D_r": float(
-                self._section_balanced_seed_values(coarse_d_r, geometry_ids, sections).mean()
-            ),
+        records = {
+            key: {
+                "sha256": value["sha256"],
+                "training_contract_sha256": value["contract_sha256"],
+                "config_sha256": self.config_sha256,
+            }
+            for key, value in checkpoint_manifest["checkpoints"].items()
         }
-        physics = self.config["evaluation"]["wall_offset_physics"]
-        cap_key = (
-            "locked_joint_ood_report_only"
-            if partition_name == "locked_joint_ood"
-            else partition_name
-        )
-        caps = physics["absolute_caps"][cap_key]
-        nonworsening = physics["coarse_nonworsening"]
-        checks = {
-            "absolute_traction": values["candidate_D_t"] <= float(caps["max_traction_discrepancy"]),
-            "absolute_resultant": values["candidate_D_r"]
-            <= float(caps["max_resultant_discrepancy"]),
-            "coarse_nonworsening_traction": values["candidate_D_t"]
-            <= float(nonworsening["max_multiplier"]) * values["coarse_D_t"]
-            + float(nonworsening["traction_additive_margin_over_S_inf"]),
-            "coarse_nonworsening_resultant": values["candidate_D_r"]
-            <= float(nonworsening["max_multiplier"]) * values["coarse_D_r"]
-            + float(nonworsening["resultant_additive_margin_over_S_inf"]),
+        dataset_manifest_path, _, _ = self._dataset_paths()
+        metrics_path = self.paths.evaluation / "sealed_metrics.json"
+        implementation_path = self.paths.root / IMPLEMENTATION_MANIFEST_FILENAME
+        prepare_manifest_path = self.paths.root / "prepare_manifest.json"
+        implementation = _read_json(implementation_path, "implementation provenance manifest")
+        return {
+            "run_id": self.config["run_id"],
+            "config_sha256": self.config_sha256,
+            "hashes": {
+                "config_canonical_sha256": self.config_sha256,
+                "dataset_manifest_canonical_sha256": _sha256_value(dataset_manifest),
+                "sealed_metrics_canonical_sha256": _sha256_value(metrics),
+                "config_file_sha256": _file_sha256(ROOT / "configs/multifidelity_formal.json"),
+                "dataset_manifest_file_sha256": _file_sha256(dataset_manifest_path),
+                "sealed_metrics_file_sha256": _file_sha256(metrics_path),
+                "access_log_file_sha256": _file_sha256(self.paths.access_log),
+                "checkpoint_manifest_file_sha256": _file_sha256(checkpoint_manifest_path),
+                "checkpoint_registry_file_sha256": _file_sha256(registry_path),
+                "implementation_manifest_file_sha256": _file_sha256(implementation_path),
+                "prepare_manifest_file_sha256": _file_sha256(prepare_manifest_path),
+            },
+            "checkpoint_registry": {
+                "frozen": True,
+                "config_sha256": self.config_sha256,
+                "checkpoint_count": registry["checkpoint_count"],
+                "registry_hash": registry["registry_hash"],
+                "checkpoints": records,
+            },
+            "config_frozen_before_generation": config_frozen_before_generation,
+            "implementation_manifest": implementation,
+            "locked_labels_opened_before_checkpoint_freeze": opened_before_registry,
+            "locked_labels_used_for_tuning": training_sealed_opens > 0,
+            "trainer_received_locked_label_path": trainer_received_locked_path,
+            "access_log_append_only": True,
+            "denied_premature_sealed_accesses": state["denied_premature_sealed_accesses"],
+            "sealed_partition_open_counts": dict(state["sealed_partition_open_counts"]),
+            "checkpoint_evaluation_counts": dict(state["checkpoint_evaluation_counts"]),
+            "abstain_reasons": list(state["abstain_reasons"]),
+            "training_access_evidence": {
+                "checkpoint_manifest_audit": dict(training_audit),
+                "worker_process_contract_passed": worker_isolation_passed,
+                "worker_argv": list(worker_argv) if isinstance(worker_argv, list) else [],
+                "worker_received_paths": dict(worker_paths)
+                if isinstance(worker_paths, Mapping)
+                else {},
+                "worker_import_audit": training_audit.get(
+                    "worker_imported_tunnelgeopt_modules", []
+                ),
+                "observed_train_sealed_path_resolution_calls": training_path_resolutions,
+                "observed_train_sealed_open_calls": training_sealed_opens,
+            },
         }
-        return {"values": values, "checks": checks, "passed": all(checks.values())}
+
+    def _run_independent_formal_analysis(self, state: Mapping[str, Any]) -> dict[str, str]:
+        from tunnelgeopt.formal_analysis import evaluate_formal_decision
+
+        metrics_path = self.paths.evaluation / "sealed_metrics.json"
+        metrics = _read_json(metrics_path, "sealed metrics")
+        dataset_manifest_path, _, _ = self._dataset_paths()
+        dataset_manifest = _read_json(dataset_manifest_path, "formal dataset manifest")
+        access_state = self._formal_analysis_access_state(
+            metrics=metrics, dataset_manifest=dataset_manifest, state=state
+        )
+        decision = evaluate_formal_decision(self.config, metrics, dataset_manifest, access_state)
+        if decision.get("classification") not in {"GO", "NO_GO", "ABSTAIN"}:
+            raise FormalRunError("independent analysis returned an invalid classification")
+        self.paths.analysis.mkdir(parents=True, exist_ok=True)
+        evidence_path = self.paths.analysis / "analysis_access_state.json"
+        decision_path = self.paths.analysis / "decision.json"
+        return {
+            "analysis/analysis_access_state.json": _atomic_json(evidence_path, access_state),
+            "analysis/decision.json": _atomic_json(decision_path, decision),
+        }
 
     def _run_analyze(self, state: dict[str, Any]) -> dict[str, str]:
         if self.tiny_mock:
@@ -2013,221 +2627,7 @@ class FormalExperimentRunner:
             self.paths.analysis.mkdir(parents=True, exist_ok=True)
             path = self.paths.analysis / "decision.json"
             return {"analysis/decision.json": _atomic_json(path, decision)}
-        metrics_path = self.paths.evaluation / "sealed_metrics.json"
-        metrics = _read_json(metrics_path, "sealed metrics")
-        if metrics.get("config_sha256") != self.config_sha256:
-            raise FormalAbstain("sealed metrics belong to another config")
-        gates = self.config["scientific_decision"]
-        bootstrap_config = self.config["evaluation"]["bootstrap"]
-        results: dict[str, Any] = {}
-        dataset_manifest_path, _, _ = self._dataset_paths()
-        dataset_manifest = _read_json(dataset_manifest_path, "formal dataset manifest")
-        validity_failures: list[str] = self._dataset_validity_failures(dataset_manifest)
-        effect_failures: list[str] = []
-        all_seeds = tuple(int(value) for value in self.config["learning"]["training_seeds"])
-        for partition_index, partition_name in enumerate(LOCKED_PARTITIONS):
-            partition = metrics["partitions"][partition_name]
-            geometry_ids = tuple(partition["geometry_group_ids"])
-            sections = tuple(partition["section_families"])
-            residual, seeds = self._method_seed_errors(
-                partition, method="residual_coarse", fraction=0.5
-            )
-            scratch, _ = self._method_seed_errors(partition, method="scratch", fraction=1.0)
-            direct, _ = self._method_seed_errors(partition, method="direct_coarse", fraction=1.0)
-            coarse = np.tile(
-                np.asarray(partition["coarse_only_case_errors"], dtype=np.float64),
-                (len(seeds), 1),
-            )
-            comparisons = {
-                "R_s": self._bootstrap_comparison(
-                    residual,
-                    scratch,
-                    geometry_ids,
-                    sections,
-                    seeds,
-                    bootstrap_seed=7319 + partition_index * 100,
-                ),
-                "R_d": self._bootstrap_comparison(
-                    residual,
-                    direct,
-                    geometry_ids,
-                    sections,
-                    seeds,
-                    bootstrap_seed=7321 + partition_index * 100,
-                ),
-                "R_c": self._bootstrap_comparison(
-                    residual,
-                    coarse,
-                    geometry_ids,
-                    sections,
-                    seeds,
-                    bootstrap_seed=7327 + partition_index * 100,
-                ),
-            }
-            seed_ratios = {
-                "R_s": self._ratio_by_seed(residual, scratch, geometry_ids, sections),
-                "R_d": self._ratio_by_seed(residual, direct, geometry_ids, sections),
-                "R_c": self._ratio_by_seed(residual, coarse, geometry_ids, sections),
-            }
-            section_ratios: dict[str, dict[str, float]] = {}
-            section_array = np.asarray(sections)
-            for section in SECTION_NAMES:
-                mask = section_array == section
-                section_ratios[section] = {
-                    "R_s": self._point_ratio(
-                        residual[:, mask],
-                        scratch[:, mask],
-                        np.asarray(geometry_ids)[mask].tolist(),
-                        np.asarray(sections)[mask].tolist(),
-                    ),
-                    "R_d": self._point_ratio(
-                        residual[:, mask],
-                        direct[:, mask],
-                        np.asarray(geometry_ids)[mask].tolist(),
-                        np.asarray(sections)[mask].tolist(),
-                    ),
-                    "R_c": self._point_ratio(
-                        residual[:, mask],
-                        coarse[:, mask],
-                        np.asarray(geometry_ids)[mask].tolist(),
-                        np.asarray(sections)[mask].tolist(),
-                    ),
-                }
-            load_subtype_ratios: dict[str, dict[str, float]] = {}
-            if partition_name in {"locked_load_ood", "locked_joint_ood"}:
-                subtypes = np.asarray(partition["load_subtypes"], dtype=object)
-                for subtype in sorted({str(value) for value in subtypes}):
-                    mask = subtypes == subtype
-                    subtype_geometry = np.asarray(geometry_ids)[mask].tolist()
-                    subtype_sections = np.asarray(sections)[mask].tolist()
-                    load_subtype_ratios[subtype] = {
-                        "R_s": self._point_ratio(
-                            residual[:, mask],
-                            scratch[:, mask],
-                            subtype_geometry,
-                            subtype_sections,
-                        ),
-                        "R_d": self._point_ratio(
-                            residual[:, mask],
-                            direct[:, mask],
-                            subtype_geometry,
-                            subtype_sections,
-                        ),
-                    }
-            wall_gate = self._wall_gate_result(partition_name, partition, geometry_ids, sections)
-            results[partition_name] = {
-                "comparisons": comparisons,
-                "seed_ratios": seed_ratios,
-                "section_ratios": section_ratios,
-                "load_subtype_ratios": load_subtype_ratios,
-                "wall_offset_physics": wall_gate,
-            }
-            for ratio, comparison in comparisons.items():
-                width = float(comparison["upper"] - comparison["lower"])
-                if partition_name != "locked_joint_ood" and width > float(
-                    bootstrap_config["max_primary_ratio_interval_total_width"]
-                ):
-                    validity_failures.append(
-                        f"{partition_name}:{ratio}:bootstrap_interval_width={width:.6g}"
-                    )
-            if partition_name in gates["upper_95_ci_gates"]:
-                for ratio, threshold in gates["upper_95_ci_gates"][partition_name].items():
-                    if comparisons[ratio]["one_sided_upper"] > float(threshold):
-                        effect_failures.append(
-                            f"{partition_name}:{ratio}:upper95={comparisons[ratio]['one_sided_upper']:.6g}"
-                        )
-            if partition_name != "locked_joint_ood" and not wall_gate["passed"]:
-                effect_failures.append(f"{partition_name}:wall_offset_physics_gate_failed")
-            if partition_name in {"locked_load_ood", "locked_joint_ood"}:
-                subtype_gate = float(
-                    gates["section_robustness"][
-                        "ood_subtype_max_point_ratio_to_each_full_label_baseline"
-                    ]
-                )
-                for subtype, ratios in load_subtype_ratios.items():
-                    if partition_name != "locked_joint_ood" and any(
-                        value > subtype_gate for value in ratios.values()
-                    ):
-                        effect_failures.append(
-                            f"{partition_name}:{subtype}:full_label_ratio_exceeds_{subtype_gate}"
-                        )
-        stability = gates["seed_stability"]
-        seed_stability: dict[str, Any] = {}
-        for partition_name, threshold_key in (
-            ("locked_iid", "iid_max_R_s_and_R_d"),
-            ("locked_geometry_ood", "geometry_ood_max_R_s_and_R_d"),
-            ("locked_load_ood", "load_ood_max_R_s_and_R_d"),
-        ):
-            threshold = float(stability[threshold_key])
-            ratios = results[partition_name]["seed_ratios"]
-            passed = [
-                float(ratios["R_s"][index]) <= threshold
-                and float(ratios["R_d"][index]) <= threshold
-                for index in range(len(all_seeds))
-            ]
-            seed_stability[partition_name] = {
-                "threshold": threshold,
-                "passing_seed_count": sum(passed),
-                "passed_by_seed": dict(zip(map(str, all_seeds), passed, strict=True)),
-            }
-            if sum(passed) < int(stability["minimum_passing_seeds"]):
-                effect_failures.append(f"{partition_name}:seed_stability_failed")
-        robustness = gates["section_robustness"]
-        iid_sections = results["locked_iid"]["section_ratios"]
-        section_worst = {
-            section: max(float(value["R_s"]), float(value["R_d"]))
-            for section, value in iid_sections.items()
-        }
-        iid_section_checks = {
-            "max_any_section": max(section_worst.values())
-            <= float(robustness["iid_max_any_section"]),
-            "strict_section_count": sum(
-                value <= float(robustness["iid_max_for_at_least_two_sections"])
-                for value in section_worst.values()
-            ),
-        }
-        iid_section_checks["passed"] = iid_section_checks["max_any_section"] and int(
-            iid_section_checks["strict_section_count"]
-        ) >= int(robustness["minimum_iid_sections_at_strict_gate"])
-        if not iid_section_checks["passed"]:
-            effect_failures.append("locked_iid:section_robustness_failed")
-        if len(all_seeds) != 5:
-            validity_failures.append("formal training seed count is not five")
-        access = metrics.get("access_contract", {})
-        if (
-            access.get("passed") is not True
-            or set(access.get("sealed_partition_open_counts", {}).values()) != {1}
-            or set(access.get("checkpoint_evaluation_counts", {}).values()) != {1}
-        ):
-            validity_failures.append("sealed evaluation access/count contract failed")
-        if state.get("abstain_reasons"):
-            validity_failures.extend(str(reason) for reason in state["abstain_reasons"])
-        classification = "ABSTAIN" if validity_failures else ("NO_GO" if effect_failures else "GO")
-        decision = {
-            "schema": "tunnelgeopt.multifidelity.formal_decision.v1",
-            "run_id": self.config["run_id"],
-            "config_sha256": self.config_sha256,
-            "classification": classification,
-            "effect_claim_allowed": classification == "GO",
-            "validity_failures": validity_failures,
-            "effect_failures": effect_failures,
-            "results": results,
-            "seed_stability": seed_stability,
-            "iid_section_robustness": {
-                **iid_section_checks,
-                "worst_full_label_ratio_by_section": section_worst,
-            },
-            "dataset_validity": {
-                "manifest_sha256": _file_sha256(dataset_manifest_path),
-                "passed": not self._dataset_validity_failures(dataset_manifest),
-            },
-            "metrics_sha256": _file_sha256(metrics_path),
-            "access_log_sha256": _file_sha256(self.paths.access_log),
-            "analyzed_at_utc": _now(),
-        }
-        self.paths.analysis.mkdir(parents=True, exist_ok=True)
-        decision_path = self.paths.analysis / "decision.json"
-        return {"analysis/decision.json": _atomic_json(decision_path, decision)}
+        return self._run_independent_formal_analysis(state)
 
 
 def _read_access_events(path: Path) -> list[dict[str, Any]]:
@@ -2252,6 +2652,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("phase", choices=PHASES)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--approval", type=Path, required=True)
+    parser.add_argument("--exclusions", type=Path, default=DEFAULT_EXCLUSIONS)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--backend", choices=("formal", "tiny-mock"), default="formal")
     parser.add_argument("--device", default="cuda")
@@ -2265,6 +2666,7 @@ def main(argv: list[str] | None = None) -> int:
             config_path=arguments.config,
             approval_path=arguments.approval,
             output_dir=arguments.output,
+            exclusions_path=arguments.exclusions,
             backend=arguments.backend,
             device=arguments.device,
         )
