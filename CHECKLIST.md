@@ -182,16 +182,18 @@
 - [x] 冻结独立反力/路径功原语：约束反力符号、壁面与远场梯形功、拒绝尝试回滚、
   瞬时 Neumann 泛函和带显式物理尺度下限的增量能量诊断均已有专项测试。
 - [x] 让求解器在同一收敛 `(u,d)` 状态输出内力、壁面力、约束 DOF 与规定位移；
-  trajectory schema v2 已从这些原始量重算反力、自由 DOF 残差、分项功、累计功和
+  trajectory schema v3 已从这些原始量重算反力、自由 DOF 残差、分项功、累计功和
   能量不平衡，并绑定完整几何/拓扑/DOF/加载身份。
-- [ ] 将 scheduled 求解结果适配并保存为 schema v2；保存前必须对每个接受步重放
-  `Phase1LoadSchedule.state_at(s)` 并逐位核对 stress/facet order/release，再接入分项
-  累计功、全局合力/力矩、重试账本和保存-重载-复验 E2E。
+- [x] 将 scheduled 求解结果适配并保存为 schema v3；保存前对每个接受步重放
+   `Phase1LoadSchedule.state_at(s)` 并逐位核对 stress/facet order/release，再接入分项
+   累计功、全局合力/力矩、减半重试账本和保存-重载-复验 E2E。
 - [x] 完成可选裂纹带 Gmsh Distance/Threshold 背景场及生成后实际最大边长和
   `h/ell` 硬审计；默认 B-elastic 网格路径保持兼容，尚未运行协议规模网格。
 - [x] 固定 MOOSE `crack2d_iso` reference self-test 在 WSL 中精确运行 1/1 通过，
   MOOSE/项目 HEAD、环境、输入、gold、runner、executable 与日志哈希均已落盘。
-- [ ] 本地相场原型与 MOOSE 在完好弹性、预缺口拉伸/剪切的 same-problem 上交叉验证。
+- [x] 本地相场原型与 MOOSE 在同一 TRI3 网格的完好弹性与固定非均匀 P1 损伤
+  平衡状态上交验证，6/6 个基载荷均通过 `1e-6` 门。
+- [ ] 完成预缺口拉伸/剪切 SENT/SENS 耦合裂纹演化三网格基准。
 - [ ] 三网格、加载步、长度尺度、能量、残差与不可逆门全部通过。
 - [ ] 完成 36 条 development-only 轨迹和 12 条 ultrafine 复算，无静默替换。
 - [ ] 完成资源、方差和计划效能审计；不达标则 STOP，不创建 locked 数据。

@@ -76,12 +76,19 @@ class AT2Material:
 
 @dataclass(frozen=True)
 class FractureSolverOptions:
-    """Numerical controls for the local active-set and staggered solves."""
+    """Numerical controls for the local active-set and staggered solves.
+
+    ``energy_tolerance`` independently bounds the symmetric relative change
+    of total potential energy between two complete staggered ``(u, d)``
+    iterates.  The first iterate has infinite change by definition, so every
+    converged step contains at least two complete staggered iterations.
+    """
 
     max_staggered_iterations: int = 40
     max_displacement_iterations: int = 30
     max_active_set_iterations: int = 100
     staggered_tolerance: float = 1.0e-7
+    energy_tolerance: float = 1.0e-7
     equilibrium_tolerance: float = 1.0e-8
     kkt_tolerance: float = 1.0e-8
     active_set_tolerance: float = 1.0e-10
@@ -101,6 +108,7 @@ class FractureSolverOptions:
                 raise ValueError(f"{name} must be a positive integer")
         for name in (
             "staggered_tolerance",
+            "energy_tolerance",
             "equilibrium_tolerance",
             "kkt_tolerance",
             "active_set_tolerance",
@@ -216,7 +224,13 @@ class DisplacementSolveResult:
 
 @dataclass(frozen=True)
 class AT2StepResult:
-    """One accepted (or explicitly nonconverged) load-step state."""
+    """One accepted (or explicitly nonconverged) load-step state.
+
+    ``energy_change`` is the symmetric relative change of total potential
+    energy, including the instantaneous Neumann load functional, between the
+    final two complete staggered iterates.  It is infinite when only the first
+    iterate was evaluated.
+    """
 
     load_parameter: float
     displacement: FloatArray
@@ -242,6 +256,7 @@ class AT2StepResult:
     range_violation: float
     displacement_change: float
     damage_change: float
+    energy_change: float
     staggered_iterations: int
     displacement_iterations: int
     damage_iterations: int
@@ -1535,6 +1550,20 @@ def _relative_change(new: FloatArray, old: FloatArray) -> float:
     )
 
 
+def _symmetric_relative_energy_change(current: float, previous: float | None) -> float:
+    """Return a symmetric relative potential-energy change, or infinity initially.
+
+    The denominator is the sum of both energy magnitudes, rather than choosing
+    either iterate as the reference.  The tiny floor keeps the zero-energy
+    state well-defined without introducing a problem-dependent energy scale.
+    """
+
+    if previous is None:
+        return float("inf")
+    denominator = max(abs(current) + abs(previous), np.finfo(float).tiny)
+    return float(2.0 * abs(current - previous) / denominator)
+
+
 def solve_at2_fracture(
     mesh: TunnelMesh | Any,
     material: AT2Material,
@@ -1565,6 +1594,9 @@ def solve_at2_fracture(
         damage_iterate = damage_old.copy()
         displacement_change = np.inf
         damage_change = np.inf
+        energy_change = np.inf
+        previous_potential_energy: float | None = None
+        fracture_energy = np.inf
         displacement_iterations = 0
         damage_iterations = 0
         converged = False
@@ -1610,6 +1642,16 @@ def solve_at2_fracture(
             candidate_history = update_history(history_old, evaluated_result.psi_positive)
             displacement_change = _relative_change(displacement_iterate, previous_displacement)
             damage_change = _relative_change(damage_iterate, previous_damage)
+            fracture_energy = at2_fracture_energy(mesh, material, damage_iterate)
+            current_potential_energy = (
+                evaluated_result.elastic_energy
+                + fracture_energy
+                - evaluated_result.neumann_load_functional
+            )
+            energy_change = _symmetric_relative_energy_change(
+                current_potential_energy, previous_potential_energy
+            )
+            previous_potential_energy = current_potential_energy
             converged = (
                 displacement_result.converged
                 and evaluated_result.converged
@@ -1618,6 +1660,7 @@ def solve_at2_fracture(
                 and damage_result.kkt_residual <= controls.kkt_tolerance
                 and displacement_change <= controls.staggered_tolerance
                 and damage_change <= controls.staggered_tolerance
+                and energy_change <= controls.energy_tolerance
             )
             if converged:
                 break
@@ -1633,12 +1676,11 @@ def solve_at2_fracture(
                 f"(load_parameter={parameter:.6g}, iterations={staggered_iterations}, "
                 f"equilibrium={evaluated_result.equilibrium_residual:.3e}, "
                 f"kkt={damage_result.kkt_residual:.3e}, "
-                f"du={displacement_change:.3e}, dd={damage_change:.3e})"
+                f"du={displacement_change:.3e}, dd={damage_change:.3e}, "
+                f"potential_energy_change={energy_change:.3e})"
             )
-        fracture_energy = at2_fracture_energy(mesh, material, damage_iterate)
-        total_potential = (
-            evaluated_result.elastic_energy + fracture_energy - evaluated_result.external_work
-        )
+        total_potential = previous_potential_energy
+        assert total_potential is not None
         step = AT2StepResult(
             load_parameter=parameter,
             displacement=displacement_iterate.copy(),
@@ -1666,6 +1708,7 @@ def solve_at2_fracture(
             range_violation=damage_result.range_violation,
             displacement_change=displacement_change,
             damage_change=damage_change,
+            energy_change=energy_change,
             staggered_iterations=staggered_iterations,
             displacement_iterations=displacement_iterations,
             damage_iterations=damage_iterations,
@@ -1729,6 +1772,9 @@ def solve_at2_fracture_schedule(
         damage_iterate = damage_old.copy()
         displacement_change = np.inf
         damage_change = np.inf
+        energy_change = np.inf
+        previous_potential_energy: float | None = None
+        fracture_energy = np.inf
         displacement_iterations = 0
         damage_iterations = 0
         converged = False
@@ -1774,6 +1820,16 @@ def solve_at2_fracture_schedule(
             candidate_history = update_history(history_old, evaluated_result.psi_positive)
             displacement_change = _relative_change(displacement_iterate, previous_displacement)
             damage_change = _relative_change(damage_iterate, previous_damage)
+            fracture_energy = at2_fracture_energy(mesh, material, damage_iterate)
+            current_potential_energy = (
+                evaluated_result.elastic_energy
+                + fracture_energy
+                - evaluated_result.neumann_load_functional
+            )
+            energy_change = _symmetric_relative_energy_change(
+                current_potential_energy, previous_potential_energy
+            )
+            previous_potential_energy = current_potential_energy
             converged = (
                 displacement_result.converged
                 and evaluated_result.converged
@@ -1782,6 +1838,7 @@ def solve_at2_fracture_schedule(
                 and damage_result.kkt_residual <= controls.kkt_tolerance
                 and displacement_change <= controls.staggered_tolerance
                 and damage_change <= controls.staggered_tolerance
+                and energy_change <= controls.energy_tolerance
             )
             if converged:
                 break
@@ -1798,12 +1855,11 @@ def solve_at2_fracture_schedule(
                 f"iterations={staggered_iterations}, "
                 f"equilibrium={evaluated_result.equilibrium_residual:.3e}, "
                 f"kkt={damage_result.kkt_residual:.3e}, "
-                f"du={displacement_change:.3e}, dd={damage_change:.3e})"
+                f"du={displacement_change:.3e}, dd={damage_change:.3e}, "
+                f"potential_energy_change={energy_change:.3e})"
             )
-        fracture_energy = at2_fracture_energy(mesh, material, damage_iterate)
-        total_potential = (
-            evaluated_result.elastic_energy + fracture_energy - evaluated_result.external_work
-        )
+        total_potential = previous_potential_energy
+        assert total_potential is not None
         step = ScheduledAT2StepResult(
             load_parameter=load_state.s,
             displacement=displacement_iterate.copy(),
@@ -1831,6 +1887,7 @@ def solve_at2_fracture_schedule(
             range_violation=damage_result.range_violation,
             displacement_change=displacement_change,
             damage_change=damage_change,
+            energy_change=energy_change,
             staggered_iterations=staggered_iterations,
             displacement_iterations=displacement_iterations,
             damage_iterations=damage_iterations,

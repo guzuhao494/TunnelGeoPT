@@ -32,7 +32,7 @@ import numpy as np
 ARRAYS_FILENAME = "arrays.npz"
 META_FILENAME = "meta.json"
 SCHEMA_NAME = "tunnelgeopt.c_fracture_trajectory"
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 FLOAT64 = np.dtype(np.float64)
 FLOAT32 = np.dtype(np.float32)
@@ -90,6 +90,7 @@ SI_UNITS: dict[str, str] = {
     "damage_connectivity": "1",
     "displacement_residual": "1",
     "damage_residual": "1",
+    "staggered_potential_energy_change": "1",
     "equilibrium_relative_residual": "1",
     "kkt_relative_residual": "1",
     "complementarity_relative_residual": "1",
@@ -137,6 +138,7 @@ FLOAT_ARRAY_KEYS = (
     "damage_connectivity",
     "displacement_residual",
     "damage_residual",
+    "staggered_potential_energy_change",
     "equilibrium_relative_residual",
     "kkt_relative_residual",
     "complementarity_relative_residual",
@@ -175,6 +177,7 @@ ATTEMPT_LEDGER_KEYS = frozenset(
         "active_set_iterations",
         "staggered_iterations",
         "step_halvings",
+        "staggered_potential_energy_change",
         "equilibrium_relative_residual",
         "kkt_relative_residual",
         "complementarity_relative_residual",
@@ -391,6 +394,7 @@ class FractureTrajectory:
     damage_connectivity: np.ndarray
     displacement_residual: np.ndarray
     damage_residual: np.ndarray
+    staggered_potential_energy_change: np.ndarray
     equilibrium_relative_residual: np.ndarray
     kkt_relative_residual: np.ndarray
     complementarity_relative_residual: np.ndarray
@@ -859,6 +863,16 @@ def _validate_metadata(record: FractureTrajectory) -> tuple[dict[str, Any], dict
     solver = _normalise_json(record.solver, path="$.solver")
     if not isinstance(solver.get("name"), str) or not solver["name"].strip():
         raise FractureSchemaValidationError("solver.name must be a non-empty string")
+    energy_tolerance = solver.get("relative_energy_increment_tolerance")
+    if (
+        isinstance(energy_tolerance, bool)
+        or not isinstance(energy_tolerance, (int, float))
+        or not math.isfinite(float(energy_tolerance))
+        or float(energy_tolerance) <= 0.0
+    ):
+        raise FractureSchemaValidationError(
+            "solver.relative_energy_increment_tolerance must be finite and strictly positive"
+        )
     _normalise_json(record.env, path="$.env")
     _normalise_json(record.meta, path="$.meta")
     if record.completed is not True or record.accepted is not True:
@@ -1178,6 +1192,7 @@ def _validate_state_arrays(
         "damage_connectivity",
         "displacement_residual",
         "damage_residual",
+        "staggered_potential_energy_change",
         "equilibrium_relative_residual",
         "kkt_relative_residual",
         "complementarity_relative_residual",
@@ -1255,6 +1270,7 @@ def _validate_state_arrays(
         "crack_density_integral",
         "displacement_residual",
         "damage_residual",
+        "staggered_potential_energy_change",
         "equilibrium_relative_residual",
         "kkt_relative_residual",
         "complementarity_relative_residual",
@@ -1283,6 +1299,11 @@ def _validate_state_arrays(
         raise FractureSchemaValidationError("KKT relative residual exceeds 1e-6")
     if np.any(scalars["complementarity_relative_residual"] > KKT_RELATIVE_TOLERANCE):
         raise FractureSchemaValidationError("complementarity relative residual exceeds 1e-6")
+    energy_tolerance = float(record.solver["relative_energy_increment_tolerance"])
+    if np.any(scalars["staggered_potential_energy_change"] > energy_tolerance):
+        raise FractureSchemaValidationError(
+            "staggered_potential_energy_change exceeds solver.relative_energy_increment_tolerance"
+        )
     for name in ("damage_irreversibility_violation", "damage_range_violation"):
         if np.any(scalars[name] > STATE_MONOTONICITY_TOLERANCE):
             raise FractureSchemaValidationError(f"{name} exceeds 1e-10")
@@ -1485,6 +1506,17 @@ def _validate_attempt_ledger(record: FractureTrajectory) -> None:
                 raise FractureSchemaValidationError(
                     f"attempt_ledger[{position}].{name} must be non-negative"
                 )
+        if entry["accepted"]:
+            if _ledger_float(entry, "staggered_potential_energy_change", position) < 0.0:
+                raise FractureSchemaValidationError(
+                    f"attempt_ledger[{position}].staggered_potential_energy_change "
+                    "must be non-negative"
+                )
+        elif entry["staggered_potential_energy_change"] is not None:
+            raise FractureSchemaValidationError(
+                f"rejected attempt_ledger[{position}] must set "
+                "staggered_potential_energy_change to null"
+            )
         code = entry["failure_code"]
         message = entry["failure_message"]
         if entry["accepted"]:
@@ -1572,6 +1604,12 @@ def _validate_attempt_ledger(record: FractureTrajectory) -> None:
             )
         accepted_diagnostics = entries[-1]
         rtol, atol = _relative_tolerances(record.dtype)
+        energy_change = float(accepted_diagnostics["staggered_potential_energy_change"])
+        if energy_change != float(record.staggered_potential_energy_change[step]):
+            raise FractureSchemaValidationError(
+                "accepted attempt staggered_potential_energy_change for step "
+                f"{step} does not exactly match the step array"
+            )
         for name in (
             "equilibrium_relative_residual",
             "kkt_relative_residual",

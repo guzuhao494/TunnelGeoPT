@@ -1,0 +1,99 @@
+
+[36m
+*** Info ***
+<WORKSPACE>/artifacts/development/moose-local-same-problem-v1/validated-167ee97d-final-v7-20260814/cases/fixed_damage-basis-2/input.i:18.7:
+The following occurred in the Action 'same_problem' of type QuasiStaticSolidMechanicsPhysics.
+
+SolidMechanics Action: selecting 'total small strain' formulation. Use `incremental = true` to select 'incremental small strain' instead.[39m
+Framework Information:
+MOOSE Version:           git commit 167ee97d on 2026-08-12
+LibMesh Version:         
+PETSc Version:           3.25.2
+SLEPc Version:           3.25.0
+Current Time:            Fri Aug 14 06:47:49 2026
+Executable Timestamp:    Fri Aug 14 03:51:14 2026
+
+Input File(s):
+  <WORKSPACE>/artifacts/development/moose-local-same-problem-v1/validated-167ee97d-final-v7-20260814/cases/fixed_damage-basis-2/input.i
+
+Command Line Argument(s):
+  --n-threads=1
+
+Checkpoint:
+  Wall Time Interval:      Every 3600 s
+  Checkpoint:              Outputs/checkpoint
+  # Checkpoints Kept:      2
+  Execute On:              TIMESTEP_END 
+
+Parallelism:
+  Num Processors:          1
+  Num Threads:             1
+
+Mesh: 
+  Parallel Type:           replicated
+  Mesh Dimension:          2
+  Spatial Dimension:       2
+  Nodes:                   8
+  Elems:                   8
+  Num Subdomains:          1
+
+Nonlinear System:
+  Num DOFs:                16
+  Num Local DOFs:          16
+  Variables:               { "disp_x" "disp_y" } 
+  Finite Element Types:    "LAGRANGE" 
+  Approximation Orders:    "FIRST" 
+
+Auxiliary System:
+  Num DOFs:                88
+  Num Local DOFs:          88
+  Variables:               { "c" "resid_x" "resid_y" } { "strain_xx" "strain_yy" "strain_xy" "stress_xx" 
+                             "stress_yy" "stress_xy" "stress_zz" "energy_density" } 
+  Finite Element Types:    "LAGRANGE" "MONOMIAL" 
+  Approximation Orders:    "FIRST" "CONSTANT" 
+
+Execution Information:
+  Executioner:             Steady
+  Solver Mode:             NEWTON 
+  PETSc Preconditioner:    lu 
+  MOOSE Preconditioner:    SMP (auto) 
+
+ 0 Nonlinear |R| = [32m1.428128e+07[39m
+      0 Linear |R| = [32m1.428128e+07[39m
+      1 Linear |R| = [32m2.133928e-09[39m
+ 1 Nonlinear |R| = [32m1.425623e+06[39m
+      0 Linear |R| = [32m1.425623e+06[39m
+      1 Linear |R| = [32m3.038529e-10[39m
+ 2 Nonlinear |R| = [32m6.530121e+04[39m
+      0 Linear |R| = [32m6.530121e+04[39m
+      1 Linear |R| = [32m8.531817e-12[39m
+ 3 Nonlinear |R| = [32m5.543861e+03[39m
+      0 Linear |R| = [32m5.543861e+03[39m
+      1 Linear |R| = [32m1.160775e-12[39m
+ 4 Nonlinear |R| = [32m3.994153e+02[39m
+      0 Linear |R| = [32m3.994153e+02[39m
+      1 Linear |R| = [32m1.044280e-13[39m
+ 5 Nonlinear |R| = [32m3.932243e+01[39m
+      0 Linear |R| = [32m3.932243e+01[39m
+      1 Linear |R| = [32m6.296051e-15[39m
+ 6 Nonlinear |R| = [32m3.298427e+00[39m
+      0 Linear |R| = [32m3.298427e+00[39m
+      1 Linear |R| = [32m5.900916e-16[39m
+ 7 Nonlinear |R| = [32m3.374144e-01[39m
+      0 Linear |R| = [32m3.374144e-01[39m
+      1 Linear |R| = [32m7.957069e-17[39m
+ 8 Nonlinear |R| = [32m3.076895e-02[39m
+      0 Linear |R| = [32m3.076895e-02[39m
+      1 Linear |R| = [32m8.228516e-18[39m
+ 9 Nonlinear |R| = [32m3.184192e-03[39m
+      0 Linear |R| = [32m3.184192e-03[39m
+      1 Linear |R| = [32m6.878492e-19[39m
+10 Nonlinear |R| = [32m3.040150e-04[39m
+      0 Linear |R| = [32m3.040150e-04[39m
+      1 Linear |R| = [32m6.943604e-20[39m
+11 Nonlinear |R| = [32m3.144961e-05[39m
+      0 Linear |R| = [32m3.144961e-05[39m
+      1 Linear |R| = [32m9.043837e-21[39m
+12 Nonlinear |R| = [32m3.080443e-06[39m
+[32m Solve Converged![39m
+

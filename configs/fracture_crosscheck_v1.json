@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "gate_id": "moose-local-same-problem-v1",
+  "claim_boundary": "Development-only cross-solver equivalence check; not a validated fracture-label or rockburst model.",
+  "coordinate_contract": {
+    "local_coordinates": ["y", "z"],
+    "moose_coordinates": ["x", "y", "z"],
+    "mapping": "moose_x=local_y; moose_y=local_z; moose_z=tunnel_axis",
+    "stress_sign": "tension_positive",
+    "strain_order": ["yy", "zz", "gamma_yz"],
+    "stress_order": ["yy", "zz", "yz"]
+  },
+  "mesh": {
+    "path": "moose/fracture_crosscheck/canonical_square_annulus_v1.msh",
+    "format": "gmsh_2.2_ascii",
+    "element_type": "TRI3",
+    "physical_names": {
+      "rock": 1,
+      "wall": 2,
+      "farfield": 3
+    },
+    "allow_renumbering": false
+  },
+  "material": {
+    "young_modulus_pa": 60000000000.0,
+    "poisson_ratio": 0.25,
+    "fracture_toughness_j_per_m2": 120.0,
+    "length_scale_m": 0.2,
+    "residual_stiffness": 0.0
+  },
+  "intact_gate": {
+    "enabled": true,
+    "damage": "zero",
+    "stress_basis_tension_positive_pa": [
+      [1000000.0, 0.0, 0.0],
+      [0.0, 1000000.0, 0.0],
+      [0.0, 0.0, 1000000.0]
+    ]
+  },
+  "fixed_damage_gate": {
+    "enabled": true,
+    "status": "conditional_after_intact_gate",
+    "damage_expression_moose_xy": "0.20 + 0.03*x - 0.02*y",
+    "damage_coefficients_local_yz": [0.2, 0.03, -0.02],
+    "stress_basis_tension_positive_pa": [
+      [1000000.0, 0.0, 0.0],
+      [0.0, 1000000.0, 0.0],
+      [0.0, 0.0, 1000000.0]
+    ]
+  },
+  "comparison": {
+    "primary_relative_l2_tolerance": 1e-6,
+    "absolute_tolerances": {
+      "coordinate_m": 1e-12,
+      "displacement_m": 1e-12,
+      "strain": 1e-12,
+      "stress_pa": 1e-3,
+      "energy_j_per_m": 1e-6,
+      "reaction_n_per_m": 1e-3
+    },
+    "normalization_floors": {
+      "displacement_m": 1e-12,
+      "strain": 1e-12,
+      "stress_pa": 1e-3,
+      "energy_j_per_m": 1e-6,
+      "reaction_n_per_m": 1e-3
+    },
+    "require_finite": true,
+    "require_bijective_coordinate_mapping": true,
+    "require_identical_mesh_file_sha256": true
+  },
+  "execution": {
+    "wsl_distribution": "Ubuntu",
+    "moose_executable_linux": "~/projects/moose/modules/combined/combined-opt",
+    "intact_template": "moose/fracture_crosscheck/intact_same_mesh.i",
+    "fixed_damage_template": "moose/fracture_crosscheck/fixed_damage_same_mesh.i",
+    "petsc_options": "direct_lu",
+    "threads": 1
+  }
+}

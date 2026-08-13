@@ -84,6 +84,7 @@ def _trajectory(
     wall_work_increment = np.zeros(3, dtype=dtype)
     cumulative_external_work = np.cumsum(farfield_work_increment).astype(dtype)
     total_potential = recoverable_energy - neumann_load_functional
+    staggered_potential_energy_change = np.asarray([0.0, 5.0e-9, 7.0e-9], dtype=dtype)
 
     load_state_hashes = [
         compute_load_state_sha256(
@@ -108,6 +109,7 @@ def _trajectory(
             "active_set_iterations": 0,
             "staggered_iterations": 0,
             "step_halvings": 0,
+            "staggered_potential_energy_change": float(staggered_potential_energy_change[0]),
             "equilibrium_relative_residual": 0.0,
             "kkt_relative_residual": 0.0,
             "complementarity_relative_residual": 0.0,
@@ -132,6 +134,7 @@ def _trajectory(
             "active_set_iterations": 3,
             "staggered_iterations": 1,
             "step_halvings": 0,
+            "staggered_potential_energy_change": None,
             "equilibrium_relative_residual": 1.0e-3,
             "kkt_relative_residual": 1.0e-5,
             "complementarity_relative_residual": 1.0e-5,
@@ -156,6 +159,7 @@ def _trajectory(
             "active_set_iterations": 5,
             "staggered_iterations": 2,
             "step_halvings": 1,
+            "staggered_potential_energy_change": float(staggered_potential_energy_change[1]),
             "equilibrium_relative_residual": 0.0,
             "kkt_relative_residual": 1.0e-8,
             "complementarity_relative_residual": 1.0e-8,
@@ -180,6 +184,7 @@ def _trajectory(
             "active_set_iterations": 5,
             "staggered_iterations": 2,
             "step_halvings": 0,
+            "staggered_potential_energy_change": float(staggered_potential_energy_change[2]),
             "equilibrium_relative_residual": 0.0,
             "kkt_relative_residual": 1.0e-8,
             "complementarity_relative_residual": 1.0e-8,
@@ -241,6 +246,7 @@ def _trajectory(
         damage_connectivity=np.asarray([0.0, 0.5, 1.0], dtype=dtype),
         displacement_residual=np.asarray([0.0, 1.0e-9, 1.0e-9], dtype=dtype),
         damage_residual=np.asarray([0.0, 1.0e-9, 1.0e-9], dtype=dtype),
+        staggered_potential_energy_change=staggered_potential_energy_change,
         equilibrium_relative_residual=np.zeros(3, dtype=dtype),
         kkt_relative_residual=np.asarray([0.0, 1.0e-8, 1.0e-8], dtype=dtype),
         complementarity_relative_residual=np.asarray([0.0, 1.0e-8, 1.0e-8], dtype=dtype),
@@ -303,7 +309,11 @@ def _trajectory(
             "damage_interpolation": "P1",
             "mesh_tier": "fine",
         },
-        solver={"name": "synthetic-schema-test", "version": "0"},
+        solver={
+            "name": "synthetic-schema-test",
+            "version": "0",
+            "relative_energy_increment_tolerance": 1.0e-8,
+        },
         env={"python": "3.13", "numpy": np.__version__},
         meta={"section_family": "circle", "split": "development"},
         **optional,
@@ -324,12 +334,15 @@ def test_contract_is_immutable_and_contains_complete_step_fields(
     assert trajectory.damage.shape == (3, 4)
     assert trajectory.strain.shape == trajectory.stress.shape == (3, 2, 3)
     assert trajectory.psi_plus.shape == trajectory.history.shape == (3, 2)
+    assert trajectory.staggered_potential_energy_change.shape == (3,)
     assert set(trajectory.arrays()) == set(ARRAY_KEYS)
     assert trajectory.damage_convention == DAMAGE_CONVENTION
     assert trajectory.units == SI_UNITS
 
     with pytest.raises(ValueError, match="WRITEABLE"):
         trajectory.damage.setflags(write=True)
+    with pytest.raises(ValueError, match="WRITEABLE"):
+        trajectory.staggered_potential_energy_change.setflags(write=True)
     with pytest.raises(TypeError):
         trajectory.material["fracture_energy"] = 20.0
     with pytest.raises(FrozenInstanceError):
@@ -355,7 +368,7 @@ def test_roundtrip_verifies_file_semantic_array_and_mesh_hashes(
     assert len(metadata["content_sha256"]) == 64
     assert len(metadata["mesh_content_sha256"]) == 64
     assert len(metadata["identity_content_sha256"]) == 64
-    assert metadata["schema_version"] == SCHEMA_VERSION == 2
+    assert metadata["schema_version"] == SCHEMA_VERSION == 3
     assert set(metadata["array_manifest"]) == set(ARRAY_KEYS)
 
     loaded = load_fracture_trajectory(paths.trajectory_dir)
@@ -366,12 +379,13 @@ def test_roundtrip_verifies_file_semantic_array_and_mesh_hashes(
         assert not getattr(loaded, name).flags.writeable
 
 
-def test_v1_metadata_is_explicitly_rejected_without_implicit_migration(
-    tmp_path, trajectory: FractureTrajectory
+@pytest.mark.parametrize("legacy_version", [1, 2])
+def test_v1_v2_metadata_is_explicitly_rejected_without_implicit_migration(
+    legacy_version: int, tmp_path, trajectory: FractureTrajectory
 ) -> None:
-    paths = save_fracture_trajectory(tmp_path / "v1", trajectory)
+    paths = save_fracture_trajectory(tmp_path / f"v{legacy_version}", trajectory)
     metadata = json.loads(paths.meta.read_text(encoding="utf-8"))
-    metadata["schema_version"] = 1
+    metadata["schema_version"] = legacy_version
     paths.meta.write_text(json.dumps(metadata), encoding="utf-8")
     with pytest.raises(FractureSchemaValidationError, match="unsupported"):
         load_fracture_trajectory(paths.trajectory_dir)
@@ -474,6 +488,69 @@ def test_rejected_attempts_cannot_publish_accepted_work_or_load_identity(
     ledger = [dict(entry) for entry in trajectory.attempt_ledger]
     ledger[1]["load_state_sha256"] = "a" * 64
     with pytest.raises(FractureSchemaValidationError, match="rejected attempt_ledger"):
+        replace(trajectory, attempt_ledger=ledger).validate()
+
+
+def test_staggered_potential_energy_change_is_independent_and_solver_gated(
+    trajectory: FractureTrajectory,
+) -> None:
+    changed = np.asarray(trajectory.staggered_potential_energy_change).copy()
+    changed[1] = 8.0e-9
+    ledger = [dict(entry) for entry in trajectory.attempt_ledger]
+    ledger[2]["staggered_potential_energy_change"] = float(changed[1])
+    replace(
+        trajectory,
+        staggered_potential_energy_change=changed,
+        attempt_ledger=ledger,
+    ).validate()
+
+    negative = np.asarray(trajectory.staggered_potential_energy_change).copy()
+    negative[1] = -1.0e-12
+    with pytest.raises(FractureSchemaValidationError, match="must be non-negative"):
+        replace(trajectory, staggered_potential_energy_change=negative).validate()
+
+    nonfinite = np.asarray(trajectory.staggered_potential_energy_change).copy()
+    nonfinite[1] = np.inf
+    with pytest.raises(FractureSchemaValidationError, match="non-finite"):
+        replace(trajectory, staggered_potential_energy_change=nonfinite).validate()
+
+    unconverged = np.asarray(trajectory.staggered_potential_energy_change).copy()
+    unconverged[1] = 1.1e-8
+    with pytest.raises(
+        FractureSchemaValidationError,
+        match="staggered_potential_energy_change exceeds",
+    ):
+        replace(trajectory, staggered_potential_energy_change=unconverged).validate()
+
+
+@pytest.mark.parametrize("tolerance", [None, True, 0.0, -1.0, np.inf, np.nan])
+def test_solver_energy_increment_tolerance_is_frozen_positive_and_finite(
+    trajectory: FractureTrajectory, tolerance: object
+) -> None:
+    solver = dict(trajectory.solver)
+    solver["relative_energy_increment_tolerance"] = tolerance
+    with pytest.raises(FractureSchemaValidationError, match="finite"):
+        replace(trajectory, solver=solver).validate()
+
+
+def test_attempt_ledger_exactly_binds_accepted_energy_change_and_nulls_rejected(
+    trajectory: FractureTrajectory,
+) -> None:
+    ledger = [dict(entry) for entry in trajectory.attempt_ledger]
+    ledger[2]["staggered_potential_energy_change"] = (
+        float(trajectory.staggered_potential_energy_change[1]) + 1.0e-16
+    )
+    with pytest.raises(FractureSchemaValidationError, match="does not exactly match"):
+        replace(trajectory, attempt_ledger=ledger).validate()
+
+    ledger = [dict(entry) for entry in trajectory.attempt_ledger]
+    ledger[1]["staggered_potential_energy_change"] = 1.0e-3
+    with pytest.raises(FractureSchemaValidationError, match="must set .* to null"):
+        replace(trajectory, attempt_ledger=ledger).validate()
+
+    ledger = [dict(entry) for entry in trajectory.attempt_ledger]
+    del ledger[0]["staggered_potential_energy_change"]
+    with pytest.raises(FractureSchemaValidationError, match="key mismatch"):
         replace(trajectory, attempt_ledger=ledger).validate()
 
 

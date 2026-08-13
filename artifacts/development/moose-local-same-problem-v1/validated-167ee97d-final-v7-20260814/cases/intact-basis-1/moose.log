@@ -1,0 +1,66 @@
+
+[36m
+*** Info ***
+<WORKSPACE>/artifacts/development/moose-local-same-problem-v1/validated-167ee97d-final-v7-20260814/cases/intact-basis-1/input.i:18.7:
+The following occurred in the Action 'same_problem' of type QuasiStaticSolidMechanicsPhysics.
+
+SolidMechanics Action: selecting 'total small strain' formulation. Use `incremental = true` to select 'incremental small strain' instead.[39m
+Framework Information:
+MOOSE Version:           git commit 167ee97d on 2026-08-12
+LibMesh Version:         
+PETSc Version:           3.25.2
+SLEPc Version:           3.25.0
+Current Time:            Fri Aug 14 06:47:43 2026
+Executable Timestamp:    Fri Aug 14 03:51:14 2026
+
+Input File(s):
+  <WORKSPACE>/artifacts/development/moose-local-same-problem-v1/validated-167ee97d-final-v7-20260814/cases/intact-basis-1/input.i
+
+Command Line Argument(s):
+  --n-threads=1
+
+Checkpoint:
+  Wall Time Interval:      Every 3600 s
+  Checkpoint:              Outputs/checkpoint
+  # Checkpoints Kept:      2
+  Execute On:              TIMESTEP_END 
+
+Parallelism:
+  Num Processors:          1
+  Num Threads:             1
+
+Mesh: 
+  Parallel Type:           replicated
+  Mesh Dimension:          2
+  Spatial Dimension:       2
+  Nodes:                   8
+  Elems:                   8
+  Num Subdomains:          1
+
+Nonlinear System:
+  Num DOFs:                16
+  Num Local DOFs:          16
+  Variables:               { "disp_x" "disp_y" } 
+  Finite Element Types:    "LAGRANGE" 
+  Approximation Orders:    "FIRST" 
+
+Auxiliary System:
+  Num DOFs:                80
+  Num Local DOFs:          80
+  Variables:               { "resid_x" "resid_y" } { "strain_xx" "strain_yy" "strain_xy" "stress_xx" 
+                             "stress_yy" "stress_xy" "stress_zz" "energy_density" } 
+  Finite Element Types:    "LAGRANGE" "MONOMIAL" 
+  Approximation Orders:    "FIRST" "CONSTANT" 
+
+Execution Information:
+  Executioner:             Steady
+  Solver Mode:             NEWTON 
+  PETSc Preconditioner:    lu 
+  MOOSE Preconditioner:    SMP (auto) 
+
+ 0 Nonlinear |R| = [32m9.617692e+06[39m
+      0 Linear |R| = [32m9.617692e+06[39m
+      1 Linear |R| = [32m1.866280e-09[39m
+ 1 Nonlinear |R| = [32m1.525125e-09[39m
+[32m Solve Converged![39m
+

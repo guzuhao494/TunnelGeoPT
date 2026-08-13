@@ -5,9 +5,9 @@ contract for candidate accepted, quasi-static AT2 fracture trajectories. It
 does not extend the fixed-width GeoPT A-layer or the linear B-elastic schema,
 and no Phase-1 trajectory has yet been admitted for publication.
 
-The current contract is **schema version 2**. It is intentionally incompatible
-with version 1: the reader rejects v1 instead of inferring reactions or path
-work from the former ambiguous scalar fields.
+The current contract is **schema version 3**. It is intentionally incompatible
+with versions 1 and 2: the reader rejects both rather than inferring reactions,
+path work, or the new independent staggered potential-energy convergence value.
 
 One trajectory occupies exactly two schema files:
 
@@ -132,6 +132,7 @@ definition. It is a path integral, not an instantaneous load potential.
 |---|---:|---|---|
 | `displacement_residual` | `[T]` | staggered displacement update residual | 1 |
 | `damage_residual` | `[T]` | staggered damage update residual | 1 |
+| `staggered_potential_energy_change` | `[T]` | symmetric relative total-potential change between the final two complete staggered iterates | 1 |
 | `equilibrium_relative_residual` | `[T]` | relative force-balance residual | 1 |
 | `kkt_relative_residual` | `[T]` | relative bound-constrained KKT residual | 1 |
 | `complementarity_relative_residual` | `[T]` | relative active-set complementarity residual | 1 |
@@ -148,13 +149,34 @@ definition. It is a path integral, not an instantaneous load potential.
 The accepted-state gates from the solver blueprint are enforced: equilibrium,
 KKT, and complementarity relative residuals may not exceed `1e-6`; damage
 irreversibility and range violations may not exceed `1e-10`; relative energy
-imbalance may not exceed `5%`. Stored damage must remain within `[0,1]`, be
-irreversible to `1e-10`, and have a monotone history field satisfying
-`H >= psi_plus` to the declared tolerance.
+imbalance may not exceed `5%`; and `staggered_potential_energy_change` may not
+exceed the finite positive
+`solver.relative_energy_increment_tolerance`. Stored damage must remain within
+`[0,1]`, be irreversible to `1e-10`, and have a monotone history field
+satisfying `H >= psi_plus` to the declared tolerance.
+
+The staggered convergence value is defined inside one fixed accepted load
+state. For consecutive complete staggered iterates `k-1` and `k`, let
+
+```text
+Pi_k = elastic_energy_k + fracture_energy_k
+       - neumann_load_functional_k
+
+staggered_potential_energy_change =
+    2 |Pi_k - Pi_(k-1)|
+    / max(|Pi_k| + |Pi_(k-1)|, smallest_positive_float64)
+```
+
+The accepted array stores only the final finite solver value; the first
+staggered iterate's internal `inf` sentinel is never publishable. This scalar
+cannot be recomputed from consecutive accepted load states because those states
+belong to different boundary conditions. The schema therefore checks its
+finiteness, non-negativity, frozen solver tolerance, exact ledger binding, and
+integrity hash, but does not misidentify it as the path energy balance below.
 
 None of the work, reaction, equilibrium, or energy-balance diagnostics is
 trusted as an opaque solver scalar. With `D` the stored constrained positions,
-version 2 recomputes
+version 3 recomputes
 
 ```text
 r_D = (f_internal - f_wall)[D]
@@ -211,6 +233,7 @@ newton_iterations
 active_set_iterations
 staggered_iterations
 step_halvings
+staggered_potential_energy_change
 equilibrium_relative_residual
 kkt_relative_residual
 complementarity_relative_residual
@@ -233,8 +256,12 @@ that caused step halving.
 The per-step Newton, active-set, and staggered counts must equal the sums over
 all attempts, not just the accepted solve. Retry counts equal the number of
 rejected attempts, and the accepted attempt's halving count and diagnostics
-must match the corresponding step arrays. This preserves failed work for cost
-accounting and prevents a successful label from hiding retries.
+must match the corresponding step arrays. In particular, the accepted
+`staggered_potential_energy_change` must exactly equal its stored array value
+after publication-dtype conversion. The same ledger field must be `null` for
+every rejected attempt because a rejected final iterate is not an accepted-state
+convergence diagnostic. This preserves failed work for cost accounting and
+prevents a successful label from hiding retries.
 
 Only an accepted ledger entry carries the load-state hash and the four work
 values; all five fields must be `null` on a rejected entry. Accepted values must
@@ -257,7 +284,8 @@ snapshot. The metadata includes:
   N/m and J/m;
 - positive physical tags for rock, wall, and far field;
 - explicit triangle/P1 displacement/P1 damage mesh declarations;
-- solver, environment, and caller metadata;
+- solver metadata including the finite positive
+  `relative_energy_increment_tolerance`, plus environment and caller metadata;
 - an exact unit mapping covering every required and optional array.
 
 The schema supports an optional EBR-DNO decomposition. It is all-or-nothing:
@@ -303,7 +331,7 @@ the complete control-knot metadata is sufficient for a separate schedule
 evaluator to audit the load actually applied at every accepted state without
 reducing P4 to a uniform scalar.
 
-The generic v2 schema deliberately does **not** infer the physical meaning or
+The generic v3 schema deliberately does **not** infer the physical meaning or
 units of every possible numeric far-field representation in `control_knots`.
 Consequently, the per-state hash proves internal byte-level binding to the
 stored evaluated state; it does not by itself prove that a caller evaluated the
@@ -412,7 +440,7 @@ differently normalized quantities from being silently accepted.
 - The solver/trajectory adapter must expose converged internal and wall nodal
   forces, prescribed far-field values, constrained positions, and reactions at
   the same `(u,d)` state. An instantaneous solver compatibility alias named
-  `external_work` is not a v2 schema field and cannot stand in for path work.
+  `external_work` is not a v3 schema field and cannot stand in for path work.
 - `damage_connectivity` is validated only as a finite `[0,1]` metric. Its
   threshold and graph definition must be frozen before formal generation.
 - Hashes detect corruption and mixed records but do not prove scientific

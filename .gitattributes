@@ -12,3 +12,5 @@
 artifacts/development/stress-recovery-v0.5-dev/** -text -diff
 artifacts/development/stress-recovery-boundary-v0.5.1-dev/** -text -diff
 artifacts/development/moose-crack2d-iso-v1/** -text -diff
+artifacts/development/moose-local-same-problem-v1/** -text -diff
+moose/fracture_crosscheck/** -text -diff

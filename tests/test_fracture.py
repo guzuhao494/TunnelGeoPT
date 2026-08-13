@@ -107,6 +107,12 @@ def _strict_options() -> FractureSolverOptions:
     )
 
 
+@pytest.mark.parametrize("value", [0.0, -1.0e-8, np.inf, -np.inf, np.nan])
+def test_energy_tolerance_must_be_finite_and_positive(value: float) -> None:
+    with pytest.raises(ValueError, match="energy_tolerance must be finite and positive"):
+        FractureSolverOptions(energy_tolerance=value)
+
+
 def test_three_dimensional_plane_strain_spectral_reconstruction_and_energy() -> None:
     material = AT2Material(
         young_modulus=120.0,
@@ -335,6 +341,7 @@ def test_staggered_acceptance_reassembles_the_post_damage_state() -> None:
     assert np.max(step.damage) > 0.8
     assert not result.converged
     assert not step.converged
+    assert np.isinf(step.energy_change)
     assert step.equilibrium_residual > permissive_change_options.equilibrium_tolerance
 
     recomputed = _evaluate_fixed_damage_displacement_state(
@@ -388,6 +395,134 @@ def test_staggered_acceptance_reassembles_the_post_damage_state() -> None:
     assert continued.converged
     assert continued.staggered_iterations > 1
     assert continued.equilibrium_residual <= continuing_options.equilibrium_tolerance
+
+
+def test_potential_energy_gate_is_independent_for_legacy_and_scheduled_p1() -> None:
+    mesh = _square_annulus_tunnel_mesh()
+    schedule = compile_phase1_load_schedule(load_fracture_phase1_config(), "p1", 1.0, mesh)
+    stress = schedule.state_at(1.0).farfield_stress_tension_positive_yz
+    material = AT2Material(
+        young_modulus=100.0,
+        poisson_ratio=0.25,
+        fracture_toughness=1.0e-4,
+        length_scale=0.5,
+        residual_stiffness=1.0e-8,
+    )
+    blocked_options = FractureSolverOptions(
+        max_staggered_iterations=2,
+        equilibrium_tolerance=1.0e-4,
+        kkt_tolerance=1.0e-10,
+        staggered_tolerance=2.0,
+        energy_tolerance=1.0e-8,
+        raise_on_nonconvergence=False,
+    )
+
+    legacy = solve_at2_fracture(
+        mesh,
+        material,
+        stress,
+        load_path=AT2LoadPath((1.0,)),
+        options=blocked_options,
+    ).final
+    scheduled = solve_at2_fracture_schedule(
+        mesh,
+        material,
+        schedule,
+        load_path=AT2LoadPath((1.0,)),
+        options=blocked_options,
+    ).final
+
+    for step in (legacy, scheduled):
+        assert not step.converged
+        assert step.displacement_change <= blocked_options.staggered_tolerance
+        assert step.damage_change <= blocked_options.staggered_tolerance
+        assert step.equilibrium_residual <= blocked_options.equilibrium_tolerance
+        assert step.kkt_residual <= blocked_options.kkt_tolerance
+        assert np.isfinite(step.energy_change)
+        assert step.energy_change > blocked_options.energy_tolerance
+    assert scheduled.energy_change == legacy.energy_change
+
+    raising_options = replace(blocked_options, raise_on_nonconvergence=True)
+    with pytest.raises(RuntimeError, match=r"potential_energy_change=[0-9.e+-]+"):
+        solve_at2_fracture(
+            mesh,
+            material,
+            stress,
+            load_path=AT2LoadPath((1.0,)),
+            options=raising_options,
+        )
+    with pytest.raises(RuntimeError, match=r"potential_energy_change=[0-9.e+-]+"):
+        solve_at2_fracture_schedule(
+            mesh,
+            material,
+            schedule,
+            load_path=AT2LoadPath((1.0,)),
+            options=raising_options,
+        )
+
+    continuing_options = replace(
+        blocked_options,
+        max_staggered_iterations=3,
+        raise_on_nonconvergence=True,
+    )
+    legacy_continued = solve_at2_fracture(
+        mesh,
+        material,
+        stress,
+        load_path=AT2LoadPath((1.0,)),
+        options=continuing_options,
+    ).final
+    scheduled_continued = solve_at2_fracture_schedule(
+        mesh,
+        material,
+        schedule,
+        load_path=AT2LoadPath((1.0,)),
+        options=continuing_options,
+    ).final
+    for step in (legacy_continued, scheduled_continued):
+        assert step.converged
+        assert step.staggered_iterations == 3
+        assert step.energy_change <= continuing_options.energy_tolerance
+    assert scheduled_continued.energy_change == legacy_continued.energy_change
+
+
+def test_energy_change_uses_total_potential_with_instantaneous_neumann_term() -> None:
+    mesh = _square_annulus_mesh()
+    stress = np.asarray([[-1.0, 0.0], [0.0, -0.1]])
+    material = AT2Material(100.0, 0.25, 1.0e-4, 0.5, residual_stiffness=1.0e-8)
+    base_options = FractureSolverOptions(
+        equilibrium_tolerance=2.0,
+        kkt_tolerance=1.0,
+        staggered_tolerance=2.0,
+        energy_tolerance=1.0e-30,
+        raise_on_nonconvergence=False,
+    )
+    first = solve_at2_fracture(
+        mesh,
+        material,
+        stress,
+        load_path=AT2LoadPath((0.5,)),
+        options=replace(base_options, max_staggered_iterations=1),
+    ).final
+    second = solve_at2_fracture(
+        mesh,
+        material,
+        stress,
+        load_path=AT2LoadPath((0.5,)),
+        options=replace(base_options, max_staggered_iterations=2),
+    ).final
+
+    expected = 2.0 * abs(second.total_potential_energy - first.total_potential_energy)
+    expected /= abs(second.total_potential_energy) + abs(first.total_potential_energy)
+    internal_first = first.elastic_energy + first.fracture_energy
+    internal_second = second.elastic_energy + second.fracture_energy
+    internal_only_change = 2.0 * abs(internal_second - internal_first)
+    internal_only_change /= abs(internal_second) + abs(internal_first)
+
+    assert first.external_work != 0.0
+    assert np.isinf(first.energy_change)
+    assert second.energy_change == pytest.approx(expected, rel=2.0e-14)
+    assert second.energy_change != pytest.approx(internal_only_change, rel=1.0e-6)
 
 
 def test_p1_load_state_is_bitwise_identical_to_legacy_uniform_release() -> None:
@@ -484,6 +619,7 @@ def test_p1_scheduled_trajectory_is_bitwise_identical_to_legacy_trajectory() -> 
             "range_violation",
             "displacement_change",
             "damage_change",
+            "energy_change",
             "staggered_iterations",
             "displacement_iterations",
             "damage_iterations",
