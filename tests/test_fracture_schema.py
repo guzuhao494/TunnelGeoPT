@@ -444,7 +444,10 @@ def test_phase1_s_paths_support_farfield_changes_and_spatial_wall_release(
             "path_parameter": path_config["path_parameter"],
             "parameter_bounds": [0, 1],
             "monotone": True,
-            "interpolation": path_config["interpolation"],
+            "coordinate_order": path_config["coordinate_order"],
+            "principal_angle_rule": path_config["principal_angle_rule"],
+            "stress_sign_rule": path_config["stress_sign_rule"],
+            "interpolation": path_config["interpolation_rule"],
             "control_knots": candidate["control_knots"],
         }
         if candidate["id"] == "p4":

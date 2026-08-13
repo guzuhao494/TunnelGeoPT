@@ -17,8 +17,8 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
-SCHEMA_VERSION = "tunnelgeopt.fracture.phase1.v2"
-PROTOCOL_ID = "fracture-phase1-development-pilot-v2"
+SCHEMA_VERSION = "tunnelgeopt.fracture.phase1.v3"
+PROTOCOL_ID = "fracture-phase1-development-pilot-v3"
 SECTION_FAMILIES = ("circle", "horseshoe", "straight_wall_arch")
 MATERIAL_LEVEL_IDS = ("m1", "m2", "m3")
 LOAD_PATH_IDS = ("p1", "p2", "p3", "p4")
@@ -555,9 +555,11 @@ def _validate_load_paths(config: Mapping[str, Any]) -> None:
     _require_exact_keys(
         load_paths,
         {
-            "stress_components",
+            "coordinate_order",
+            "principal_angle_rule",
+            "stress_sign_rule",
             "path_parameter",
-            "interpolation",
+            "interpolation_rule",
             "wall_release_definition",
             "wall_zones_for_p4",
             "paths",
@@ -565,15 +567,25 @@ def _validate_load_paths(config: Mapping[str, Any]) -> None:
         "load_paths",
     )
     _require_equal(
-        load_paths["stress_components"],
-        "principal_compression_magnitudes_reported_positive_then_converted_to_solver_tension_positive_tensor",
-        "load_paths.stress_components",
+        load_paths["coordinate_order"],
+        "y_vertical_then_z_horizontal",
+        "load_paths.coordinate_order",
+    )
+    _require_equal(
+        load_paths["principal_angle_rule"],
+        "degrees_from_positive_y_toward_positive_z",
+        "load_paths.principal_angle_rule",
+    )
+    _require_equal(
+        load_paths["stress_sign_rule"],
+        "stored_principal_compression_magnitudes_positive_solver_tensor_tension_positive",
+        "load_paths.stress_sign_rule",
     )
     _require_equal(load_paths["path_parameter"], "s_in_[0,1]", "load_paths.path_parameter")
     _require_equal(
-        load_paths["interpolation"],
-        "piecewise_linear_between_control_knots",
-        "load_paths.interpolation",
+        load_paths["interpolation_rule"],
+        "piecewise_linear_stored_principal_controls_and_releases_then_convert_tensor",
+        "load_paths.interpolation_rule",
     )
     _require_equal(
         load_paths["wall_release_definition"],
@@ -584,19 +596,38 @@ def _validate_load_paths(config: Mapping[str, Any]) -> None:
     _require_exact_keys(
         zones,
         {
-            "coordinate_rule",
+            "facet_source",
+            "centroid_rule",
+            "evaluation_rule",
+            "angle_rule",
             "crown",
             "right_sidewall",
             "invert",
             "left_sidewall",
-            "transition_blend_deg",
+            "transition_rule",
+            "transition_total_width_deg",
         },
         "load_paths.wall_zones_for_p4",
     )
     _require_equal(
-        zones["coordinate_rule"],
-        "polar_angle_about_boundary_centroid_measured_from_positive_z_toward_positive_y",
-        "load_paths.wall_zones_for_p4.coordinate_rule",
+        zones["facet_source"],
+        "actual_mesh_wall_facets",
+        "load_paths.wall_zones_for_p4.facet_source",
+    )
+    _require_equal(
+        zones["centroid_rule"],
+        "length_weighted_perimeter_centroid_of_wall_facets",
+        "load_paths.wall_zones_for_p4.centroid_rule",
+    )
+    _require_equal(
+        zones["evaluation_rule"],
+        "wall_facet_midpoints",
+        "load_paths.wall_zones_for_p4.evaluation_rule",
+    )
+    _require_equal(
+        zones["angle_rule"],
+        "theta_deg=atan2(z-c_z,y-c_y)_mod_360",
+        "load_paths.wall_zones_for_p4.angle_rule",
     )
     for key, expected in {
         "crown": "[-45deg,45deg]",
@@ -605,8 +636,15 @@ def _validate_load_paths(config: Mapping[str, Any]) -> None:
         "left_sidewall": "(225deg,315deg)",
     }.items():
         _require_equal(zones[key], expected, f"load_paths.wall_zones_for_p4.{key}")
+    _require_equal(
+        zones["transition_rule"],
+        "linear_convex_partition_centered_on_each_boundary_plus_or_minus_2.5deg",
+        "load_paths.wall_zones_for_p4.transition_rule",
+    )
     _require_close(
-        zones["transition_blend_deg"], 5.0, "load_paths.wall_zones_for_p4.transition_blend_deg"
+        zones["transition_total_width_deg"],
+        5.0,
+        "load_paths.wall_zones_for_p4.transition_total_width_deg",
     )
 
     paths = _sequence(load_paths["paths"], "load_paths.paths")

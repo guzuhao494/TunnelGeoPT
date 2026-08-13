@@ -6,6 +6,8 @@ import math
 import pytest
 
 from tunnelgeopt.fracture_validation import (
+    PROTOCOL_ID,
+    SCHEMA_VERSION,
     FracturePhase1ContractError,
     enumerate_fracture_phase1_cases,
     enumerate_ultrafine_audits,
@@ -47,6 +49,10 @@ def _passing_metrics(*, audit: bool = False) -> dict[str, float | int | bool]:
 
 def test_frozen_config_enumerates_exact_cross_product_and_ids() -> None:
     config = load_fracture_phase1_config()
+    assert SCHEMA_VERSION == "tunnelgeopt.fracture.phase1.v3"
+    assert PROTOCOL_ID == "fracture-phase1-development-pilot-v3"
+    assert config["schema_version"] == SCHEMA_VERSION
+    assert config["protocol_id"] == PROTOCOL_ID
     cases = enumerate_fracture_phase1_cases(config)
     assert len(cases) == 36
     assert len({case.case_id for case in cases}) == 36
@@ -177,6 +183,51 @@ def test_load_histories_and_required_outputs_are_actual_and_frozen() -> None:
     changed = copy.deepcopy(config)
     changed["load_paths"]["paths"][0]["control_knots"][2]["wall_release"]["all"] = 0.49
     with pytest.raises(FracturePhase1ContractError, match="frozen value"):
+        validate_fracture_phase1_config(changed)
+
+
+@pytest.mark.parametrize(
+    ("old_key", "old_value"),
+    [
+        (
+            "stress_components",
+            "principal_compression_magnitudes_reported_positive_then_converted_to_solver_tension_positive_tensor",
+        ),
+        ("interpolation", "piecewise_linear_between_control_knots"),
+    ],
+)
+def test_v3_rejects_old_ambiguous_load_path_fields(old_key: str, old_value: str) -> None:
+    config = load_fracture_phase1_config()
+    changed = copy.deepcopy(config)
+    changed["load_paths"][old_key] = old_value
+    with pytest.raises(FracturePhase1ContractError, match="extra"):
+        validate_fracture_phase1_config(changed)
+
+    changed = copy.deepcopy(config)
+    del changed["load_paths"]["principal_angle_rule"]
+    changed["load_paths"]["coordinate_rule"] = (
+        "polar_angle_about_boundary_centroid_measured_from_positive_z_toward_positive_y"
+    )
+    with pytest.raises(FracturePhase1ContractError, match="missing.*principal_angle_rule"):
+        validate_fracture_phase1_config(changed)
+
+
+def test_v3_rejects_ambiguous_p4_transition_and_centroid_fields() -> None:
+    config = load_fracture_phase1_config()
+    zones = config["load_paths"]["wall_zones_for_p4"]
+    assert zones["transition_total_width_deg"] == pytest.approx(5.0)
+    assert "plus_or_minus_2.5deg" in zones["transition_rule"]
+
+    changed = copy.deepcopy(config)
+    old_zones = changed["load_paths"]["wall_zones_for_p4"]
+    del old_zones["transition_total_width_deg"]
+    old_zones["transition_blend_deg"] = 5.0
+    with pytest.raises(FracturePhase1ContractError, match="transition_total_width_deg"):
+        validate_fracture_phase1_config(changed)
+
+    changed = copy.deepcopy(config)
+    changed["load_paths"]["wall_zones_for_p4"]["centroid_rule"] = "vertex_arithmetic_mean"
+    with pytest.raises(FracturePhase1ContractError, match="centroid_rule"):
         validate_fracture_phase1_config(changed)
 
 

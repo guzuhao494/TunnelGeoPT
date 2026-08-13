@@ -1,6 +1,6 @@
 {
-  "schema_version": "tunnelgeopt.fracture.phase1.v2",
-  "protocol_id": "fracture-phase1-development-pilot-v2",
+  "schema_version": "tunnelgeopt.fracture.phase1.v3",
+  "protocol_id": "fracture-phase1-development-pilot-v3",
   "status": {
     "state": "frozen_development_only_not_run",
     "development_only": true,
@@ -136,17 +136,23 @@
     ]
   },
   "load_paths": {
-    "stress_components": "principal_compression_magnitudes_reported_positive_then_converted_to_solver_tension_positive_tensor",
+    "coordinate_order": "y_vertical_then_z_horizontal",
+    "principal_angle_rule": "degrees_from_positive_y_toward_positive_z",
+    "stress_sign_rule": "stored_principal_compression_magnitudes_positive_solver_tensor_tension_positive",
     "path_parameter": "s_in_[0,1]",
-    "interpolation": "piecewise_linear_between_control_knots",
+    "interpolation_rule": "piecewise_linear_stored_principal_controls_and_releases_then_convert_tensor",
     "wall_release_definition": "lambda=0_supported_in_situ_wall_traction_lambda=1_fully_released",
     "wall_zones_for_p4": {
-      "coordinate_rule": "polar_angle_about_boundary_centroid_measured_from_positive_z_toward_positive_y",
+      "facet_source": "actual_mesh_wall_facets",
+      "centroid_rule": "length_weighted_perimeter_centroid_of_wall_facets",
+      "evaluation_rule": "wall_facet_midpoints",
+      "angle_rule": "theta_deg=atan2(z-c_z,y-c_y)_mod_360",
       "crown": "[-45deg,45deg]",
       "right_sidewall": "(45deg,135deg)",
       "invert": "[135deg,225deg]",
       "left_sidewall": "(225deg,315deg)",
-      "transition_blend_deg": 5.0
+      "transition_rule": "linear_convex_partition_centered_on_each_boundary_plus_or_minus_2.5deg",
+      "transition_total_width_deg": 5.0
     },
     "paths": [
       {

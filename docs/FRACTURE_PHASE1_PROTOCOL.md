@@ -1,9 +1,9 @@
 # Fracture Phase-1 development protocol
 
-Status: frozen development-only contract. A local P1 AT2 kernel exists for
-isolated debugging, but the full P1-P4 protocol solver and trajectory labels do
-not yet exist. Passing this protocol is not evidence of field rockburst
-prediction.
+Status: frozen v3 development-only contract. A local P1 AT2 kernel and an
+audited P1-P4 load-schedule adapter exist for isolated development, but the
+adapter is not yet integrated into the solver and trajectory labels do not yet
+exist. Passing this protocol is not evidence of field rockburst prediction.
 
 The machine-readable source of truth is
 [`configs/fracture_phase1_pilot.json`](../configs/fracture_phase1_pilot.json).
@@ -86,9 +86,22 @@ strict finite onset threshold in that sense.
 
 ### Four actual load histories
 
-Every path has five explicit control knots in `s in [0,1]`, with piecewise
-linear interpolation. Compression magnitudes are stored positive in protocol
-metadata and must be converted to the solver's tension-positive tensor.
+Every path has five explicit control knots in `s in [0,1]`. Coordinates are
+always `(y,z)`, with `y` vertical and `z` horizontal. A principal angle is
+measured from positive `y` toward positive `z`. The stored controls
+`sigma1/UCS`, `sigma3/sigma1`, angle, and releases are each interpolated
+piecewise-linearly first; only then are the positive compression magnitudes
+converted to the solver's tension-positive tensor. For angle `alpha`,
+
+```text
+e1 = (cos alpha, sin alpha)
+e3 = (-sin alpha, cos alpha)
+sigma_infinity = -UCS [(sigma1/UCS) e1 tensor e1
+                       + (sigma1/UCS)(sigma3/sigma1) e3 tensor e3]
+```
+
+The runtime `ucs_scale` passed to the adapter must be explicit, finite, and
+strictly positive; the adapter does not guess stress units.
 
 | Path | Frozen history |
 |---|---|
@@ -97,8 +110,18 @@ metadata and must be converted to the solver's tension-positive tensor.
 | p3 | Fixed `sigma1/UCS=.55`, ratio `.55`; angle `-30 -> 0 -> 30 deg` during uniform release |
 | p4 | Fixed `sigma1/UCS=.55`, ratio `.45`, angle `15 deg`; crown, then sidewalls, then invert are released |
 
-P4 uses four named polar wall zones with a frozen 5-degree transition blend.
-All zone releases are monotone and reach one at `s=1`.
+P4 is evaluated on the actual wall facets of the generated mesh, not on the
+input boundary vertices. The wall centroid is the length-weighted perimeter
+centroid of those facets. For each facet midpoint `(y_f,z_f)`,
+`theta=atan2(z_f-c_z,y_f-c_y) mod 360 deg`. Crown, right sidewall, invert, and
+left sidewall occupy `[-45,45]`, `(45,135)`, `[135,225]`, and `(225,315)`
+degrees respectively away from transitions. Every zone boundary has one
+linear convex transition of total width exactly `5 deg` (`+-2.5 deg`): the two
+neighboring weights vary from `(1,0)` to `(0,1)` and all other weights are
+zero. Facet identifiers remain in the mesh marker order, so every returned
+release stays aligned with its source facet. Reordering facets or reversing
+edge endpoints cannot change the physical result. All zone releases are
+monotone and reach one at `s=1`.
 
 Required output states are `s=0, 0.025, ..., 1` (41 states). Adaptive accepted
 substeps may be inserted between them and must also be stored. Six step retries
@@ -186,6 +209,29 @@ cases = enumerate_fracture_phase1_cases(config)  # 36 frozen identities
 audits = enumerate_ultrafine_audits(config)  # 12 preselected identities
 result = evaluate_trajectory_qc(config, cases[0].case_id, trajectory_metrics)
 ```
+
+The v3 load adapter is a separate, solver-independent API:
+
+```python
+from tunnelgeopt.fracture_loading import compile_phase1_load_schedule
+
+schedule = compile_phase1_load_schedule(
+    config,
+    path_id="p4",
+    ucs_scale=ucs_in_consistent_stress_units,
+    mesh=tunnel_mesh,
+)
+state = schedule.state_at(0.375)  # any finite s in [0,1], not only output knots
+
+sigma_yz = state.farfield_stress_tension_positive_yz
+facet_ids = state.wall_facet_ids
+facet_release = state.wall_release
+```
+
+`FractureLoadState` is frozen and owns read-only copies of its numeric arrays.
+The adapter computes controls, tensors, zone weights, and facet-aligned release
+values only. It does not assemble tractions, advance damage, integrate work, or
+close any solver-validation prerequisite.
 
 `evaluate_trajectory_qc` consumes reported aggregate diagnostics. It does not
 derive those values from raw fields, execute a solver, or validate a trajectory
