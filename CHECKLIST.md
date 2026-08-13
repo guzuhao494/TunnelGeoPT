@@ -105,3 +105,20 @@
 - [x] 若 `TunnelGeoPT@80%` 未达到主门槛，记录 No-Go，不增加事后容差。
 - [x] 若收益由 shuffled-dynamics、元数据探针或 solver ID 同样复现，判定机理解释 No-Go。
 - [x] 通过辅助 pilot 后仍不声称现场岩爆预警有效；先进入跨求解器/实验室验证。
+
+## I. v0.3 多保真残差执行门禁
+
+- [ ] 三类断面均有至少两个改变归一化边界的连续宏观参数；smooth circle 只作校准。
+- [ ] `geometry_group_id/load_group_id/case_group_id` 三级身份、boundary hash 与父几何 split 继承通过。
+- [ ] coarse/fine 使用完全相同边界与外域，只改变冻结的网格尺寸。
+- [ ] 公共 query 在求解前确定；粗细场均通过 point-in-triangle 独立定位和重心坐标复验。
+- [ ] stress scale 只来自已知远场输入；任何归一化都不读取 fine/test 标签。
+- [ ] smoke 完成且只用于接线；formal config 在任何正式效果计算前冻结并提交。
+- [ ] `Scratch`、`Direct+Coarse`、`Residual+Coarse` 与 `Mismatched-Coarse` 使用公平骨干/预算。
+- [ ] 25/50/75/100% 子集按父几何整组、分族平衡且严格嵌套。
+- [ ] 全部五种子 checkpoint 在 test 解锁前原子落盘并记录 SHA-256。
+- [ ] train/dev/locked-IID/geometry-OOD/load-OOD/joint-OOD 的 geometry/case/boundary/load hash 零交集。
+- [ ] 至少 20% 预选 case 的 fine-ultrafine 审计通过；失败则 ABSTAIN 而非模型 No-Go。
+- [ ] locked-IID、geometry-OOD、load-OOD 仅评价一次，并报告所有种子、断面和失败切片。
+- [ ] 主 gate 使用父几何与训练种子的层级配对 bootstrap，不按点 bootstrap。
+- [ ] 只有全部预注册 gate 通过才表述“50% fine 训练标签非劣”；否则如实 No-Go/ABSTAIN。

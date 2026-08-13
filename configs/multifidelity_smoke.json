@@ -1,0 +1,82 @@
+{
+  "schema_version": "0.3.0-smoke-v1",
+  "config_name": "multifidelity_residual_pipeline_smoke",
+  "status": "preregistered_before_smoke",
+  "run_id": "mf-residual-smoke-v0.3.0",
+  "scope": "pipeline_only_no_effect_claim",
+  "split_salt": "tunnelgeopt-v0.3-mf-residual-smoke-20260813-v1",
+  "claim_exclusions": [
+    "model_effect",
+    "fracture",
+    "damage",
+    "rockburst",
+    "field_validity"
+  ],
+  "geometry": {
+    "section_families": ["circle", "horseshoe", "straight_wall_arch"],
+    "boundary_points": 192,
+    "radius": 1.0,
+    "roughness_amplitude_range": [0.008, 0.025],
+    "parent_geometry_counts_per_family": {
+      "train": 6,
+      "dev": 2,
+      "pseudo_test": 2
+    },
+    "generator_seed": 310003
+  },
+  "loads": {
+    "per_geometry": 2,
+    "young_modulus_over_reference_stress": 500.0,
+    "poisson_ratio": 0.25,
+    "sigma1_over_reference_stress": [0.3, 0.8],
+    "sigma3_over_sigma1": [0.45, 0.85],
+    "principal_angle_deg": [-45.0, 45.0],
+    "generator_seed": 310007
+  },
+  "mesh": {
+    "outer_half_width_over_radius": 8.0,
+    "coarse": {"wall_size_over_radius": 0.25, "farfield_size_over_radius": 0.8},
+    "fine": {"wall_size_over_radius": 0.0625, "farfield_size_over_radius": 0.4}
+  },
+  "query": {
+    "points_per_case": 256,
+    "nearfield_volume": 192,
+    "wall_offset": 32,
+    "farfield": 32,
+    "nearfield_distance_over_radius": [0.05, 2.0],
+    "wall_offset_over_radius": 0.02,
+    "generator_seed": 310009
+  },
+  "methods": [
+    "scratch_100",
+    "direct_coarse_100",
+    "residual_coarse_50",
+    "residual_coarse_100",
+    "mismatched_coarse_50"
+  ],
+  "model": {
+    "point_input_width": 14,
+    "hidden_width": 64,
+    "global_context_blocks": 3,
+    "output_width": 3
+  },
+  "optimization": {
+    "training_seeds": [103],
+    "optimizer": "adamw",
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "case_batch_size": 6,
+    "max_epochs": 8,
+    "early_stopping_patience": 3,
+    "early_stopping_min_delta": 0.0001
+  },
+  "smoke_success": {
+    "require_all_solver_cases": true,
+    "require_all_query_points_located_in_both_meshes": true,
+    "require_no_cross_split_parent": true,
+    "require_locked_label_denied_before_authorization": true,
+    "require_all_methods_one_checkpoint": true,
+    "require_finite_metrics": true,
+    "effect_claim_allowed": false
+  }
+}
