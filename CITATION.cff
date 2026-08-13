@@ -4,7 +4,7 @@ title: "TunnelGeoPT: Physics-aware synthetic pre-training data for hard-rock tun
 type: software
 authors:
   - name: "guzuhao494"
-version: 0.1.0
+version: 0.2.0
 date-released: 2026-08-13
 repository-code: "https://github.com/guzuhao494/TunnelGeoPT"
 license: MIT

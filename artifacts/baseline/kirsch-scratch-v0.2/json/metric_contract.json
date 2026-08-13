@@ -1,0 +1,75 @@
+{
+  "contract_version": "0.2.0",
+  "baseline_id": "kirsch-scratch-v0.2",
+  "acceptance_target": "comparison_ready",
+  "status": "trusted_reference_after_real_run",
+  "task": "predict_three_component_tension_positive_kirsch_stress_on_fixed_circle_query_points",
+  "dataset": {
+    "identity": "kirsch_analytic_transfer_smoke_v0.2",
+    "source": "src/tunnelgeopt/kirsch.py",
+    "config": "configs/analytic_transfer_smoke.json",
+    "case_count": 240,
+    "split_unit": "case_group_id",
+    "split_counts": {
+      "train": 168,
+      "dev": 36,
+      "locked_test": 36
+    },
+    "test_policy": "single_locked_evaluation_after_dev_selection"
+  },
+  "comparator": {
+    "variant": "scratch_100",
+    "initialization": "random",
+    "high_fidelity_train_fraction": 1.0,
+    "backbone": "shared_deepsets_point_operator",
+    "training_budget": "identical_to_all_finetune_variants"
+  },
+  "evaluation_path": "scripts/run_analytic_transfer.py",
+  "primary_metric": "case_mean_stress_frobenius_relative_l2",
+  "required_metrics": {
+    "case_mean_stress_frobenius_relative_l2": {
+      "direction": "lower_is_better",
+      "aggregation": "within_case_then_equal_weight_across_locked_cases",
+      "derivation": "symmetric_tensor_frobenius_norm_with_shear_counted_twice"
+    },
+    "wall_traction_relative_l2": {
+      "direction": "lower_is_better",
+      "aggregation": "within_case_then_equal_weight_across_locked_cases",
+      "origin_path": "locked_test_predictions"
+    },
+    "farfield_stress_relative_l2": {
+      "direction": "lower_is_better",
+      "aggregation": "within_case_then_equal_weight_across_locked_cases",
+      "origin_path": "locked_test_predictions"
+    },
+    "peak_wall_hoop_stress_relative_error": {
+      "direction": "lower_is_better",
+      "aggregation": "within_case_then_equal_weight_across_locked_cases",
+      "origin_path": "locked_test_predictions"
+    }
+  },
+  "source": {
+    "repository": "https://github.com/guzuhao494/TunnelGeoPT",
+    "source_commit_before_run": "5e3be0238873c9e99fc598d8f81fbebc30ec9db9",
+    "implementation_branch": "codex/elastic-milestone"
+  },
+  "known_deviations": [
+    "This is an independent lightweight DeepSets surrogate rather than the full released GeoPT Transolver architecture.",
+    "All cases share one circular geometry; the split measures unseen load conditions, not unseen geometry.",
+    "Labels are an analytical linear-elastic solution, not experimental or field truth.",
+    "Pretrained variants use 200 additional cheap-label pretraining epochs; this is a high-fidelity label-efficiency comparison, not a total-compute comparison."
+  ],
+  "acceptance": {
+    "verification_verdict": "trusted_reference_for_analytic_circle_only",
+    "metrics_source": "artifacts/experiment/analytic-transfer-v0.2.0/locked_test_results.json",
+    "run_config_sha256": "e2c533421aa547228d69785fc490d14bec4095128506a145e54ff92ac4c56d44",
+    "scratch_100_primary_by_seed": {
+      "17": 0.016917073299366658,
+      "29": 0.01987104182055363,
+      "43": 0.012685231313540952
+    },
+    "scratch_100_primary_mean": 0.016491115478,
+    "candidate_gate_result": "no_go",
+    "integrity": "18_of_18_checkpoint_hashes_match_and_all_locked_metrics_are_finite"
+  }
+}

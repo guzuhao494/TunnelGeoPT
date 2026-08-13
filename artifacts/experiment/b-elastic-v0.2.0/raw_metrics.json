@@ -1,0 +1,1802 @@
+{
+  "case_manifest_hash": "0a2ec8fe59cdc536ecc32dfa60acae5956db6c5e228b3b8de90bc71e506a22f6",
+  "config_hash": "d4e0f621b848c68041a7811b992bc659af2356021e0fb0e091ed3bb7fa424bd2",
+  "kirsch": [
+    {
+      "element_count": 2020,
+      "generic_qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.013590108408313109
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 4.101175934397377e-15,
+            "energy_discretization_relative_error": 3.2809407475179047e-15,
+            "free_dof_algebraic_residual": 1.2780043643253128e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.363222940442587e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "load_case": "uniaxial",
+      "mesh_tier": "coarse",
+      "metrics": {
+        "analytical_peak_hoop_stress": 3.0,
+        "annulus_element_count": 543,
+        "annulus_stress_relative_l2": 0.06283704520129006,
+        "peak_hoop_relative_error": 0.03707594161453528,
+        "peak_hoop_stress": 2.888772175156394,
+        "wall_traction_relative_l2": 0.2860458573586578
+      },
+      "node_count": 1066,
+      "status": "completed",
+      "wall_seconds": 0.061908200001198566
+    },
+    {
+      "element_count": 3851,
+      "generic_qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.004287289923951462
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 4.797322588728577e-16,
+            "energy_discretization_relative_error": 1.5991075295761923e-15,
+            "free_dof_algebraic_residual": 2.684004792867041e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.310865805494141e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "load_case": "uniaxial",
+      "mesh_tier": "medium",
+      "metrics": {
+        "analytical_peak_hoop_stress": 3.0,
+        "annulus_element_count": 1103,
+        "annulus_stress_relative_l2": 0.050229267999032795,
+        "peak_hoop_relative_error": 0.034366669891471524,
+        "peak_hoop_stress": 2.8968999903255854,
+        "wall_traction_relative_l2": 0.19727819815233963
+      },
+      "node_count": 2005,
+      "status": "completed",
+      "wall_seconds": 0.1004475999980059
+    },
+    {
+      "element_count": 9459,
+      "generic_qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.0010960873515817222
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 3.3104894540677573e-15,
+            "energy_discretization_relative_error": 6.148051843268692e-15,
+            "free_dof_algebraic_residual": 6.865898230475862e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.358008767875923e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "load_case": "uniaxial",
+      "mesh_tier": "fine",
+      "metrics": {
+        "analytical_peak_hoop_stress": 3.0,
+        "annulus_element_count": 2966,
+        "annulus_stress_relative_l2": 0.04184233928009762,
+        "peak_hoop_relative_error": 0.004533885274473774,
+        "peak_hoop_stress": 2.9863983441765787,
+        "wall_traction_relative_l2": 0.10673132021524433
+      },
+      "node_count": 4860,
+      "status": "completed",
+      "wall_seconds": 0.2847105000000738
+    },
+    {
+      "element_count": 2020,
+      "generic_qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.013590108408313109
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 0.0,
+            "energy_discretization_relative_error": 0.0,
+            "free_dof_algebraic_residual": 8.515810658196003e-15,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.363222940442587e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "load_case": "equal_biaxial",
+      "mesh_tier": "coarse",
+      "metrics": {
+        "analytical_peak_hoop_stress": 2.0000000000000004,
+        "annulus_element_count": 543,
+        "annulus_stress_relative_l2": 0.04508551579377957,
+        "peak_hoop_relative_error": 0.03501853929770914,
+        "peak_hoop_stress": 2.0700370785954187,
+        "wall_traction_relative_l2": 0.21993894745105624
+      },
+      "node_count": 1066,
+      "status": "completed",
+      "wall_seconds": 0.04429099999833852
+    },
+    {
+      "element_count": 3851,
+      "generic_qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.004287289923951462
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 8.13356173927745e-16,
+            "energy_discretization_relative_error": 5.809686956626747e-16,
+            "free_dof_algebraic_residual": 1.7474148442493357e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.310865805494141e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "load_case": "equal_biaxial",
+      "mesh_tier": "medium",
+      "metrics": {
+        "analytical_peak_hoop_stress": 2.0000000000000004,
+        "annulus_element_count": 1103,
+        "annulus_stress_relative_l2": 0.03462837760663298,
+        "peak_hoop_relative_error": 0.022304099942981322,
+        "peak_hoop_stress": 2.044608199885963,
+        "wall_traction_relative_l2": 0.14101446235608323
+      },
+      "node_count": 2005,
+      "status": "completed",
+      "wall_seconds": 0.08652869999787072
+    },
+    {
+      "element_count": 9459,
+      "generic_qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.0010960873515817222
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 3.3405879136808878e-15,
+            "energy_discretization_relative_error": 3.916551347074144e-15,
+            "free_dof_algebraic_residual": 4.468630363023569e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.358008767875923e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "load_case": "equal_biaxial",
+      "mesh_tier": "fine",
+      "metrics": {
+        "analytical_peak_hoop_stress": 2.0000000000000004,
+        "annulus_element_count": 2966,
+        "annulus_stress_relative_l2": 0.028578154224933677,
+        "peak_hoop_relative_error": 0.010369077554632565,
+        "peak_hoop_stress": 2.0207381551092656,
+        "wall_traction_relative_l2": 0.07267753017486069
+      },
+      "node_count": 4860,
+      "status": "completed",
+      "wall_seconds": 0.2961112000011781
+    },
+    {
+      "element_count": 2020,
+      "generic_qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.013590108408313109
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 1.6130122287467412e-15,
+            "energy_discretization_relative_error": 1.1167007737477445e-15,
+            "free_dof_algebraic_residual": 1.654015161833668e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.363222940442587e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "load_case": "pure_shear",
+      "mesh_tier": "coarse",
+      "metrics": {
+        "analytical_peak_hoop_stress": 4.0,
+        "annulus_element_count": 543,
+        "annulus_stress_relative_l2": 0.07021497471838727,
+        "peak_hoop_relative_error": 0.06908340198070118,
+        "peak_hoop_stress": 3.7236663920771953,
+        "wall_traction_relative_l2": 0.3461491587806528
+      },
+      "node_count": 1066,
+      "status": "completed",
+      "wall_seconds": 0.04497079999782727
+    },
+    {
+      "element_count": 3851,
+      "generic_qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.004287289923951462
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 3.609492523292825e-16,
+            "energy_discretization_relative_error": 1.0828477569878463e-15,
+            "free_dof_algebraic_residual": 3.3021098678838625e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.310865805494141e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "load_case": "pure_shear",
+      "mesh_tier": "medium",
+      "metrics": {
+        "analytical_peak_hoop_stress": 4.0,
+        "annulus_element_count": 1103,
+        "annulus_stress_relative_l2": 0.05456381875403679,
+        "peak_hoop_relative_error": 0.031077664991372767,
+        "peak_hoop_stress": 3.875689340034509,
+        "wall_traction_relative_l2": 0.2413739938420729
+      },
+      "node_count": 2005,
+      "status": "completed",
+      "wall_seconds": 0.09854009999980917
+    },
+    {
+      "element_count": 9459,
+      "generic_qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.0010960873515817222
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 1.8927801272117147e-15,
+            "energy_discretization_relative_error": 1.7744813692609795e-15,
+            "free_dof_algebraic_residual": 8.74668811625348e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.358008767875923e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "load_case": "pure_shear",
+      "mesh_tier": "fine",
+      "metrics": {
+        "analytical_peak_hoop_stress": 4.0,
+        "annulus_element_count": 2966,
+        "annulus_stress_relative_l2": 0.04425354083179013,
+        "peak_hoop_relative_error": 0.03087839681106863,
+        "peak_hoop_stress": 3.8764864127557255,
+        "wall_traction_relative_l2": 0.13409573991817708
+      },
+      "node_count": 4860,
+      "status": "completed",
+      "wall_seconds": 0.284858200000599
+    }
+  ],
+  "patch": {
+    "metrics": {
+      "element_count": 128,
+      "free_dof_residual": 1.7678990091307955e-13,
+      "node_count": 81,
+      "passed": true,
+      "stress_relative_l2": 1.7043734775558355e-14
+    },
+    "status": "completed",
+    "wall_seconds": 0.217950700000074
+  },
+  "physical_cases": [
+    {
+      "case_group_id": "09856af9cf6e6ab1d0c34de2bd2d421eca26d1774bd08059490664988ad16c82",
+      "derived_record_id": "4f8eb8cd7155d4063393a199c1198b7b6d6b23f6eb06c47576749540bb5298bc",
+      "element_count": 5526,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.4500000000000001,
+          0.04999999999999999
+        ],
+        [
+          0.04999999999999999,
+          0.4500000000000001
+        ]
+      ],
+      "mesh_id": "3a646005946128be4d9cedfa293ec5ca2714799d238ec6bfecf19375df486969",
+      "mesh_tier": "medium",
+      "node_count": 2868,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.001248770719363333
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 9.554174991818086e-16,
+            "energy_discretization_relative_error": 6.82441070844149e-16,
+            "free_dof_algebraic_residual": 3.723792020054836e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.566449908249909e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/4f8eb8cd7155d4063393a199c1198b7b6d6b23f6eb06c47576749540bb5298bc/arrays.npz",
+        "meta": "cases/4f8eb8cd7155d4063393a199c1198b7b6d6b23f6eb06c47576749540bb5298bc/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "straight_wall_arch",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.4500000000000001,
+          -0.04999999999999999
+        ],
+        [
+          -0.04999999999999999,
+          -0.4500000000000001
+        ]
+      ],
+      "split": "train",
+      "status": "passed",
+      "wall_seconds": 0.21113709999917774
+    },
+    {
+      "case_group_id": "0c6a46959e5736ceb806880168e480333e38edb789ad19f26cc68c0f83171abd",
+      "derived_record_id": "b0bebd1305b8fee82d3a24041695c1b73cd929d46018fcb01fb24ece8818415f",
+      "element_count": 5526,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.20250000000000004,
+          -0.0975
+        ],
+        [
+          -0.0975,
+          0.20250000000000004
+        ]
+      ],
+      "mesh_id": "3a646005946128be4d9cedfa293ec5ca2714799d238ec6bfecf19375df486969",
+      "mesh_tier": "medium",
+      "node_count": 2868,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.001248770719363333
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 2.3693622913487106e-15,
+            "energy_discretization_relative_error": 2.992878683808898e-15,
+            "free_dof_algebraic_residual": 4.332679173727079e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 5.771619238248837e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/b0bebd1305b8fee82d3a24041695c1b73cd929d46018fcb01fb24ece8818415f/arrays.npz",
+        "meta": "cases/b0bebd1305b8fee82d3a24041695c1b73cd929d46018fcb01fb24ece8818415f/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "straight_wall_arch",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.20250000000000004,
+          0.0975
+        ],
+        [
+          0.0975,
+          -0.20250000000000004
+        ]
+      ],
+      "split": "train",
+      "status": "passed",
+      "wall_seconds": 0.21100899999873945
+    },
+    {
+      "case_group_id": "0e696fb3b12b618374af3a127bdaf88adbd69722e13511eaf86abb06a097527b",
+      "derived_record_id": "cfaa58d7729bf4ea66b4740dfb6b5b65b0cfc56c9ba4b24553191b470570106b",
+      "element_count": 3863,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.7,
+          0.0
+        ],
+        [
+          0.0,
+          0.42
+        ]
+      ],
+      "mesh_id": "3ddd58d1ce5b1c411250d49642ce768cc9bb0f5f203b7eee59048cc159c1255a",
+      "mesh_tier": "medium",
+      "node_count": 2011,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.004329122682692361
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 0.0,
+            "energy_discretization_relative_error": 1.6642159826613431e-15,
+            "free_dof_algebraic_residual": 1.5414181329089327e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 5.756693005662611e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/cfaa58d7729bf4ea66b4740dfb6b5b65b0cfc56c9ba4b24553191b470570106b/arrays.npz",
+        "meta": "cases/cfaa58d7729bf4ea66b4740dfb6b5b65b0cfc56c9ba4b24553191b470570106b/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "circle",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.7,
+          -0.0
+        ],
+        [
+          -0.0,
+          -0.42
+        ]
+      ],
+      "split": "train",
+      "status": "passed",
+      "wall_seconds": 0.14462229999844567
+    },
+    {
+      "case_group_id": "1d8177238db85d234a58b6aa7d792e9b96a7194417cf31bd5f20e1935bc4b9f3",
+      "derived_record_id": "24e2f00964e10e1a6d473b96a4bc29ba96131cd0c6005dd4774ddbed01c87414",
+      "element_count": 4085,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.20250000000000004,
+          -0.0975
+        ],
+        [
+          -0.0975,
+          0.20250000000000004
+        ]
+      ],
+      "mesh_id": "e44a95745b57b6682f63c7ee954779a148788503858fd13050898653c9ebbe89",
+      "mesh_tier": "medium",
+      "node_count": 2122,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.003180836701954971
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 6.780654129031371e-16,
+            "energy_discretization_relative_error": 1.0170981193547057e-15,
+            "free_dof_algebraic_residual": 2.141338384806498e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 5.71422109529634e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/24e2f00964e10e1a6d473b96a4bc29ba96131cd0c6005dd4774ddbed01c87414/arrays.npz",
+        "meta": "cases/24e2f00964e10e1a6d473b96a4bc29ba96131cd0c6005dd4774ddbed01c87414/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "horseshoe",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.20250000000000004,
+          0.0975
+        ],
+        [
+          0.0975,
+          -0.20250000000000004
+        ]
+      ],
+      "split": "train",
+      "status": "passed",
+      "wall_seconds": 0.15336529999694903
+    },
+    {
+      "case_group_id": "306c45d94c57cb443c3a4014758579d990f3e1a9e5b632e82518dae18179841d",
+      "derived_record_id": "13558b0a229192f5b383a54528cd2ff2ac85c76b777b3729954651d8b563506a",
+      "element_count": 4085,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.4500000000000001,
+          0.04999999999999999
+        ],
+        [
+          0.04999999999999999,
+          0.4500000000000001
+        ]
+      ],
+      "mesh_id": "e44a95745b57b6682f63c7ee954779a148788503858fd13050898653c9ebbe89",
+      "mesh_tier": "medium",
+      "node_count": 2122,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.003180836701954971
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 1.1164862098777287e-15,
+            "energy_discretization_relative_error": 1.4886482798369694e-15,
+            "free_dof_algebraic_residual": 1.717279565582806e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.676464111049214e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/13558b0a229192f5b383a54528cd2ff2ac85c76b777b3729954651d8b563506a/arrays.npz",
+        "meta": "cases/13558b0a229192f5b383a54528cd2ff2ac85c76b777b3729954651d8b563506a/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "horseshoe",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.4500000000000001,
+          -0.04999999999999999
+        ],
+        [
+          -0.04999999999999999,
+          -0.4500000000000001
+        ]
+      ],
+      "split": "train",
+      "status": "passed",
+      "wall_seconds": 0.15579169999909936
+    },
+    {
+      "case_group_id": "450714015ee7780a670042bf00d45ab4d3670aeae8536d672ba40ad075c87d1c",
+      "derived_record_id": "d8fc11d96ef97ca8dc7ac9191034636d74677602eafc8cfd7a311a01964b0a2f",
+      "element_count": 5434,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.7,
+          0.0
+        ],
+        [
+          0.0,
+          0.42
+        ]
+      ],
+      "mesh_id": "fd5a712006dd917dbec28bdb5a9a02c82092f551e10103a38d6d5a059906e12a",
+      "mesh_tier": "medium",
+      "node_count": 2822,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.0013115092951895006
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 8.944690072625774e-16,
+            "energy_discretization_relative_error": 5.36681404357547e-15,
+            "free_dof_algebraic_residual": 3.589239567430528e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 5.774981032073561e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/d8fc11d96ef97ca8dc7ac9191034636d74677602eafc8cfd7a311a01964b0a2f/arrays.npz",
+        "meta": "cases/d8fc11d96ef97ca8dc7ac9191034636d74677602eafc8cfd7a311a01964b0a2f/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "straight_wall_arch",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.7,
+          -0.0
+        ],
+        [
+          -0.0,
+          -0.42
+        ]
+      ],
+      "split": "train",
+      "status": "passed",
+      "wall_seconds": 0.21474210000087623
+    },
+    {
+      "case_group_id": "51866e51bc157b915b42aab3c686642c5e0c8c1d322bb7d1cb8f352e15df40bd",
+      "derived_record_id": "a74e54b71f5b64bc690316eb7eb7c3aaf361c04dd65fc8c6413b0f04ed29722e",
+      "element_count": 3851,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.4500000000000001,
+          0.04999999999999999
+        ],
+        [
+          0.04999999999999999,
+          0.4500000000000001
+        ]
+      ],
+      "mesh_id": "872e9eed0c3b671704a4a3bfc8039cfbf26f7adbf9b9a25a97de598402372664",
+      "mesh_tier": "medium",
+      "node_count": 2005,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.004287289923951462
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 1.2749915551755034e-15,
+            "energy_discretization_relative_error": 1.2749915551755018e-15,
+            "free_dof_algebraic_residual": 1.5754162968797153e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.621496254532182e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/a74e54b71f5b64bc690316eb7eb7c3aaf361c04dd65fc8c6413b0f04ed29722e/arrays.npz",
+        "meta": "cases/a74e54b71f5b64bc690316eb7eb7c3aaf361c04dd65fc8c6413b0f04ed29722e/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "circle",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.4500000000000001,
+          -0.04999999999999999
+        ],
+        [
+          -0.04999999999999999,
+          -0.4500000000000001
+        ]
+      ],
+      "split": "train",
+      "status": "passed",
+      "wall_seconds": 0.14640650000001187
+    },
+    {
+      "case_group_id": "51bd70d395fbda8ffc70e5f04abc811ce99ab0ae0fd3de0d7d02a11d12af2b77",
+      "derived_record_id": "3ccf4436a4b766e9d18920a1f5e99aa1e8a3ce331f536df878f5deb1020729e6",
+      "element_count": 3983,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.20250000000000004,
+          -0.0975
+        ],
+        [
+          -0.0975,
+          0.20250000000000004
+        ]
+      ],
+      "mesh_id": "511e306d8349b28d673b524036e8b6c0d59800c57048c3bce9bcb8fbdcc24f74",
+      "mesh_tier": "medium",
+      "node_count": 2071,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.004116208065125979
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 2.5569558342929325e-15,
+            "energy_discretization_relative_error": 2.4351960326599423e-16,
+            "free_dof_algebraic_residual": 2.431264450750144e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.659786658430965e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/3ccf4436a4b766e9d18920a1f5e99aa1e8a3ce331f536df878f5deb1020729e6/arrays.npz",
+        "meta": "cases/3ccf4436a4b766e9d18920a1f5e99aa1e8a3ce331f536df878f5deb1020729e6/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "horseshoe",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.20250000000000004,
+          0.0975
+        ],
+        [
+          0.0975,
+          -0.20250000000000004
+        ]
+      ],
+      "split": "train",
+      "status": "passed",
+      "wall_seconds": 0.1462905000007595
+    },
+    {
+      "case_group_id": "6dfa28a84fdf7ed30c5fe7fbc6a115b47a21946c22c8fc599b48c885904c7c89",
+      "derived_record_id": "a81a20f8e47d459ab3b12e7c5293239b3d92f0c02dda191a22c3983e7f8657f3",
+      "element_count": 5396,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.20250000000000004,
+          -0.0975
+        ],
+        [
+          -0.0975,
+          0.20250000000000004
+        ]
+      ],
+      "mesh_id": "f6092305bba3a2a952b029180d439e884940585b123c56d7129744864e93d80e",
+      "mesh_tier": "medium",
+      "node_count": 2803,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.0012635966335435623
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 2.4939210334105166e-15,
+            "energy_discretization_relative_error": 4.453430416804485e-15,
+            "free_dof_algebraic_residual": 5.048955764048698e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.69825668264672e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/a81a20f8e47d459ab3b12e7c5293239b3d92f0c02dda191a22c3983e7f8657f3/arrays.npz",
+        "meta": "cases/a81a20f8e47d459ab3b12e7c5293239b3d92f0c02dda191a22c3983e7f8657f3/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "straight_wall_arch",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.20250000000000004,
+          0.0975
+        ],
+        [
+          0.0975,
+          -0.20250000000000004
+        ]
+      ],
+      "split": "train",
+      "status": "passed",
+      "wall_seconds": 0.19787379999979748
+    },
+    {
+      "case_group_id": "86705fa13756477aad296d7f50df7e48a3346b2f84c3902d96cf838224d1e26a",
+      "derived_record_id": "04cadbd781ca32b9d60f697e618ab26000f6ca0008ebd69aabe051c81fa36e46",
+      "element_count": 3989,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.56,
+          0.13999999999999999
+        ],
+        [
+          0.13999999999999999,
+          0.56
+        ]
+      ],
+      "mesh_id": "c5df4f7df48206cef61e16f86dad097d41b65c447bd2e8eade528da1c78d143c",
+      "mesh_tier": "medium",
+      "node_count": 2074,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.004297842049439869
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 1.3155946615496103e-15,
+            "energy_discretization_relative_error": 1.7541262153994804e-15,
+            "free_dof_algebraic_residual": 1.793172770262022e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.557249494249446e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/04cadbd781ca32b9d60f697e618ab26000f6ca0008ebd69aabe051c81fa36e46/arrays.npz",
+        "meta": "cases/04cadbd781ca32b9d60f697e618ab26000f6ca0008ebd69aabe051c81fa36e46/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "horseshoe",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.56,
+          -0.13999999999999999
+        ],
+        [
+          -0.13999999999999999,
+          -0.56
+        ]
+      ],
+      "split": "train",
+      "status": "passed",
+      "wall_seconds": 0.14827429999786546
+    },
+    {
+      "case_group_id": "8b6ad3923b84830bda99058292c675fccad4ad9aaa0cde013eb61ed8295e7367",
+      "derived_record_id": "8facc88b163245a5385eedda87c740d2b7d26cdcfbbf95a997806362bce7fe06",
+      "element_count": 5392,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.56,
+          0.13999999999999999
+        ],
+        [
+          0.13999999999999999,
+          0.56
+        ]
+      ],
+      "mesh_id": "eea24fccf9cd52e1afd555f5248a5f719c57bdb44611a07b2fb7d907edc03eb5",
+      "mesh_tier": "medium",
+      "node_count": 2801,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.0015330605504815752
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 3.3690865704202837e-15,
+            "energy_discretization_relative_error": 2.4064904074430597e-15,
+            "free_dof_algebraic_residual": 4.130160768853517e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.674347615026846e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/8facc88b163245a5385eedda87c740d2b7d26cdcfbbf95a997806362bce7fe06/arrays.npz",
+        "meta": "cases/8facc88b163245a5385eedda87c740d2b7d26cdcfbbf95a997806362bce7fe06/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "straight_wall_arch",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.56,
+          -0.13999999999999999
+        ],
+        [
+          -0.13999999999999999,
+          -0.56
+        ]
+      ],
+      "split": "dev",
+      "status": "passed",
+      "wall_seconds": 0.20231480000074953
+    },
+    {
+      "case_group_id": "9aa43d82165f61a48637f31fc7263e302c51ae7e776cf93b084dec8f2b8eade4",
+      "derived_record_id": "62c84f194edca758b23a1bdeb693279e9cc246f69d07838b7b4d2fb67973569d",
+      "element_count": 3851,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.20250000000000004,
+          -0.0975
+        ],
+        [
+          -0.0975,
+          0.20250000000000004
+        ]
+      ],
+      "mesh_id": "872e9eed0c3b671704a4a3bfc8039cfbf26f7adbf9b9a25a97de598402372664",
+      "mesh_tier": "medium",
+      "node_count": 2005,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.004287289923951462
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 1.723462632897769e-15,
+            "energy_discretization_relative_error": 5.1703878986933075e-16,
+            "free_dof_algebraic_residual": 1.9391666832121848e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 5.746801267610329e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/62c84f194edca758b23a1bdeb693279e9cc246f69d07838b7b4d2fb67973569d/arrays.npz",
+        "meta": "cases/62c84f194edca758b23a1bdeb693279e9cc246f69d07838b7b4d2fb67973569d/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "circle",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.20250000000000004,
+          0.0975
+        ],
+        [
+          0.0975,
+          -0.20250000000000004
+        ]
+      ],
+      "split": "train",
+      "status": "passed",
+      "wall_seconds": 0.14873570000054315
+    },
+    {
+      "case_group_id": "ab17ee3542f1153228d43861303fd9e7270595dda29f4fdfac39b988fabd8966",
+      "derived_record_id": "fb8949fa3d4a3477749fe7b52e2ec4adfc0d3a6e34da0ff7e9b8e87e39a07c5f",
+      "element_count": 3919,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.20250000000000004,
+          -0.0975
+        ],
+        [
+          -0.0975,
+          0.20250000000000004
+        ]
+      ],
+      "mesh_id": "ed8e29042e27e32b993605b4fb926149626dd5eb171db7302e3fdd51efec98c8",
+      "mesh_tier": "medium",
+      "node_count": 2039,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.005119274289446152
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 1.7077454657798326e-15,
+            "energy_discretization_relative_error": 8.53872732889917e-16,
+            "free_dof_algebraic_residual": 2.317117224414261e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.68501019736295e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/fb8949fa3d4a3477749fe7b52e2ec4adfc0d3a6e34da0ff7e9b8e87e39a07c5f/arrays.npz",
+        "meta": "cases/fb8949fa3d4a3477749fe7b52e2ec4adfc0d3a6e34da0ff7e9b8e87e39a07c5f/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "circle",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.20250000000000004,
+          0.0975
+        ],
+        [
+          0.0975,
+          -0.20250000000000004
+        ]
+      ],
+      "split": "train",
+      "status": "passed",
+      "wall_seconds": 0.1476446999986365
+    },
+    {
+      "case_group_id": "c0b10715a5b5d9b59c5f87060943868b8026fe5dd22c5bfe8b1ff584c2f2d2ed",
+      "derived_record_id": "20949aa876ea384cc1a02bfe826d0f42376b210d21f335d609dcb8e5e434dc9e",
+      "element_count": 3939,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.56,
+          0.13999999999999999
+        ],
+        [
+          0.13999999999999999,
+          0.56
+        ]
+      ],
+      "mesh_id": "401c199af92fbe5c6c0d9cc9b4bd42e44318b9d3d30be27843f86da7de01fd8d",
+      "mesh_tier": "medium",
+      "node_count": 2049,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.00469918120556531
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 4.2922191203551057e-16,
+            "energy_discretization_relative_error": 0.0,
+            "free_dof_algebraic_residual": 1.7890572612723463e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.533272648945064e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/20949aa876ea384cc1a02bfe826d0f42376b210d21f335d609dcb8e5e434dc9e/arrays.npz",
+        "meta": "cases/20949aa876ea384cc1a02bfe826d0f42376b210d21f335d609dcb8e5e434dc9e/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "circle",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.56,
+          -0.13999999999999999
+        ],
+        [
+          -0.13999999999999999,
+          -0.56
+        ]
+      ],
+      "split": "dev",
+      "status": "passed",
+      "wall_seconds": 0.151862999999139
+    },
+    {
+      "case_group_id": "c29d68b74ff6bcfa3d8efa97519eeb3923f0b4fa21766488b77cd356b26a05b3",
+      "derived_record_id": "99163d3cadb75a12f728ed9f56a148311b02ed32066ea13737ef77a98e422172",
+      "element_count": 3945,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.7,
+          0.0
+        ],
+        [
+          0.0,
+          0.42
+        ]
+      ],
+      "mesh_id": "691f636187da62ef8e51ec33c33de443f81ca89803afa6d8f43eb8a1637e7165",
+      "mesh_tier": "medium",
+      "node_count": 2052,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.0036187373437591482
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 2.6090564277873816e-16,
+            "energy_discretization_relative_error": 1.4349810352830582e-15,
+            "free_dof_algebraic_residual": 1.4494914548337148e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 5.707258118428769e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/99163d3cadb75a12f728ed9f56a148311b02ed32066ea13737ef77a98e422172/arrays.npz",
+        "meta": "cases/99163d3cadb75a12f728ed9f56a148311b02ed32066ea13737ef77a98e422172/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "horseshoe",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.7,
+          -0.0
+        ],
+        [
+          -0.0,
+          -0.42
+        ]
+      ],
+      "split": "dev",
+      "status": "passed",
+      "wall_seconds": 0.1465531000030751
+    },
+    {
+      "case_group_id": "c7a3a8669632aaae383029fe77affedab78918a7e31efa030b638dcf23f21a35",
+      "derived_record_id": "ac1d3bd2ddb93662d6514263c9176a4cbd3479d40fe3c2c0249a551dd12714ac",
+      "element_count": 3877,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.5,
+          0.0
+        ],
+        [
+          0.0,
+          0.4
+        ]
+      ],
+      "mesh_id": "dabb3f2082ea9f5d2dc4dad077b40fc8cb7f9b2b7f51b9d5a05051a9fb317355",
+      "mesh_tier": "medium",
+      "node_count": 2018,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.004917155768980344
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 1.6325076373027483e-15,
+            "energy_discretization_relative_error": 0.0,
+            "free_dof_algebraic_residual": 1.8982316990110434e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.837471905018691e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/ac1d3bd2ddb93662d6514263c9176a4cbd3479d40fe3c2c0249a551dd12714ac/arrays.npz",
+        "meta": "cases/ac1d3bd2ddb93662d6514263c9176a4cbd3479d40fe3c2c0249a551dd12714ac/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "circle",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.5,
+          -0.0
+        ],
+        [
+          -0.0,
+          -0.4
+        ]
+      ],
+      "split": "locked_test",
+      "status": "passed",
+      "wall_seconds": 0.15232730000207084
+    },
+    {
+      "case_group_id": "e316669adeac1daab5dab362138da6fdd49a72f46d421cc3c30abe296e7d992e",
+      "derived_record_id": "1734edaf30c84aedba21b4f4704c3354bbbd5148c73e69aa7988437eab1c9bc6",
+      "element_count": 4067,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.5,
+          0.0
+        ],
+        [
+          0.0,
+          0.4
+        ]
+      ],
+      "mesh_id": "6096cec7eaa6f1a262175ee77e2b14d0da95eb32dee42ce515489b49772c79c8",
+      "mesh_tier": "medium",
+      "node_count": 2113,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.0043185306940728896
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 1.2997689654938224e-15,
+            "energy_discretization_relative_error": 1.1553501915500642e-15,
+            "free_dof_algebraic_residual": 2.0550148569962445e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.658559979300516e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/1734edaf30c84aedba21b4f4704c3354bbbd5148c73e69aa7988437eab1c9bc6/arrays.npz",
+        "meta": "cases/1734edaf30c84aedba21b4f4704c3354bbbd5148c73e69aa7988437eab1c9bc6/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "horseshoe",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.5,
+          -0.0
+        ],
+        [
+          -0.0,
+          -0.4
+        ]
+      ],
+      "split": "locked_test",
+      "status": "passed",
+      "wall_seconds": 0.15094559999852208
+    },
+    {
+      "case_group_id": "eeb3c87329ea4fa3caf59d05b377640a8aa80030ec6979c162198d3a6225ae9b",
+      "derived_record_id": "1ccbbec813fe4da6716ff2c4729118719a88fddb98b99e37544f7a84e88a0a28",
+      "element_count": 5424,
+      "input_sigma_inf_compression_positive": [
+        [
+          0.5,
+          0.0
+        ],
+        [
+          0.0,
+          0.4
+        ]
+      ],
+      "mesh_id": "5fc5883b7d6091446a6a2e68cd5aca2089d60d967f3ddf2253d25d021b71259b",
+      "mesh_tier": "medium",
+      "node_count": 2817,
+      "qc": {
+        "checks": {
+          "explicit_wall_and_farfield_tags": true,
+          "minimum_triangle_signed_area": true,
+          "no_element_centroid_inside_cavity": true,
+          "nonfinite_fraction_within_gate": true
+        },
+        "metrics": {
+          "element_centroid_inside_cavity_count": 0,
+          "minimum_triangle_signed_area": 0.001506035003596848
+        },
+        "passed": true,
+        "solver": {
+          "checks": {
+            "algebraic_residual": true,
+            "energy_closure": true,
+            "finite": true,
+            "matrix_symmetry": true,
+            "nonnegative_element_energy": true
+          },
+          "metrics": {
+            "clapeyron_relative_error": 2.6880707628878152e-15,
+            "energy_discretization_relative_error": 4.75581750357075e-15,
+            "free_dof_algebraic_residual": 4.162507039561031e-14,
+            "nonfinite_fraction": 0.0,
+            "stiffness_symmetry_relative_error": 6.787878701383868e-17
+          },
+          "not_applicable": [
+            "damage_irreversibility",
+            "negative_dissipation",
+            "joint_penetration",
+            "cfl"
+          ],
+          "passed": true
+        }
+      },
+      "record_paths": {
+        "arrays": "cases/1ccbbec813fe4da6716ff2c4729118719a88fddb98b99e37544f7a84e88a0a28/arrays.npz",
+        "meta": "cases/1ccbbec813fe4da6716ff2c4729118719a88fddb98b99e37544f7a84e88a0a28/meta.json"
+      },
+      "record_round_trip_verified": true,
+      "section_family": "straight_wall_arch",
+      "solver_sigma_inf_tension_positive": [
+        [
+          -0.5,
+          -0.0
+        ],
+        [
+          -0.0,
+          -0.4
+        ]
+      ],
+      "split": "locked_test",
+      "status": "passed",
+      "wall_seconds": 0.21800380000058794
+    }
+  ],
+  "run_id": "b-elastic-v0.2.0"
+}

@@ -1,0 +1,22 @@
+{
+  "checked_at": "2026-08-13T15:27:55+08:00",
+  "environment": "project_windows_venv",
+  "python": "3.13.5",
+  "packages": {
+    "numpy": "2.5.2",
+    "scipy": "1.18.0",
+    "scikit_fem": "12.0.2",
+    "gmsh": "4.15.2"
+  },
+  "smoke": {
+    "gmsh_nodes": 30,
+    "gmsh_triangles": 42,
+    "scikit_fem_matrix_shape": [
+      25,
+      25
+    ],
+    "scikit_fem_matrix_nnz": 105,
+    "status": "passed"
+  },
+  "claim_scope": "imports_mesh_generation_and_sparse_assembly_only_not_solver_validation"
+}

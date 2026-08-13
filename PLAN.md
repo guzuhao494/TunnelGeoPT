@@ -5,8 +5,48 @@
 - Origin Skill: academic-research-suite / experiment-agent
 - Origin Mode: plan
 - Origin Date: 2026-08-13
-- Verification Status: A-layer smoke verified; auxiliary pilot not run
-- Version Label: auxiliary_dev_v0.1
+- Verification Status: B-elastic GO; analytic Stress-Lift smoke NO-GO
+- Version Label: milestone_v0.2
+
+## 0. 当前执行节点：B-elastic-v0.2 里程碑
+
+- Run ID: `b-elastic-v0.2.0`
+- Tier: B 层求解器 `main/test`；对整个岩爆研究仍属于 `auxiliary/dev`
+- Selected idea: 先把 GeoPT 的几何先验接到一个可独立验证的二维平面应变开挖卸载求解器，再讨论预训练迁移。求解器采用拉应力为正的增量形式：远场增量位移为零、洞壁施加 `-Sigma_inf*n`，最终总应力为 `Sigma_inf + delta_sigma`。
+- Baseline/oracle: 无孔均匀应变 patch test 与现有圆洞 Kirsch 解析解；二者都是只读验证基准，不是学习结果。
+- Dataset boundary: 本节点只产生位移、应变、应力、平面应变轴向应力、应变能及静力诊断；`damage/velocity/dissipation/AE/rockburst` 均为不适用，不允许填零冒充标签。
+
+### 0.1 冻结验收条件
+
+1. `case_group_id` 在网格、保真度和求解重启之间保持不变；三类断面按 largest-remainder 规则做确定性 70/15/15 拆分，小样本每断面 6 个 case 必须得到 4/1/1。
+2. Gmsh 网格显式区分 `wall/farfield`；无倒置单元、洞内无单元质心，网格和结果均有内容哈希。
+3. P1 平面应变装配通过均匀场 patch、矩阵对称、自由自由度残差和 Clapeyron 能量检查。
+4. 圆洞在冻结环带内与 Kirsch 三个应力分量比较；加密必须改善误差，细网格门槛见 `configs/elastic_milestone.json`，不得看结果后放宽。
+5. 圆形、马蹄形、直墙拱形各至少完成一个端到端求解；随后生成冻结的 18-case B 层 smoke，并记录全部失败而不是补生成到好看。
+6. 只有上述条件通过后才进入同一骨干的 Scratch/Static/Random/Stress-Lift 代理模型比较；该比较只允许声称合成弹性求解器仿真，不允许声称岩爆机理或现场有效。
+
+### 0.2 最小代码变更图
+
+| 路径 | 作用 | 本节点变更 |
+|---|---|---|
+| `src/tunnelgeopt/cases.py` | 原子 case 与 split | canonical hash、分层冻结 manifest、防泄漏断言 |
+| `src/tunnelgeopt/mesh.py` | 带孔域网格 | Gmsh 生成、边界标签、网格 QC |
+| `src/tunnelgeopt/elasticity.py` | B 层求解 | P1 平面应变增量求解、场恢复、物理诊断 |
+| `src/tunnelgeopt/elastic_schema.py` | 独立 B schema | float64 计算记录、原子保存/加载、结果 hash |
+| `scripts/run_elastic_milestone.py` | 真实运行入口 | patch、Kirsch、三断面、18-case smoke 与 manifest |
+| `artifacts/experiment/b-elastic-v0.2.0/` | 证据 | 配置、命令、环境、原始指标、判定与失败清单 |
+
+### 0.3 停止与转向条件
+
+- 若洞壁法向、符号或边界组无法被独立测试确认，停止生成数据并修复网格/载荷接口。
+- 若圆洞误差不随加密改善，结论是实现或边界截断有误，不能把细网格输出命名为高保真。
+- 若静力求解器通过但迁移学习不优于 Scratch，保留 B 层数据与 No-Go 结果，转向机理求解器闭合项，而不是放宽门槛。
+
+### 0.4 已执行结果（2026-08-13）
+
+- `b-elastic-v0.2.0`：**GO**。18/18 三断面 case 通过；Kirsch 三载荷均随网格加密单调改善，fine 环带误差为 0.04184/0.02858/0.04425。
+- `analytic-transfer-v0.2.0`：**NO-GO**。Stress-Lift@80% 相对 Scratch@100% 只通过 1/3 种子，且平均误差高于 Random-Lift；Shuffled 对照取得最低三种子均值。
+- 决策：冻结 v0.2 负结果，不扩大当前 vector-distance/sticking 预任务；v0.3 转向跨几何、粗到细 B-elastic 场与残差学习。详见 `docs/MILESTONE_V0.2.md`。
 
 ## 1. 状态与边界
 
@@ -14,7 +54,7 @@
 
 本阶段只回答一个开发问题：动态提升式预训练是否能在严格 case 级隔离下，减少学习合成高保真卸荷响应所需的标签数量。即使通过，也只能进入更严格的跨求解器、实验室和工程验证，不能据此宣称模型已经学会岩爆机理或具备现场预警能力。
 
-当前仓库已实现的是 A 层几何-边界 lifted 样本、三类固定原型断面和圆洞 Kirsch 锚点；尚未实现高保真破裂求解器、损伤/断裂标签或训练结果。本计划中 B/C 层字段、物理 QC 和样本量是下一步接口与门禁，不能当作现有代码能力。
+当前仓库已经实现 A 层几何-边界 lifted 样本、B 层二维平面应变求解器、独立弹性 schema、冻结 case/split 和首个解析迁移结果。尚未实现高保真破裂求解器、损伤/断裂标签或现场迁移；本计划中 C 层字段和正式 pilot 规模仍是下一步接口与门禁，不能当作现有能力。
 
 ## 2. 预注册科学问题与假设
 

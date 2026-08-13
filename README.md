@@ -1,66 +1,130 @@
-# TunnelGeoPT
+# TunnelGeoPT v0.2
 
 [![CI](https://github.com/guzuhao494/TunnelGeoPT/actions/workflows/ci.yml/badge.svg)](https://github.com/guzuhao494/TunnelGeoPT/actions/workflows/ci.yml)
 
-面向硬岩隧洞的物理感知合成数据与几何预训练实验平台。
+面向硬岩隧洞的物理感知合成数据与预训练实验平台。项目借鉴
+[GeoPT](https://github.com/Physics-Scaling/GeoPT)“先学习廉价几何—边界关系，再用较少昂贵物理样本适配”的思路，但不复刻其代码。
 
-本项目借鉴 GeoPT 的核心经济性：用大量廉价的几何—边界监督进行预训练，再用少量昂贵的物理仿真监督进行适配。项目不会把随机轨迹等同于岩爆物理；当前代码首先验证“几何—应力先验是否能减少高保真破裂样本”，随后才扩展到损伤、断裂、能量释放和岩爆时序。
+v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久化的二维线弹性里程碑：程序可以为圆形、马蹄形和直墙拱形隧洞生成有限元网格，求解均质各向同性平面应变开挖增量，并将位移、应变、应力和应变能保存为独立 B-elastic 数据记录。
 
-## 当前状态
+## 当前证据边界
 
-| 状态 | 内容 |
+| 状态 | 当前证据 |
 |---|---|
-| 已实现 | 三类二维隧洞断面、可控粗糙度、围岩/洞壁采样、GeoPT兼容的三步lifted样本、Kirsch圆洞应力解、数据契约与单元测试 |
-| 本机环境已核验 | Windows和WSL2均能识别NVIDIA GeForce RTX 5070 Ti Laptop GPU（12227 MiB）；WSL2为Ubuntu 24.04、Python 3.12 |
-| 当前阻塞 | WSL内项目依赖安装因访问PyPI超时未完成；这不影响WSL2、Python和GPU可见性已经通过的结论 |
-| 尚未验证 | PyTorch/CUDA训练、Transolver训练、OpenFDEM/YADE/MOOSE求解器运行、高保真破裂数据生成 |
-| 研究假设 | Stress-Lift预训练在未见几何/应力/材料划分上，比从零训练、静态几何预训练和原始随机lift预训练更节省高保真标签 |
+| 已实现并测试 | A 层三类断面及 GeoPT 兼容 lifted 样本；B 层 Gmsh 网格、scikit-fem P1 平面应变求解、case/split 身份、严格持久化 schema、Kirsch/仿射 patch/残差/能量验证 |
+| 本机科学栈 | Windows Python 环境已实测 NumPy、SciPy、scikit-fem、Gmsh 的导入、网格和稀疏计算 |
+| GPU 实算 | Windows Python 3.12 + PyTorch `2.11.0+cu128` 已在 RTX 5070 Ti Laptop GPU 上完成 CUDA smoke，并完成 6 方法 × 3 种子的圆洞解析迁移训练；后者结果为 No-Go，只适用于解析圆洞筛查 |
+| WSL2 | Ubuntu 24.04、Python 3.12、Git 和同一 GPU 的可见性已通过；WSL 内访问 PyPI 超时，因此依赖安装、pytest 和 CUDA PyTorch 仍为 **blocked** |
+| 尚未实现 | 岩石损伤、裂纹萌生扩展、断裂耗散、动态破坏、微震/AE 波形、高保真 FDEM/DEM/相场样本和现场迁移 |
 
-详细边界见 [科学设计](docs/SCIENTIFIC_DESIGN.md)、[数据契约](docs/DATA_SCHEMA.md)、[验证协议](docs/VALIDATION.md)和[求解器路线](docs/SOLVER_ROADMAP.md)。
+因此，B 层当前是**静态、均质、各向同性、小应变线弹性**结果，不是岩爆、岩体破裂或现场预测结果。schema 明确不允许使用全零 `damage`、`velocity` 或 `dissipation` 字段冒充高保真标签。
+
+环境证据保存在：
+
+- [`validation/environment/physics_stack.json`](validation/environment/physics_stack.json)
+- [`validation/environment/windows_gpu_torch.json`](validation/environment/windows_gpu_torch.json)
+- [`validation/environment/wsl_python_stack.json`](validation/environment/wsl_python_stack.json)
 
 ## 数据路线
 
 ```text
-程序化断面 + 原岩应力/开挖提示
+程序化断面 + 原岩应力/开挖条件
               │
-              ├── A层：廉价几何lift（当前已实现）
+              ├── A 层：廉价几何 lift（已实现）
               │          x[N,7] + condition[N,4] -> supervise[N,9]
               │
-              ├── B层：解析解/线弹性FEM（Kirsch锚点已实现）
-              │          位移、应力、应变能
+              ├── B 层：解析解 + 线弹性 FEM（v0.2 已实现）
+              │          网格、位移、应变、总/增量应力、应变能
               │
-              └── C层：FDEM/DEM/相场（计划）
-                         损伤、裂纹图、耗散能、AE源事件
+              └── C 层：FDEM/DEM/相场（尚未实现）
+                         损伤、裂纹图、耗散能、动态过程、AE 源事件
 ```
 
-A层只提供几何—边界先验。只有B/C层加入动量平衡、材料本构、损伤不可逆和断裂耗散后，模型输出才可以被解释为岩体力学预测。
+研究路线、schema 和验证边界分别见：
 
-## 快速开始（Windows PowerShell）
+- [`PLAN.md`](PLAN.md)
+- [`docs/DATA_SCHEMA.md`](docs/DATA_SCHEMA.md)
+- [`docs/CASE_MANIFEST.md`](docs/CASE_MANIFEST.md)
+- [`docs/ELASTIC_SCHEMA.md`](docs/ELASTIC_SCHEMA.md)
+- [`docs/VALIDATION.md`](docs/VALIDATION.md)
+- [`docs/SOLVER_ROADMAP.md`](docs/SOLVER_ROADMAP.md)
+- [`docs/MILESTONE_V0.2.md`](docs/MILESTONE_V0.2.md)
+
+## 安装与测试（Windows PowerShell）
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 .\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\ruff.exe check .
+```
 
-# 生成一个小型、可复现的GeoPT兼容案例
+B 层依赖属于 `elastic` 可选依赖组；`dev` 已包含它们。环境脚本只记录版本和硬件可见性，不读取或保存令牌、密钥或其他凭据。
+
+## A 层：GeoPT 兼容几何样本
+
+```powershell
 .\.venv\Scripts\python.exe -m tunnelgeopt.cli generate `
   --shape horseshoe --n-volume 256 --n-surface 64 `
   --n-prompts 2 --seed 42 --output outputs\smoke\case_000000
 
-# 校验已有案例
-.\.venv\Scripts\python.exe -m tunnelgeopt.cli validate outputs\smoke\case_000000
+.\.venv\Scripts\python.exe -m tunnelgeopt.cli validate `
+  outputs\smoke\case_000000 --require-meta
 ```
 
-记录当前环境：
+每个 A 层 case 保存：
+
+```text
+case_xxxxxx/
+  x.npy                 float16 [N,7]
+  condition_0.npy       float16 [N,4]
+  supervise_0.npy       float16 [N,9]
+  meta.json
+```
+
+`x = [x,y,z,d_wall,g_x,g_y,g_z]`，`condition` 保存 lifted 方向和步长，`supervise` 保存三个时刻的距离向量监督。
+
+## B 层：线弹性求解与持久化
+
+CLI 对用户暴露**压应力为正**的岩石力学输入；进入求解器时一次性转换为内部**拉应力为正**约定。参数名中的 `compression` 是有意设计，避免符号约定被默默猜测。
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\check_environment.ps1 `
-  -OutputPath validation\environment\windows.json
+.\.venv\Scripts\python.exe -m tunnelgeopt.cli elastic-solve `
+  --shape horseshoe --output outputs\elastic\case_000001 `
+  --young-modulus 5.0e10 --poisson-ratio 0.25 `
+  --sigma-yy-compression 3.0e7 `
+  --sigma-zz-compression 2.0e7 `
+  --tau-yz-compression 0
+
+.\.venv\Scripts\python.exe -m tunnelgeopt.cli elastic-validate `
+  outputs\elastic\case_000001
 ```
 
-## WSL2路线
+`elastic-solve` 只有在有限性、矩阵对称性、自由度残差和能量闭合均通过后才保存：
 
-高保真求解器和后续GPU训练建议在WSL2/Linux中运行。不要在Windows与WSL之间共用同一个虚拟环境。
+```text
+case_000001/
+  arrays.npz   # nodes/elements/facets/u/strain/stress/energy 等
+  meta.json    # case_group_id/mesh_id/config_hash/env/hash/QC 等
+```
+
+默认使用严格 `float64`。如确需发布 `float32`，必须在求解与校验两端显式指定；载入会复验文件哈希、内容哈希、数组清单、拓扑、shape、有限性、分量顺序、符号、SI 单位、本构和能量关系。
+
+## 冻结 Kirsch 多网格验证
+
+```powershell
+.\.venv\Scripts\python.exe -m tunnelgeopt.cli elastic-kirsch `
+  --output validation\elastic\kirsch-v0.2.json `
+  --young-modulus 1.0e9 --poisson-ratio 0.25 `
+  --sigma-yy-compression 1.0e6 `
+  --sigma-zz-compression 0
+```
+
+命令依次运行粗、中、细三档圆洞网格，记录每档网格规模、环带应力相对 L2、洞壁牵引残差、峰值环向应力误差、求解器 QC 和仿射 patch 测试。报告以 SHA-256 冻结写入指定 JSON；任一冻结门槛失败仍保留报告并返回非零退出码 `2`，适合 CI 和数据生成门禁。
+
+## WSL2 路线
+
+高保真求解器和后续 GPU 训练仍优先考虑 WSL2/Linux，但不要在 Windows 与 WSL 之间共用一个虚拟环境：
 
 ```bash
 python3 -m venv .venv-wsl
@@ -70,50 +134,16 @@ python -m pytest
 bash scripts/check_environment.sh validation/environment/wsl.json
 ```
 
-环境脚本只记录版本和硬件可见性，不读取或保存GitHub令牌、密钥或其他凭据。
+当前上述安装在 WSL 的 PyPI 网络步骤受阻；在网络恢复并完成依赖安装、pytest 和 CUDA smoke 前，不把 WSL 训练栈列为已验证。
 
-## GeoPT兼容接口
+## 首个预注册学习比较：No-Go
 
-每个廉价预训练案例保存：
+圆洞 Kirsch 解析筛查已按完整 `case_group_id` 拆为 168/36/36 train/dev/locked-test，并在 GPU 上完成 Scratch@80/100%、Static、Random-Lift、Shuffled-Stress-Lift 和 Stress-Lift 六种方法、三个种子的正式比较。
 
-```text
-case_xxxxxx/
-  x.npy                 float16 [N, 7]
-  condition_0.npy       float16 [N, 4]
-  supervise_0.npy       float16 [N, 9]
-  ...
-  meta.json
-```
+Stress-Lift@80% 相对 Scratch@100% 的误差比分别为 `1.166 / 0.638 / 1.618`，只通过 1/3 种子；平均主误差 `0.017642` 也高于 Random-Lift 的 `0.016773`。Shuffled 对照平均误差反而最低（`0.015944`），因此不能把单个好种子的收益解释为稳定学到了应力—边界耦合。正式判定为 **No-Go**，不声称节省了 20% 标签。
 
-- `x = [x, y, z, d_wall, g_x, g_y, g_z]`，其中围岩点的 `g` 指向最近洞壁，洞壁点保存指向围岩侧的表面法向
-- `condition = [direction_x, direction_y, direction_z, step_length]`
-- `supervise = [dvec_t0, dvec_t1, dvec_t2]`
-
-坐标约定为 `x=隧洞轴向、y=竖向、z=横向`。当前二维平面应变样本的 `x=0`，同时在元数据中保留特征半径和归一化方式。
-
-## 首个预注册比较
-
-在严格按完整算例划分、不得按点或时间帧泄漏的条件下，比较：
-
-1. 从零训练；
-2. 静态距离/法向预训练；
-3. 原始随机lift预训练；
-4. Stress-Lift预训练。
-
-Go/No-Go门槛预先设为：在未见案例上达到相同误差时，Stress-Lift至少减少20%的高保真训练案例，并在三个随机种子上稳定优于前三个基线。这是后续实验门槛，不是当前结果。
-
-## 项目结构
-
-```text
-configs/                 试验参数
-docs/                    科学设计、数据与验证契约
-scripts/                 环境检查和运行入口
-src/tunnelgeopt/         生成器、解析解与数据校验
-tests/                   单元和物理不变量测试
-validation/              小型、可审计的验证证据
-artifacts/experiment/    试验清单与结果摘要
-```
+这一负结果和 B-elastic 的 GO 共同构成 v0.2 里程碑。下一步转向跨断面、粗网格到细网格的弹性场/残差学习，并重新建立未使用的锁定测试集。完整指标、审计和边界见 [`docs/MILESTONE_V0.2.md`](docs/MILESTONE_V0.2.md)。
 
 ## 来源与许可
 
-本项目是独立实现，设计受 [GeoPT官方仓库](https://github.com/Physics-Scaling/GeoPT) 启发，并在 `CITATION.cff` 中保留学术引用。代码采用MIT许可。未来接入OpenFDEM、YADE、MOOSE等求解器时，各外部组件继续遵守其自身许可证，本仓库不重新分发这些求解器。
+本项目为 MIT 许可的独立实现。未来接入 OpenFDEM、YADE、MOOSE 等外部求解器时，各组件继续遵守自身许可证，本仓库不重新分发这些求解器。

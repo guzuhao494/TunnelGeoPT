@@ -1,4 +1,5 @@
 .venv/
+.venv-gpu/
 .venv-wsl/
 __pycache__/
 *.py[cod]
@@ -14,9 +15,11 @@ outputs/
 tmp/
 *.npy
 *.npz
+*.pt
 *.h5
 *.hdf5
 *.zarr/
+artifacts/experiment/*-dry-run*/
 
 # Local IDE and operating-system files.
 .vscode/
