@@ -43,3 +43,14 @@ Official references:
 
 - <https://mooseframework.inl.gov/getting_started/installation/conda.html>
 - <https://mooseframework.inl.gov/source/materials/ComputeLinearElasticPFFractureStress.html>
+
+## Recorded development result
+
+The public artifact at
+[`artifacts/development/moose-crack2d-iso-v1`](../artifacts/development/moose-crack2d-iso-v1)
+records `MOOSE_REFERENCE_EXECUTION_CONFIRMED`: exactly one target test passed,
+with zero skipped and zero failed tests. It binds MOOSE HEAD
+`167ee97da204df5e8643695e18b9b28910f0014b` and pushed TunnelGeoPT HEAD
+`68ac0cfa037a5d9447a2ba61cc45446d7f0e2bde`. The artifact manifest SHA-256 is
+`605c2830bb7aa0e018526e8b00ad77b52f5c1a8e42de3b5518ac89bfa866bac8`.
+This closes only the first of the two MOOSE-related Phase-1 prerequisites.

@@ -37,7 +37,9 @@
 > 断裂轨迹标签。当前已有本地 P1 AT2 调试内核、严格轨迹 schema、36-case/12-audit
 > 冻结开发协议和裂纹带网格审计，但求解器尚不能表达 P2/P3 的变远场应力或 P4
 > 分区卸荷，也没有累计边界功/反力/重试账本及本地-MOOSE 同题验证，所以禁止生成
-> 训练标签。范围、反证和论文大纲见 [`RESEARCH_SCOPE.md`](paper/RESEARCH_SCOPE.md)、
+> 训练标签。固定版本 MOOSE 的官方 `crack2d_iso` 自测已经独立通过，但它只验收
+> 外部参考环境，不能替代尚未完成的本地-MOOSE 同题比较。范围、反证和论文大纲见
+> [`RESEARCH_SCOPE.md`](paper/RESEARCH_SCOPE.md)、
 > [`PAPER_OUTLINE.md`](paper/PAPER_OUTLINE.md) 与 [`PLAN.md`](PLAN.md)。
 
 v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久化的二维线弹性里程碑：程序可以为圆形、马蹄形和直墙拱形隧洞生成有限元网格，求解均质各向同性平面应变开挖增量，并将位移、应变、应力和应变能保存为独立 B-elastic 数据记录。
@@ -49,7 +51,7 @@ v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久
 | 已实现并测试 | A 层三类断面及 GeoPT 兼容 lifted 样本；B 层 Gmsh 网格、scikit-fem P1 平面应变求解、case/split 身份、严格持久化 schema、Kirsch/仿射 patch/残差/能量验证 |
 | 本机科学栈 | Windows Python 环境已实测 NumPy、SciPy、scikit-fem、Gmsh 的导入、网格和稀疏计算 |
 | GPU 实算 | Windows Python 3.12 + PyTorch `2.11.0+cu128` 已在 RTX 5070 Ti Laptop GPU 上完成 CUDA smoke，并完成 6 方法 × 3 种子的圆洞解析迁移训练；后者结果为 No-Go，只适用于解析圆洞筛查 |
-| WSL2 | Ubuntu 24.04、Git 和同一 GPU 的可见性已通过；已安装官方 MOOSE conda 栈并在编译 `combined-opt`，官方 `crack2d_iso` 尚未宣告通过 |
+| WSL2 | Ubuntu 24.04、Git 和同一 GPU 的可见性已通过；官方 MOOSE conda 栈与 `combined-opt` 已构建，固定 `crack2d_iso` 自测以精确单测试过滤运行通过并留存哈希证据 |
 | C-fracture 调试层 | 本地 P1 AT2 spectral-split 内核、不可逆 active-set、独立 schema、冻结开发协议和裂纹带 Gmsh 网格已实现并测试；完整 P1-P4 生成器、MOOSE 同题交叉验证和 SENT/SENS 尚未完成 |
 | 尚未实现 | 可接受的高保真断裂标签集、动态破坏、微震/AE 波形、FDEM/DEM、实验校准和现场迁移 |
 
@@ -174,9 +176,11 @@ python -m pytest
 bash scripts/check_environment.sh validation/environment/wsl.json
 ```
 
-当前 WSL 已通过本机代理安装官方 MOOSE conda 依赖；MOOSE 编译、官方自测及
-TunnelGeoPT 同题交叉验证仍分别验收。官方自测只证明所钉住 MOOSE 版本能执行其
-自身回归用例，不能代替本地求解器等价性或隧洞断裂验证。
+当前 WSL 已通过本机代理安装官方 MOOSE conda 依赖并完成 `combined-opt` 构建。
+固定 MOOSE 与项目提交下的官方 `crack2d_iso` 自测已经运行通过；公开证据见
+[`result.json`](artifacts/development/moose-crack2d-iso-v1/result.json)。TunnelGeoPT
+同题交叉验证仍是另一个未完成的独立门。官方自测只证明所钉住 MOOSE 版本能执行
+其自身回归用例，不能代替本地求解器等价性或隧洞断裂验证。
 
 ## 首个预注册学习比较：No-Go
 

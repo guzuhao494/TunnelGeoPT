@@ -1,6 +1,6 @@
 {
-  "schema_version": "tunnelgeopt.fracture.phase1.v1",
-  "protocol_id": "fracture-phase1-development-pilot-v1",
+  "schema_version": "tunnelgeopt.fracture.phase1.v2",
+  "protocol_id": "fracture-phase1-development-pilot-v2",
   "status": {
     "state": "frozen_development_only_not_run",
     "development_only": true,
@@ -496,7 +496,8 @@
       "require_spectral_reconstruction_and_compression_tests": true,
       "require_tangent_directional_derivative_test": true,
       "require_constrained_damage_kkt_test": true,
-      "require_MOOSE_crack2d_iso_cross_check": true,
+      "require_pinned_MOOSE_crack2d_iso_reference_self_test": true,
+      "require_local_vs_MOOSE_same_problem_cross_check": true,
       "require_single_edge_notch_tension_and_shear_three_grid_benchmarks": true
     },
     "failed_trajectory_policy": "retain_identity_and_failure_ledger_exclude_from_successful_labels_no_replacement",

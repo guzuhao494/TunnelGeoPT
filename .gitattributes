@@ -11,3 +11,4 @@
 # Git newline normalization cannot invalidate the recorded SHA-256 values.
 artifacts/development/stress-recovery-v0.5-dev/** -text -diff
 artifacts/development/stress-recovery-boundary-v0.5.1-dev/** -text -diff
+artifacts/development/moose-crack2d-iso-v1/** -text -diff

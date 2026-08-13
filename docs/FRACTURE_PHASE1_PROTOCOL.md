@@ -150,9 +150,17 @@ Each of the 12 preselected audits additionally requires both peak reaction and
 total fracture-energy fine-to-ultrafine changes to be at most `5%`.
 
 Before launching the 36 trajectories, the element/spectral/KKT tests, intact
-elastic regression, MOOSE `crack2d_iso` cross-check, and three-grid
-single-edge-notch tension and shear benchmarks listed in the config must pass.
-These prerequisites are not waived by trajectory-level QC.
+elastic regression, three-grid single-edge-notch tension and shear benchmarks,
+and both MOOSE-related gates listed in the config must pass:
+
+1. the pinned official MOOSE `crack2d_iso` reference self-test verifies only
+   that the external reference environment executes its own regression; and
+2. a separate local-vs-MOOSE same-problem comparison must cover intact
+   elasticity and pre-notched tension/shear with matched parameters, boundary
+   conditions, and output definitions.
+
+The first gate cannot satisfy the second. These prerequisites are not waived by
+trajectory-level QC.
 
 The pilot requires a 100% pass fraction. A failed identity remains in the
 ledger and is excluded from successful labels; it is never replaced by a newly

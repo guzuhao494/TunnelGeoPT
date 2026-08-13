@@ -127,6 +127,36 @@ def test_scope_and_no_replacement_flags_are_not_relaxable() -> None:
         validate_fracture_phase1_config(changed)
 
 
+def test_moose_reference_and_same_problem_cross_check_are_independent_gates() -> None:
+    config = load_fracture_phase1_config()
+    prerequisites = config["quality_control"]["solver_prerequisites_before_pilot"]
+    reference_key = "require_pinned_MOOSE_crack2d_iso_reference_self_test"
+    cross_check_key = "require_local_vs_MOOSE_same_problem_cross_check"
+    assert prerequisites[reference_key] is True
+    assert prerequisites[cross_check_key] is True
+    assert "require_MOOSE_crack2d_iso_cross_check" not in prerequisites
+
+    for key in (reference_key, cross_check_key):
+        changed = copy.deepcopy(config)
+        changed["quality_control"]["solver_prerequisites_before_pilot"][key] = False
+        with pytest.raises(FracturePhase1ContractError, match=key):
+            validate_fracture_phase1_config(changed)
+
+        changed = copy.deepcopy(config)
+        del changed["quality_control"]["solver_prerequisites_before_pilot"][key]
+        with pytest.raises(FracturePhase1ContractError, match="missing"):
+            validate_fracture_phase1_config(changed)
+
+    changed = copy.deepcopy(config)
+    del changed["quality_control"]["solver_prerequisites_before_pilot"][reference_key]
+    del changed["quality_control"]["solver_prerequisites_before_pilot"][cross_check_key]
+    changed["quality_control"]["solver_prerequisites_before_pilot"][
+        "require_MOOSE_crack2d_iso_cross_check"
+    ] = True
+    with pytest.raises(FracturePhase1ContractError, match="extra"):
+        validate_fracture_phase1_config(changed)
+
+
 def test_load_histories_and_required_outputs_are_actual_and_frozen() -> None:
     config = load_fracture_phase1_config()
     paths = config["load_paths"]["paths"]

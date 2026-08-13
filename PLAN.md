@@ -257,7 +257,8 @@ v0.2 的圆洞 Stress-Lift 已按预注册门槛判为 No-Go，因此本节取�
 当前只允许执行 solver/schema/QC 的 development pilot：
 
 1. 主求解器候选为 MOOSE 相场断裂；本地 scikit-fem 实现只能作交叉验证原型；
-2. 先通过完好弹性、MOOSE `crack2d_iso`、Miehe 拉伸/剪切、三网格、能量与不可逆门禁；
+2. 先通过完好弹性、固定 MOOSE `crack2d_iso` 官方自测、本地-MOOSE 同题比较、
+   Miehe 拉伸/剪切、三网格、能量与不可逆门禁；
 3. 然后生成 `3 断面 x 3 材料档 x 4 载荷路径 = 36` 条 development-only 轨迹；
 4. 其中 `12` 条按断面×路径平衡做 ultrafine 复算；36 个冻结 cell 不得静默替换；
 5. Phase-1 不切 train/dev/test、不训练模型、不声称标签效率；
@@ -278,7 +279,8 @@ v0.2 的圆洞 Stress-Lift 已按预注册门槛判为 No-Go，因此本节取�
 2. 裂纹带 Distance/Threshold 网格和实际 `h/ell` 硬审计已经补齐，但尚未做
    协议尺寸的单案例资源试算；
 3. 反力、累计边界功、路径能量平衡、自适应减半和失败账本尚未由求解器产生；
-4. MOOSE 官方自测执行与本地-MOOSE 同题交叉验证是两个门，前者不能替代后者；
+4. MOOSE 官方 `crack2d_iso` 自测已在固定且已推送的 MOOSE/项目提交上执行通过并
+   留存哈希证据；本地-MOOSE 同题交叉验证仍是独立未完成门，前者不能替代后者；
 5. 最终 `(u,d,H)` 后损伤状态一致性反例已修复；在完整载荷、累计功/反力、重试、
    SENT/SENS 三网格和资源试算通过前，仍禁止生成 36 条标签或启动模型训练。
 

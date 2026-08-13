@@ -177,8 +177,9 @@
   P1-P4 全部 41 个必需状态。
 - [x] 完成可选裂纹带 Gmsh Distance/Threshold 背景场及生成后实际最大边长和
   `h/ell` 硬审计；默认 B-elastic 网格路径保持兼容，尚未运行协议规模网格。
-- [ ] MOOSE `crack2d_iso` 在 WSL 或可复现容器中实际运行通过，版本和环境哈希落盘。
-- [ ] 本地相场原型与 MOOSE 在完好弹性、预缺口拉伸/剪切上交叉验证。
+- [x] 固定 MOOSE `crack2d_iso` reference self-test 在 WSL 中精确运行 1/1 通过，
+  MOOSE/项目 HEAD、环境、输入、gold、runner、executable 与日志哈希均已落盘。
+- [ ] 本地相场原型与 MOOSE 在完好弹性、预缺口拉伸/剪切的 same-problem 上交叉验证。
 - [ ] 三网格、加载步、长度尺度、能量、残差与不可逆门全部通过。
 - [ ] 完成 36 条 development-only 轨迹和 12 条 ultrafine 复算，无静默替换。
 - [ ] 完成资源、方差和计划效能审计；不达标则 STOP，不创建 locked 数据。

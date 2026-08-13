@@ -1,0 +1,7 @@
+Parsing application capabilities... 1.16 seconds
+INFO: Using cached hwloc topology in '<HOME>/.local/share/moose/testharness/hwloc_topo_<USER>.xml'
+test:phase_field_fracture.crack2d_iso ..................................................................... OK
+
+--------------------------------------------------------------------------------------------------------------
+Ran 1 tests in 1.6 seconds. Average test time 0.9 seconds, maximum test time 0.9 seconds.
+1 passed, 0 skipped, 0 failed

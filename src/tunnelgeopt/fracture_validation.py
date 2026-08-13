@@ -17,8 +17,8 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
-SCHEMA_VERSION = "tunnelgeopt.fracture.phase1.v1"
-PROTOCOL_ID = "fracture-phase1-development-pilot-v1"
+SCHEMA_VERSION = "tunnelgeopt.fracture.phase1.v2"
+PROTOCOL_ID = "fracture-phase1-development-pilot-v2"
 SECTION_FAMILIES = ("circle", "horseshoe", "straight_wall_arch")
 MATERIAL_LEVEL_IDS = ("m1", "m2", "m3")
 LOAD_PATH_IDS = ("p1", "p2", "p3", "p4")
@@ -931,7 +931,8 @@ def _validate_quality_and_identity(config: Mapping[str, Any]) -> None:
         "require_spectral_reconstruction_and_compression_tests": True,
         "require_tangent_directional_derivative_test": True,
         "require_constrained_damage_kkt_test": True,
-        "require_MOOSE_crack2d_iso_cross_check": True,
+        "require_pinned_MOOSE_crack2d_iso_reference_self_test": True,
+        "require_local_vs_MOOSE_same_problem_cross_check": True,
         "require_single_edge_notch_tension_and_shear_three_grid_benchmarks": True,
     }
     _require_exact_keys(
