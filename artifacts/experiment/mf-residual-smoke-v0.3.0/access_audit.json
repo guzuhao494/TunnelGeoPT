@@ -1,0 +1,1 @@
+{"evaluation_calls_per_checkpoint":1,"frozen_checkpoint_count_authorized":5,"pseudo_test_evaluation_calls":5,"pseudo_test_label_case_reads_after_freeze":12,"pseudo_test_label_case_reads_before_freeze":0,"sealed_label_file_opened_before_all_checkpoints_frozen":false,"train_dev_label_case_reads":48}

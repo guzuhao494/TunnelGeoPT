@@ -1,20 +1,29 @@
+from dataclasses import replace
+
 import numpy as np
 import pytest
 
 from tunnelgeopt.multifidelity_learning import (
     LearningBatch,
     LearningContractError,
+    aggregate_case_errors_by_parent,
+    build_training_contract,
+    build_training_selection,
     case_weighted_stress_error,
     checkpoint_payload,
     hierarchical_paired_bootstrap,
+    load_formal_model_from_checkpoint,
     make_model,
     method_arrays,
     mismatched_coarse_indices,
     nested_geometry_subsets,
     reconstruct_fine_prediction,
     save_checkpoint_atomic,
+    save_formal_checkpoint_atomic,
     section_balanced_geometry_mean,
+    train_formal_with_dev_selection,
     train_with_dev_selection,
+    validate_training_selection,
 )
 
 
@@ -32,6 +41,36 @@ def _batch(case_count: int = 6, point_count: int = 5) -> LearningBatch:
         section_families=sections,
         case_group_ids=tuple(f"c{index}" for index in range(case_count)),
         splits=tuple("train" for _ in range(case_count)),
+    )
+
+
+def _formal_batch(point_count: int = 5) -> LearningBatch:
+    rng = np.random.default_rng(44)
+    geometry = (
+        "ta0",
+        "ta0",
+        "ta1",
+        "ta1",
+        "tb0",
+        "tb0",
+        "tb1",
+        "tb1",
+        "da",
+        "db",
+        "locked",
+    )
+    sections = ("a", "a", "a", "a", "b", "b", "b", "b", "a", "b", "a")
+    splits = (*("train" for _ in range(8)), "dev", "dev", "locked_test")
+    coarse = rng.normal(size=(len(geometry), point_count, 3)).astype(np.float32)
+    return LearningBatch(
+        base_features=rng.normal(size=(len(geometry), point_count, 11)).astype(np.float32),
+        coarse_stress=coarse,
+        fine_stress=coarse + 0.1 * rng.normal(size=coarse.shape).astype(np.float32),
+        weights=np.ones((len(geometry), point_count), dtype=np.float32),
+        geometry_group_ids=geometry,
+        section_families=sections,
+        case_group_ids=tuple(f"case-{index}" for index in range(len(geometry))),
+        splits=tuple(splits),
     )
 
 
@@ -99,6 +138,84 @@ def test_geometry_cannot_cross_splits() -> None:
         )
 
 
+def test_formal_selection_is_derived_from_real_splits_and_fraction() -> None:
+    batch = _formal_batch()
+    selection = build_training_selection(
+        batch,
+        ("ta0", "tb0"),
+        expected_fine_fraction=0.5,
+    )
+    assert selection.fine_fraction == 0.5
+    assert selection.train_geometry_ids == ("ta0", "tb0")
+    assert selection.train_case_ids == ("case-0", "case-1", "case-4", "case-5")
+    assert all(batch.splits[index] == "train" for index in selection.train_indices)
+    assert all(batch.splits[index] == "dev" for index in selection.dev_indices)
+    assert selection.section_geometry_counts == {"a": 1, "b": 1}
+
+    with pytest.raises(LearningContractError, match="declared fine fraction disagrees"):
+        build_training_selection(
+            batch,
+            ("ta0", "ta1", "tb0", "tb1"),
+            expected_fine_fraction=0.5,
+        )
+    with pytest.raises(LearningContractError, match="outside the train split"):
+        build_training_selection(batch, ("ta0", "db"))
+
+    forged = replace(selection, train_indices=(*selection.train_indices, 8))
+    with pytest.raises(LearningContractError, match="not derived"):
+        validate_training_selection(batch, forged)
+
+
+def test_parent_aggregation_precedes_unique_geometry_bootstrap() -> None:
+    case_values = np.asarray(
+        [
+            [1.0, 3.0, 4.0, 6.0],
+            [2.0, 4.0, 5.0, 7.0],
+        ]
+    )
+    geometry = ("g1", "g1", "g2", "g2")
+    sections = ("a", "a", "b", "b")
+    with pytest.raises(LearningContractError, match="must be unique"):
+        hierarchical_paired_bootstrap(
+            0.8 * case_values,
+            case_values,
+            (3, 5),
+            geometry,
+            sections,
+            replicates=20,
+            confidence=0.95,
+            bootstrap_seed=7,
+        )
+    reference, parent_ids, parent_sections = aggregate_case_errors_by_parent(
+        case_values, geometry, sections
+    )
+    assert parent_ids == ("g1", "g2")
+    assert parent_sections == ("a", "b")
+    np.testing.assert_allclose(reference, [[2.0, 5.0], [3.0, 6.0]])
+    result = hierarchical_paired_bootstrap(
+        0.8 * reference,
+        reference,
+        (3, 5),
+        parent_ids,
+        parent_sections,
+        replicates=50,
+        confidence=0.95,
+        bootstrap_seed=7,
+    )
+    assert result["center_ratio"] == pytest.approx(0.8)
+    with pytest.raises(LearningContractError, match="seeds must be non-empty and unique"):
+        hierarchical_paired_bootstrap(
+            0.8 * reference,
+            reference,
+            (3, 3),
+            parent_ids,
+            parent_sections,
+            replicates=20,
+            confidence=0.95,
+            bootstrap_seed=7,
+        )
+
+
 def test_hierarchical_bootstrap_preserves_known_ratio() -> None:
     reference = np.asarray([[1.0, 2.0, 3.0, 4.0], [2.0, 1.0, 4.0, 3.0]])
     result = hierarchical_paired_bootstrap(
@@ -162,3 +279,89 @@ def test_short_training_and_cpu_checkpoint_roundtrip(tmp_path) -> None:
     payload = checkpoint_payload(path)
     assert payload["method"] == "residual_coarse"
     assert all(value.device.type == "cpu" for value in payload["state_dict"].values())
+
+
+def test_formal_training_checkpoint_binds_actual_selection_and_config(tmp_path) -> None:
+    pytest.importorskip("torch")
+    batch = _formal_batch(point_count=8)
+    config_hash = "a" * 64
+    contract = build_training_contract(
+        batch,
+        method="residual_coarse",
+        config_sha256=config_hash,
+        train_geometry_selector=("ta0", "tb0"),
+        expected_fine_fraction=0.5,
+    )
+    model_config = {
+        "point_input_width": 14,
+        "hidden_width": 16,
+        "global_context_blocks": 1,
+        "output_width": 3,
+    }
+    model = make_model(model_config, seed=9, device="cpu")
+    outcome = train_formal_with_dev_selection(
+        model,
+        batch,
+        contract,
+        seed=9,
+        device="cpu",
+        learning_rate=1e-3,
+        weight_decay=1e-4,
+        batch_size=2,
+        max_epochs=2,
+        patience=2,
+        min_delta=0.0,
+    )
+    path = tmp_path / "formal.pt"
+    digest = save_formal_checkpoint_atomic(
+        outcome,
+        path,
+        contract=contract,
+        seed=9,
+        model_config=model_config,
+    )
+    assert len(digest) == 64
+    payload = checkpoint_payload(
+        path,
+        expected_config_sha256=config_hash,
+        expected_selection_sha256=contract.selection.selection_sha256,
+        require_formal=True,
+    )
+    assert payload["format_version"] == 2
+    assert payload["fine_fraction"] == 0.5
+    assert tuple(payload["train_geometry_ids"]) == ("ta0", "tb0")
+    assert tuple(payload["train_case_ids"]) == (
+        "case-0",
+        "case-1",
+        "case-4",
+        "case-5",
+    )
+    loaded, loaded_payload = load_formal_model_from_checkpoint(
+        path,
+        contract=contract,
+        device="cpu",
+    )
+    assert loaded is not None
+    assert loaded_payload["training_contract_sha256"] == contract.contract_sha256
+    with pytest.raises(LearningContractError, match="config hash"):
+        checkpoint_payload(
+            path,
+            expected_config_sha256="b" * 64,
+            expected_selection_sha256=contract.selection.selection_sha256,
+            require_formal=True,
+        )
+    with pytest.raises(LearningContractError, match="selection hash"):
+        checkpoint_payload(
+            path,
+            expected_config_sha256=config_hash,
+            expected_selection_sha256="b" * 64,
+            require_formal=True,
+        )
+    with pytest.raises(LearningContractError, match="different formal contract"):
+        save_formal_checkpoint_atomic(
+            outcome,
+            tmp_path / "wrong.pt",
+            contract=replace(contract, contract_sha256="b" * 64),
+            seed=9,
+            model_config=model_config,
+        )

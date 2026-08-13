@@ -18,8 +18,13 @@ Three SHA-256 identities prevent accidental pairing and leakage:
 
 The split unit is `geometry_group_id`, not load or mesh. Every load associated
 with a boundary inherits that boundary's `train`, `dev`, or `locked_test`
-assignment. `freeze_geometry_splits` sorts hashes and writes an explicit
-`GeometrySplitSpec`; it should run before the first elastic solve.
+assignment. Formal experiments must call `freeze_stratified_geometry_splits`
+with a non-empty preregistered salt, a section family for every geometry, and
+explicit train/dev/locked counts for every section. The salt is hashed into the
+split specification and changes the assignment ranking. The older
+`freeze_geometry_splits` API remains available for historical smoke runs, but
+its result is explicitly `formal_eligible = false`, even when it is salted,
+because it cannot prove section balance.
 
 ## Common physical query
 
@@ -63,21 +68,41 @@ known far-field scale returns pascals.
 Coarse and fine solves use the same frozen boundary, outer bounds, material,
 far-field load, first-order plane-strain formulation, and sign convention.
 Only the three mesh-size controls differ, and fine sizes must be no larger than
-coarse sizes with at least one strict refinement.
+coarse sizes with at least one strict refinement. A paired solve accepts a
+`GeometryDataSpec` (or its complete frozen identity mapping) and rejects an
+actual `domain_scale` different from its `outer_domain_scale`. Both mesh
+metadata records and case diagnostics retain the actual outer bounds.
+
+All NumPy arrays held by the query and sample dataclasses are detached copies
+with `writeable = false`. Query construction recomputes the content hash before
+freezing. JSON-like geometry parameters, query metadata, mesh metadata, and
+diagnostics are deep-copied into mutation-rejecting mappings. These measures
+prevent ordinary caller aliases from silently changing an in-memory record;
+they are integrity checks, not process isolation.
 
 ## Locked-label access
 
 `MultiFidelityDataset.features_for` may read locked-test features, including
 the permitted coarse solver input. Fine stress and residual targets are private
 and only available through audited methods. Any locked fine-label read before
-the complete unique checkpoint set is frozen is rejected and counted. After
+the complete unique checkpoint set is frozen is rejected and counted.
+Authorization accepts only a `CheckpointRegistry`: each checkpoint identity
+must be a lowercase 64-character SHA-256 digest, the count is derived from that
+frozen registry rather than self-reported by the authorization call, and the
+audit stores the complete identity tuple plus the registry hash. After
 authorization, evaluation reads are counted separately by split and purpose.
 Direct `sample.fine_stress_normalized` access deliberately fails.
 
 The data object records actual reads; the training runner must persist
-`access_snapshot()` alongside checkpoint identities. This access boundary does
-not by itself guarantee sound model selection, so the experimental protocol
-must still prohibit test-derived hyperparameter or gate changes.
+`access_snapshot()` alongside checkpoint identities. The underscore-prefixed
+sample array and the Python property guard are **not a security boundary**: a
+caller running in the same Python process can use introspection or low-level
+mutation APIs. A formal run must therefore keep locked labels in a separate
+file-level sealed store, keep that file unopened during training and model
+selection, freeze and hash the external checkpoint registry, and only then
+open the store once for evaluation. The in-memory audit is supporting evidence,
+not a substitute for that sealed-store boundary. The protocol must also
+prohibit test-derived hyperparameter or gate changes.
 
 ## Known scope limits
 

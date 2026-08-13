@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import replace
 
 import numpy as np
 import pytest
 
-from tunnelgeopt.geometry import make_parametric_tunnel_boundary
 from tunnelgeopt.multifidelity import (
+    CheckpointRegistry,
+    GeometryDataSpec,
+    GeometrySplitRecord,
     GeometrySplitSpec,
     MeshFidelitySpec,
     MultiFidelityContractError,
@@ -17,7 +20,7 @@ from tunnelgeopt.multifidelity import (
     elastic_condition_vector,
     farfield_stress_scale,
     freeze_geometry_splits,
-    geometry_group_id,
+    freeze_stratified_geometry_splits,
     load_group_id,
     reconstruct_fine_stress,
     solve_multifidelity_case,
@@ -54,21 +57,25 @@ def _synthetic_sample(grid, split: str, diagonal_load: float) -> MultiFidelitySa
 
 
 def _small_grid(seed: int = 7):
-    geometry = make_parametric_tunnel_boundary(
-        "horseshoe",
+    spec = GeometryDataSpec(
+        shape="horseshoe",
         parameters={"span_height_ratio": 0.9, "sidewall_height_ratio": 0.82},
-        n_points=48,
+        n_boundary_points=48,
         roughness_amplitude=0.01,
         seed=12,
+        outer_domain_scale=3.0,
     )
+    geometry = spec.build()
     grid = build_elastic_query_grid(
         geometry,
+        geometry_parameters=spec.identity_parameters(),
         nearfield_points=12,
         wall_offset_points=8,
         farfield_points=4,
         nearfield_scale=1.8,
         farfield_scale=2.5,
         seed=seed,
+        outer_domain_scale=spec.outer_domain_scale,
     )
     return geometry, grid
 
@@ -76,24 +83,36 @@ def _small_grid(seed: int = 7):
 def test_identity_split_and_query_grid_are_boundary_level_and_deterministic() -> None:
     geometry, first = _small_grid()
     _, second = _small_grid()
-    other = make_parametric_tunnel_boundary(
-        "horseshoe",
-        parameters={"span_height_ratio": 1.04, "sidewall_height_ratio": 0.82},
-        n_points=48,
+    spec = GeometryDataSpec(
+        shape="horseshoe",
+        parameters={"span_height_ratio": 0.9, "sidewall_height_ratio": 0.82},
+        n_boundary_points=48,
         roughness_amplitude=0.01,
         seed=12,
+        outer_domain_scale=3.0,
     )
+    other_spec = GeometryDataSpec(
+        shape="horseshoe",
+        parameters={"span_height_ratio": 1.04, "sidewall_height_ratio": 0.82},
+        n_boundary_points=48,
+        roughness_amplitude=0.01,
+        seed=12,
+        outer_domain_scale=3.0,
+    )
+    other = other_spec.build()
     other_grid = build_elastic_query_grid(
         other,
+        geometry_parameters=other_spec.identity_parameters(),
         nearfield_points=12,
         wall_offset_points=8,
         farfield_points=4,
         nearfield_scale=1.8,
         farfield_scale=2.5,
         seed=7,
+        outer_domain_scale=other_spec.outer_domain_scale,
     )
 
-    assert geometry_group_id(geometry) == first.geometry_group_id
+    assert spec.geometry_group_id(geometry) == first.geometry_group_id
     assert first.query_hash == second.query_hash
     assert np.array_equal(first.points_yz, second.points_yz)
     assert first.geometry_group_id != other_grid.geometry_group_id
@@ -127,6 +146,7 @@ def test_identity_split_and_query_grid_are_boundary_level_and_deterministic() ->
         locked_test_count=1,
     )
     assert split.geometry_count == 3
+    assert split.formal_eligible is False
     assert set(split.as_dict()["counts"]) == {"train", "dev", "locked_test"}
     with pytest.raises(MultiFidelityContractError, match="multiple splits"):
         GeometrySplitSpec(
@@ -134,6 +154,41 @@ def test_identity_split_and_query_grid_are_boundary_level_and_deterministic() ->
             dev=(first.geometry_group_id,),
             locked_test=(),
         )
+
+
+def test_formal_split_is_salted_section_stratified_and_salt_changes_assignment() -> None:
+    records = tuple(
+        GeometrySplitRecord(hashlib.sha256(f"{section}:{index}".encode()).hexdigest(), section)
+        for section in ("circle", "horseshoe")
+        for index in range(9)
+    )
+    counts = {
+        section: {"train": 3, "dev": 3, "locked_test": 3} for section in ("circle", "horseshoe")
+    }
+    first = freeze_stratified_geometry_splits(
+        records, salt="formal-v0.3-a", counts_per_section=counts
+    )
+    second = freeze_stratified_geometry_splits(
+        records, salt="formal-v0.3-b", counts_per_section=counts
+    )
+
+    assert first.formal_eligible is True
+    assert first.protocol == "salted_stratified_geometry_v1"
+    assert first.salt_sha256 == hashlib.sha256(b"formal-v0.3-a").hexdigest()
+    assert (first.train, first.dev, first.locked_test) != (
+        second.train,
+        second.dev,
+        second.locked_test,
+    )
+    for section in counts:
+        for split in ("train", "dev", "locked_test"):
+            assert (
+                sum(
+                    first.section_by_geometry[identifier] == section
+                    for identifier in getattr(first, split)
+                )
+                == 3
+            )
 
 
 def test_model_array_residual_reconstruction_and_stress_normalization_contract() -> None:
@@ -144,6 +199,36 @@ def test_model_array_residual_reconstruction_and_stress_normalization_contract()
     assert np.allclose(sample.model_features[:, 11:14], sample.coarse_stress_normalized)
     with pytest.raises(MultiFidelityContractError, match="fine labels are private"):
         _ = sample.fine_stress_normalized
+    frozen_hash = grid.query_hash
+    for array in (
+        grid.points_yz,
+        grid.x,
+        grid.nearfield_mask,
+        grid.area_weights,
+        sample.condition,
+        sample.coarse_stress_normalized,
+        sample._fine_stress_normalized,
+        sample.coarse_element_ids,
+    ):
+        assert array.flags.writeable is False
+        with pytest.raises(ValueError, match="read-only"):
+            array.flat[0] = 0
+    with pytest.raises(TypeError, match="frozen mapping"):
+        grid.metadata["seed"] = 999
+    with pytest.raises(TypeError, match="frozen mapping"):
+        sample.diagnostics["tampered"] = True
+    assert grid.query_hash == frozen_hash
+
+    points_alias = np.array(grid.points_yz, copy=True)
+    detached_grid = replace(grid, points_yz=points_alias)
+    points_alias[0, 0] += 100.0
+    assert np.array_equal(detached_grid.points_yz, grid.points_yz)
+    coarse_alias = np.array(sample.coarse_stress_normalized, copy=True)
+    detached_sample = replace(sample, coarse_stress_normalized=coarse_alias)
+    coarse_alias[0, 0] += 100.0
+    assert np.array_equal(detached_sample.coarse_stress_normalized, sample.coarse_stress_normalized)
+    with pytest.raises(MultiFidelityContractError, match="query_hash"):
+        replace(grid, x=np.asarray(grid.x) + 0.01)
 
     sigma = np.asarray([[-12.0, 2.0], [2.0, -5.0]])
     assert farfield_stress_scale(sigma) == pytest.approx(np.sqrt(12.0**2 + 5.0**2 + 2 * 2.0**2))
@@ -175,16 +260,25 @@ def test_all_loads_inherit_geometry_split_and_locked_fine_access_is_denied() -> 
     assert audit["coarse_feature_case_reads"]["locked_test"] == 2
     assert audit["fine_label_case_reads"]["locked_test"] == 0
     assert audit["denied_locked_fine_accesses"] == 1
-    with pytest.raises(MultiFidelityContractError, match="every expected"):
-        dataset.authorize_locked_test(["only-one"], expected_checkpoint_count=2)
-
-    dataset.authorize_locked_test(["checkpoint-a", "checkpoint-b"], expected_checkpoint_count=2)
+    with pytest.raises(MultiFidelityContractError, match="CheckpointRegistry"):
+        dataset.authorize_locked_test(["only-one"])
+    with pytest.raises(MultiFidelityContractError, match="SHA-256"):
+        CheckpointRegistry(("not-a-hash",))
+    checkpoint_ids = tuple(
+        hashlib.sha256(f"checkpoint-{index}".encode()).hexdigest() for index in range(2)
+    )
+    registry = CheckpointRegistry(checkpoint_ids)
+    dataset.authorize_locked_test(registry)
     residual = dataset.residual_labels_for(locked, purpose="single_post_freeze_evaluation")
     fine = reconstruct_fine_stress(
         np.stack([first.coarse_stress_normalized, second.coarse_stress_normalized]), residual
     )
     assert fine.shape == (2, grid.point_count, 3)
-    assert dataset.access_snapshot()["fine_label_case_reads"]["locked_test"] == 2
+    authorized = dataset.access_snapshot()
+    assert authorized["fine_label_case_reads"]["locked_test"] == 2
+    assert authorized["authorized_checkpoint_ids"] == list(checkpoint_ids)
+    assert authorized["checkpoint_registry_hash"] == registry.registry_hash
+    assert authorized["frozen_checkpoint_count_authorized"] == registry.checkpoint_count
 
     with pytest.raises(MultiFidelityContractError, match="sample split disagrees"):
         MultiFidelityDataset((replace(first, split="train"),), spec)
@@ -192,13 +286,15 @@ def test_all_loads_inherit_geometry_split_and_locked_fine_access_is_denied() -> 
 
 def test_different_frozen_boundary_is_rejected_before_any_solver_call() -> None:
     geometry, grid = _small_grid()
-    other = make_parametric_tunnel_boundary(
-        geometry.shape,
+    other_spec = GeometryDataSpec(
+        shape=geometry.shape,
         parameters={"span_height_ratio": 1.03, "sidewall_height_ratio": 0.82},
-        n_points=48,
+        n_boundary_points=48,
         roughness_amplitude=0.01,
         seed=12,
+        outer_domain_scale=3.0,
     )
+    other = other_spec.build()
     with pytest.raises(MultiFidelityContractError, match="grid/frozen-boundary mismatch"):
         solve_multifidelity_case(
             other,
@@ -210,20 +306,46 @@ def test_different_frozen_boundary_is_rejected_before_any_solver_call() -> None:
             coarse_mesh=MeshFidelitySpec(0.7, 0.35, 0.7),
             fine_mesh=MeshFidelitySpec(0.4, 0.2, 0.4),
             domain_scale=3.0,
+            geometry_spec=other_spec,
+        )
+
+    original_spec = GeometryDataSpec(
+        shape="horseshoe",
+        parameters={"span_height_ratio": 0.9, "sidewall_height_ratio": 0.82},
+        n_boundary_points=48,
+        roughness_amplitude=0.01,
+        seed=12,
+        outer_domain_scale=3.0,
+    )
+    with pytest.raises(MultiFidelityContractError, match="actual domain_scale"):
+        solve_multifidelity_case(
+            geometry,
+            grid,
+            split="train",
+            sigma_inf_tension_positive=np.asarray([[-10.0, 0.0], [0.0, -6.0]]),
+            young_modulus=30.0e9,
+            poisson_ratio=0.24,
+            coarse_mesh=MeshFidelitySpec(0.7, 0.35, 0.7),
+            fine_mesh=MeshFidelitySpec(0.4, 0.2, 0.4),
+            domain_scale=3.1,
+            geometry_spec=original_spec,
         )
 
 
 def test_tiny_real_common_query_coarse_fine_e2e() -> None:
     pytest.importorskip("gmsh")
     pytest.importorskip("skfem")
-    geometry = make_parametric_tunnel_boundary(
-        "circle",
+    geometry_spec = GeometryDataSpec(
+        shape="circle",
         parameters={"axis_ratio": 1.08},
-        n_points=32,
+        n_boundary_points=32,
         seed=2,
+        outer_domain_scale=3.0,
     )
+    geometry = geometry_spec.build()
     grid = build_elastic_query_grid(
         geometry,
+        geometry_parameters=geometry_spec.identity_parameters(),
         nearfield_points=8,
         wall_offset_points=8,
         farfield_points=4,
@@ -231,6 +353,7 @@ def test_tiny_real_common_query_coarse_fine_e2e() -> None:
         farfield_scale=2.4,
         wall_offset_over_radius=0.12,
         seed=23,
+        outer_domain_scale=geometry_spec.outer_domain_scale,
     )
     sample = solve_multifidelity_case(
         geometry,
@@ -242,6 +365,7 @@ def test_tiny_real_common_query_coarse_fine_e2e() -> None:
         coarse_mesh=MeshFidelitySpec(0.65, 0.32, 0.65),
         fine_mesh=MeshFidelitySpec(0.38, 0.19, 0.38),
         domain_scale=3.0,
+        geometry_spec=geometry_spec,
     )
     spec = GeometrySplitSpec(train=(grid.geometry_group_id,), dev=(), locked_test=())
     dataset = MultiFidelityDataset((sample,), spec)
@@ -254,6 +378,10 @@ def test_tiny_real_common_query_coarse_fine_e2e() -> None:
     assert np.all(sample.fine_element_ids >= 0)
     assert sample.diagnostics["same_frozen_boundary"] is True
     assert sample.diagnostics["same_outer_bounds"] is True
+    expected_bounds = tuple(sample.diagnostics["actual_outer_bounds"])
+    assert tuple(sample.coarse_mesh_metadata["actual_outer_bounds"]) == expected_bounds
+    assert tuple(sample.fine_mesh_metadata["actual_outer_bounds"]) == expected_bounds
+    assert sample.diagnostics["actual_domain_scale"] == 3.0
     assert sample.diagnostics["sign_convention"] == "tension_positive"
     assert sample.model_features.shape == (20, 14)
     assert fine.shape == residual.shape == (1, 20, 3)

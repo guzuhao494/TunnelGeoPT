@@ -47,6 +47,68 @@ class MultiFidelityContractError(ValueError):
     """Raised when a multi-fidelity identity, split, or access rule is broken."""
 
 
+class _FrozenDict(dict[str, Any]):
+    """JSON-serializable mapping that rejects mutation after construction."""
+
+    @staticmethod
+    def _immutable(*args: Any, **kwargs: Any) -> None:
+        del args, kwargs
+        raise TypeError("frozen mapping does not support mutation")
+
+    __delitem__ = _immutable
+    __ior__ = _immutable
+    __setitem__ = _immutable
+    clear = _immutable
+    pop = _immutable
+    popitem = _immutable
+    setdefault = _immutable
+    update = _immutable
+
+
+def _deep_freeze(value: Any) -> Any:
+    """Detach JSON-like metadata from its caller and recursively freeze it."""
+
+    normalized = json.loads(_canonical_json(value))
+
+    def freeze(item: Any) -> Any:
+        if isinstance(item, dict):
+            return _FrozenDict({str(key): freeze(child) for key, child in item.items()})
+        if isinstance(item, list):
+            return tuple(freeze(child) for child in item)
+        return item
+
+    return freeze(normalized)
+
+
+def _readonly_array(value: ArrayLike, *, dtype: Any | None = None) -> np.ndarray:
+    """Copy an array so caller aliases cannot mutate a frozen data contract."""
+
+    result = np.array(value, dtype=dtype, copy=True)
+    result.setflags(write=False)
+    return result
+
+
+def _elastic_query_hash(
+    *,
+    metadata: Mapping[str, Any],
+    geometry_id: str,
+    points: ArrayLike,
+    x: ArrayLike,
+    area_weights: ArrayLike,
+    arc_weights: ArrayLike,
+) -> str:
+    return _sha256_payload(
+        {
+            "metadata": _normalise_mapping(metadata),
+            "geometry_group_id": geometry_id,
+            "points_sha256": _array_digest(points),
+            "x_sha256": _array_digest(x),
+            "area_weights_sha256": _array_digest(area_weights),
+            "arc_weights_sha256": _array_digest(arc_weights),
+        }
+    )
+
+
 def _canonical_json(value: Any) -> str:
     try:
         return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -208,6 +270,18 @@ class GeometryDataSpec:
     seed: int = 0
     outer_domain_scale: float = 4.0
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.shape, str) or not self.shape:
+            raise MultiFidelityContractError("shape must be a non-empty string")
+        if int(self.n_boundary_points) < 8:
+            raise MultiFidelityContractError("n_boundary_points must be at least eight")
+        if (
+            not math.isfinite(float(self.outer_domain_scale))
+            or float(self.outer_domain_scale) <= 1.05
+        ):
+            raise MultiFidelityContractError("outer_domain_scale must be finite and exceed 1.05")
+        object.__setattr__(self, "parameters", _deep_freeze(dict(self.parameters)))
+
     def build(self) -> TunnelGeometry:
         return make_parametric_tunnel_boundary(
             self.shape,
@@ -245,6 +319,9 @@ class GeometrySplitSpec:
     train: tuple[str, ...]
     dev: tuple[str, ...]
     locked_test: tuple[str, ...]
+    protocol: str = "explicit_legacy_v1"
+    salt_sha256: str | None = None
+    section_by_geometry: Mapping[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         groups: list[str] = []
@@ -256,10 +333,35 @@ class GeometrySplitSpec:
                 groups.append(_require_hash(value, f"{name} geometry_group_id"))
         if len(groups) != len(set(groups)):
             raise MultiFidelityContractError("a geometry_group_id appears in multiple splits")
+        object.__setattr__(self, "train", tuple(self.train))
+        object.__setattr__(self, "dev", tuple(self.dev))
+        object.__setattr__(self, "locked_test", tuple(self.locked_test))
+        if not isinstance(self.protocol, str) or not self.protocol:
+            raise MultiFidelityContractError("split protocol must be a non-empty string")
+        if self.salt_sha256 is not None:
+            _require_hash(self.salt_sha256, "salt_sha256")
+        sections = {str(key): str(value) for key, value in self.section_by_geometry.items()}
+        if set(sections) - set(groups):
+            raise MultiFidelityContractError("section map contains geometry outside the split")
+        if any(not section for section in sections.values()):
+            raise MultiFidelityContractError("section family names must be non-empty")
+        if self.protocol == "salted_stratified_geometry_v1" and (
+            self.salt_sha256 is None or set(sections) != set(groups)
+        ):
+            raise MultiFidelityContractError(
+                "formal stratified split requires salt and every geometry section"
+            )
+        object.__setattr__(self, "section_by_geometry", _deep_freeze(sections))
 
     @property
     def geometry_count(self) -> int:
         return len(self.train) + len(self.dev) + len(self.locked_test)
+
+    @property
+    def formal_eligible(self) -> bool:
+        """Only salted, section-stratified assignments may enter a formal run."""
+
+        return self.protocol == "salted_stratified_geometry_v1"
 
     def split_for(self, geometry_id: str) -> str:
         geometry_id = _require_hash(geometry_id, "geometry_id")
@@ -275,13 +377,27 @@ class GeometrySplitSpec:
             "dev": list(self.dev),
             "locked_test": list(self.locked_test),
             "counts": {name: len(getattr(self, name)) for name in SPLIT_NAMES},
+            "protocol": self.protocol,
+            "formal_eligible": self.formal_eligible,
+            "salt_sha256": self.salt_sha256,
+            "section_by_geometry": dict(self.section_by_geometry),
         }
 
 
 def freeze_geometry_splits(
-    geometry_ids: Sequence[str], *, train_count: int, dev_count: int, locked_test_count: int
+    geometry_ids: Sequence[str],
+    *,
+    train_count: int,
+    dev_count: int,
+    locked_test_count: int,
+    salt: str | None = None,
 ) -> GeometrySplitSpec:
-    """Freeze deterministic hash-ordered splits before any elastic solve."""
+    """Freeze an unstratified split; retained only for legacy/smoke callers.
+
+    Supplying ``salt`` changes the ranking, but this function remains formally
+    ineligible because section balance is unknown.  Formal runs must call
+    :func:`freeze_stratified_geometry_splits`.
+    """
 
     identifiers = [_require_hash(value, "geometry_id") for value in geometry_ids]
     if len(identifiers) != len(set(identifiers)):
@@ -289,13 +405,94 @@ def freeze_geometry_splits(
     counts = [int(train_count), int(dev_count), int(locked_test_count)]
     if any(count < 1 for count in counts) or sum(counts) != len(identifiers):
         raise MultiFidelityContractError("positive split counts must sum to geometry count")
-    ordered = sorted(identifiers)
+    if salt is not None and (not isinstance(salt, str) or not salt):
+        raise MultiFidelityContractError("split salt must be a non-empty string")
+    ordered = sorted(
+        identifiers,
+        key=(
+            None
+            if salt is None
+            else lambda identifier: _sha256_payload({"salt": salt, "geometry_group_id": identifier})
+        ),
+    )
     train_end = counts[0]
     dev_end = train_end + counts[1]
     return GeometrySplitSpec(
         train=tuple(ordered[:train_end]),
         dev=tuple(ordered[train_end:dev_end]),
         locked_test=tuple(ordered[dev_end:]),
+        protocol="explicit_legacy_v1" if salt is None else "salted_unstratified_geometry_v1",
+        salt_sha256=None if salt is None else hashlib.sha256(salt.encode("utf-8")).hexdigest(),
+    )
+
+
+@dataclass(frozen=True)
+class GeometrySplitRecord:
+    """One preregistered parent geometry and its section family."""
+
+    geometry_group_id: str
+    section_family: str
+
+    def __post_init__(self) -> None:
+        _require_hash(self.geometry_group_id, "geometry_group_id")
+        if not isinstance(self.section_family, str) or not self.section_family:
+            raise MultiFidelityContractError("section_family must be a non-empty string")
+
+
+def freeze_stratified_geometry_splits(
+    records: Sequence[GeometrySplitRecord],
+    *,
+    salt: str,
+    counts_per_section: Mapping[str, Mapping[str, int]],
+) -> GeometrySplitSpec:
+    """Freeze a required-salt, section-stratified parent-geometry split."""
+
+    if not isinstance(salt, str) or not salt:
+        raise MultiFidelityContractError("formal split salt must be a non-empty string")
+    items = tuple(records)
+    if not items:
+        raise MultiFidelityContractError("formal split requires at least one geometry record")
+    identifiers = [item.geometry_group_id for item in items]
+    if len(identifiers) != len(set(identifiers)):
+        raise MultiFidelityContractError("formal split geometry ids must be unique")
+    by_section: dict[str, list[str]] = {}
+    for item in items:
+        by_section.setdefault(item.section_family, []).append(item.geometry_group_id)
+    if set(by_section) != set(counts_per_section):
+        raise MultiFidelityContractError("counts_per_section must exactly cover section families")
+    assignments: dict[str, list[str]] = {name: [] for name in SPLIT_NAMES}
+    for section in sorted(by_section):
+        requested = counts_per_section[section]
+        if set(requested) != set(SPLIT_NAMES):
+            raise MultiFidelityContractError(
+                f"section {section!r} counts must contain exactly {SPLIT_NAMES}"
+            )
+        counts = {name: int(requested[name]) for name in SPLIT_NAMES}
+        if any(value < 1 for value in counts.values()):
+            raise MultiFidelityContractError("formal per-section split counts must be positive")
+        identifiers_in_section = by_section[section]
+        if sum(counts.values()) != len(identifiers_in_section):
+            raise MultiFidelityContractError(
+                f"section {section!r} counts do not sum to its geometry count"
+            )
+        ordered = sorted(
+            identifiers_in_section,
+            key=lambda identifier: _sha256_payload(
+                {"salt": salt, "section": section, "geometry_group_id": identifier}
+            ),
+        )
+        cursor = 0
+        for split in SPLIT_NAMES:
+            next_cursor = cursor + counts[split]
+            assignments[split].extend(ordered[cursor:next_cursor])
+            cursor = next_cursor
+    return GeometrySplitSpec(
+        train=tuple(sorted(assignments["train"])),
+        dev=tuple(sorted(assignments["dev"])),
+        locked_test=tuple(sorted(assignments["locked_test"])),
+        protocol="salted_stratified_geometry_v1",
+        salt_sha256=hashlib.sha256(salt.encode("utf-8")).hexdigest(),
+        section_by_geometry={item.geometry_group_id: item.section_family for item in items},
     )
 
 
@@ -369,6 +566,28 @@ class ElasticQueryGrid:
             raise MultiFidelityContractError("arc_weights must sum to one")
         if not np.isfinite(points).all() or not np.isfinite(x).all():
             raise MultiFidelityContractError("query grid contains non-finite values")
+        expected_hash = _elastic_query_hash(
+            metadata=self.metadata,
+            geometry_id=self.geometry_group_id,
+            points=points,
+            x=x,
+            area_weights=self.area_weights,
+            arc_weights=self.arc_weights,
+        )
+        if self.query_hash != expected_hash:
+            raise MultiFidelityContractError("query_hash does not match the query arrays/metadata")
+        for name, dtype in (
+            ("points_yz", np.float64),
+            ("x", np.float32),
+            ("nearfield_mask", np.bool_),
+            ("wall_offset_mask", np.bool_),
+            ("farfield_mask", np.bool_),
+            ("area_weights", np.float64),
+            ("arc_weights", np.float64),
+            ("normalization_center_yz", np.float64),
+        ):
+            object.__setattr__(self, name, _readonly_array(getattr(self, name), dtype=dtype))
+        object.__setattr__(self, "metadata", _deep_freeze(dict(self.metadata)))
 
     @property
     def point_count(self) -> int:
@@ -536,15 +755,13 @@ def build_elastic_query_grid(
         "area_weight_normalization": "nearfield_sum_one",
         "arc_weight_normalization": "wall_offset_sum_one",
     }
-    query_hash = _sha256_payload(
-        {
-            "metadata": metadata,
-            "geometry_group_id": geometry_id,
-            "points_sha256": _array_digest(points),
-            "x_sha256": _array_digest(x),
-            "area_weights_sha256": _array_digest(area_weights),
-            "arc_weights_sha256": _array_digest(arc_weights),
-        }
+    query_hash = _elastic_query_hash(
+        metadata=metadata,
+        geometry_id=geometry_id,
+        points=points,
+        x=x,
+        area_weights=area_weights,
+        arc_weights=arc_weights,
     )
     return ElasticQueryGrid(
         geometry_group_id=geometry_id,
@@ -633,6 +850,16 @@ class MultiFidelitySample:
                 raise MultiFidelityContractError(f"{name} contains a query outside the mesh")
         if not math.isfinite(float(self.stress_scale)) or float(self.stress_scale) <= 0.0:
             raise MultiFidelityContractError("stress_scale must be positive and finite")
+        for name, dtype in (
+            ("condition", np.float32),
+            ("coarse_stress_normalized", np.float64),
+            ("_fine_stress_normalized", np.float64),
+            ("coarse_element_ids", np.int64),
+            ("fine_element_ids", np.int64),
+        ):
+            object.__setattr__(self, name, _readonly_array(getattr(self, name), dtype=dtype))
+        for name in ("coarse_mesh_metadata", "fine_mesh_metadata", "diagnostics"):
+            object.__setattr__(self, name, _deep_freeze(dict(getattr(self, name))))
 
     @property
     def model_features(self) -> FloatArray:
@@ -672,19 +899,57 @@ def solve_multifidelity_case(
     fine_mesh: MeshFidelitySpec,
     domain_scale: float = 4.0,
     sigma_xx_inf_tension_positive: float | None = None,
+    geometry_spec: GeometryDataSpec | None = None,
     geometry_identity_parameters: Mapping[str, Any] | None = None,
 ) -> MultiFidelitySample:
     """Solve one frozen boundary/load twice, changing mesh resolution only."""
 
     if split not in SPLIT_NAMES:
         raise MultiFidelityContractError(f"unknown split {split!r}")
+    if geometry_spec is not None:
+        registered_geometry = geometry_spec.build()
+        if _array_digest(geometry.boundary_yz) != _array_digest(registered_geometry.boundary_yz):
+            raise MultiFidelityContractError(
+                "geometry boundary does not match the supplied GeometryDataSpec"
+            )
+        spec_identity_parameters = geometry_spec.identity_parameters()
+        if geometry_identity_parameters is not None and _canonical_json(
+            dict(geometry_identity_parameters)
+        ) != _canonical_json(spec_identity_parameters):
+            raise MultiFidelityContractError(
+                "geometry_spec and geometry_identity_parameters disagree"
+            )
+        identity_parameters = spec_identity_parameters
+        registered_domain_scale = float(geometry_spec.outer_domain_scale)
+    else:
+        if geometry_identity_parameters is None:
+            raise MultiFidelityContractError(
+                "paired solve requires GeometryDataSpec or its frozen identity parameters"
+            )
+        identity_parameters = _normalise_mapping(geometry_identity_parameters)
+        try:
+            outer_rule = identity_parameters["outer_domain_rule"]
+            if outer_rule["kind"] != "boundary_extent_rectangle":
+                raise KeyError("kind")
+            registered_domain_scale = float(outer_rule["domain_scale"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise MultiFidelityContractError(
+                "geometry identity must contain a boundary_extent_rectangle outer-domain rule"
+            ) from exc
+    if not math.isclose(float(domain_scale), registered_domain_scale, rel_tol=0.0, abs_tol=1e-12):
+        raise MultiFidelityContractError(
+            "actual domain_scale must equal GeometryDataSpec.outer_domain_scale"
+        )
+    registered_grid_scale = grid.metadata.get("outer_domain_scale")
+    if registered_grid_scale is None or not math.isclose(
+        float(registered_grid_scale), registered_domain_scale, rel_tol=0.0, abs_tol=1e-12
+    ):
+        raise MultiFidelityContractError(
+            "query grid outer-domain identity must match GeometryDataSpec"
+        )
     expected_geometry_id = geometry_group_id(
         geometry,
-        parameters=(
-            geometry.shape_parameters
-            if geometry_identity_parameters is None
-            else geometry_identity_parameters
-        ),
+        parameters=identity_parameters,
     )
     if expected_geometry_id != grid.geometry_group_id:
         raise MultiFidelityContractError(
@@ -773,6 +1038,8 @@ def solve_multifidelity_case(
         "common_query_hash": grid.query_hash,
         "same_frozen_boundary": True,
         "same_outer_bounds": meshes[0].outer_bounds == meshes[1].outer_bounds,
+        "actual_domain_scale": float(domain_scale),
+        "actual_outer_bounds": [float(value) for value in common_outer_bounds],
         "coarse": {
             "algebraic_residual": float(results[0].algebraic_residual),
             "energy_closure": float(results[0].energy_closure),
@@ -798,10 +1065,56 @@ def solve_multifidelity_case(
         _fine_stress_normalized=normalized[1],
         coarse_element_ids=np.asarray(element_ids[0], dtype=np.int64),
         fine_element_ids=np.asarray(element_ids[1], dtype=np.int64),
-        coarse_mesh_metadata=dict(meshes[0].metadata),
-        fine_mesh_metadata=dict(meshes[1].metadata),
+        coarse_mesh_metadata={
+            **dict(meshes[0].metadata),
+            "actual_outer_bounds": [float(value) for value in meshes[0].outer_bounds],
+        },
+        fine_mesh_metadata={
+            **dict(meshes[1].metadata),
+            "actual_outer_bounds": [float(value) for value in meshes[1].outer_bounds],
+        },
         diagnostics=diagnostics,
     )
+
+
+@dataclass(frozen=True)
+class CheckpointRegistry:
+    """Externally frozen checkpoint identities required before label unsealing."""
+
+    checkpoint_ids: tuple[str, ...]
+    registry_hash: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        identities = tuple(
+            _require_hash(str(value), "checkpoint_id") for value in self.checkpoint_ids
+        )
+        if not identities:
+            raise MultiFidelityContractError("checkpoint registry must not be empty")
+        if len(identities) != len(set(identities)):
+            raise MultiFidelityContractError("checkpoint registry identities must be unique")
+        object.__setattr__(self, "checkpoint_ids", identities)
+        object.__setattr__(
+            self,
+            "registry_hash",
+            _sha256_payload(
+                {
+                    "identity": "tunnelgeopt.checkpoint_registry.v1",
+                    "checkpoint_ids": list(identities),
+                }
+            ),
+        )
+
+    @property
+    def checkpoint_count(self) -> int:
+        return len(self.checkpoint_ids)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "schema": "tunnelgeopt.checkpoint_registry.v1",
+            "checkpoint_ids": list(self.checkpoint_ids),
+            "checkpoint_count": self.checkpoint_count,
+            "registry_hash": self.registry_hash,
+        }
 
 
 @dataclass
@@ -815,6 +1128,8 @@ class MultiFidelityAccessAudit:
     denied_locked_fine_accesses: int = 0
     locked_test_unlocked: bool = False
     frozen_checkpoint_count_authorized: int = 0
+    authorized_checkpoint_ids: tuple[str, ...] = ()
+    checkpoint_registry_hash: str | None = None
     events: list[dict[str, Any]] = field(default_factory=list)
 
     def snapshot(self) -> dict[str, Any]:
@@ -824,6 +1139,8 @@ class MultiFidelityAccessAudit:
             "denied_locked_fine_accesses": int(self.denied_locked_fine_accesses),
             "locked_test_unlocked": bool(self.locked_test_unlocked),
             "frozen_checkpoint_count_authorized": int(self.frozen_checkpoint_count_authorized),
+            "authorized_checkpoint_ids": list(self.authorized_checkpoint_ids),
+            "checkpoint_registry_hash": self.checkpoint_registry_hash,
             "events": [dict(event) for event in self.events],
         }
 
@@ -889,22 +1206,28 @@ class MultiFidelityDataset:
             np.float32
         )
 
-    def authorize_locked_test(
-        self, frozen_checkpoint_ids: Sequence[str], *, expected_checkpoint_count: int
-    ) -> None:
-        identities = [str(value) for value in frozen_checkpoint_ids]
-        if expected_checkpoint_count <= 0 or len(identities) != expected_checkpoint_count:
+    def authorize_locked_test(self, registry: CheckpointRegistry) -> None:
+        """Unlock against one already-frozen external registry, never a self-reported count."""
+
+        if not isinstance(registry, CheckpointRegistry):
             raise MultiFidelityContractError(
-                "locked-test authorization requires every expected frozen checkpoint"
+                "locked-test authorization requires a frozen CheckpointRegistry"
             )
-        if len(set(identities)) != len(identities) or any(not value for value in identities):
-            raise MultiFidelityContractError("checkpoint identities must be unique and non-empty")
+        if self.access_audit.locked_test_unlocked:
+            raise MultiFidelityContractError("locked-test labels were already authorized")
         if self.access_audit.fine_label_case_reads["locked_test"]:
             raise MultiFidelityContractError("locked fine labels were read before authorization")
         self.access_audit.locked_test_unlocked = True
-        self.access_audit.frozen_checkpoint_count_authorized = len(identities)
+        self.access_audit.frozen_checkpoint_count_authorized = registry.checkpoint_count
+        self.access_audit.authorized_checkpoint_ids = registry.checkpoint_ids
+        self.access_audit.checkpoint_registry_hash = registry.registry_hash
         self.access_audit.events.append(
-            {"event": "locked_test_authorized", "checkpoint_count": len(identities)}
+            {
+                "event": "locked_test_authorized",
+                "checkpoint_count": registry.checkpoint_count,
+                "checkpoint_ids": list(registry.checkpoint_ids),
+                "checkpoint_registry_hash": registry.registry_hash,
+            }
         )
 
     def _fine_arrays_for(
@@ -983,8 +1306,10 @@ __all__ = [
     "SIGN_CONVENTION",
     "SPLIT_NAMES",
     "STRESS_COMPONENT_ORDER",
+    "CheckpointRegistry",
     "ElasticQueryGrid",
     "GeometryDataSpec",
+    "GeometrySplitRecord",
     "GeometrySplitSpec",
     "MeshFidelitySpec",
     "MultiFidelityAccessAudit",
@@ -996,6 +1321,7 @@ __all__ = [
     "elastic_condition_vector",
     "farfield_stress_scale",
     "freeze_geometry_splits",
+    "freeze_stratified_geometry_splits",
     "geometry_group_id",
     "load_group_id",
     "reconstruct_fine_stress",
