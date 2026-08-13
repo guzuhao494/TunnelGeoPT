@@ -114,11 +114,20 @@
 - [ ] 公共 query 在求解前确定；粗细场均通过 point-in-triangle 独立定位和重心坐标复验。
 - [ ] stress scale 只来自已知远场输入；任何归一化都不读取 fine/test 标签。
 - [ ] smoke 完成且只用于接线；formal config 在任何正式效果计算前冻结并提交。
+- [x] 独立 dev-only fine-ultrafine 收敛审计通过：24 case median/p95 为 `2.116%/3.036%`，三族 median 均 `<=2.564%`，locked 读取为 0。
+- [x] 优化上限仅据独立 train/dev 轨迹冻结为 max 300 epochs、patience 35；其他优化字段与全部效果门槛未改变，formal/locked 读取为 0。
+- [x] `configs/multifidelity_formal.json` 已从 candidate 更新为 `frozen_preregistered_pre_generation`；允许生成但当前仍为 `formal_data_generated=false`，未误写成已运行。
 - [ ] `Scratch`、`Direct+Coarse`、`Residual+Coarse` 与 `Mismatched-Coarse` 使用公平骨干/预算。
 - [ ] 25/50/75/100% 子集按父几何整组、分族平衡且严格嵌套。
-- [ ] 全部五种子 checkpoint 在 test 解锁前原子落盘并记录 SHA-256。
+- [ ] 方法矩阵严格为 Scratch100、Direct100、Residual25/50/75/100、Mismatched50 × 5 seeds，共 35 个 checkpoint。
+- [ ] 每个 checkpoint 的实际训练行/比例/config hash 由 `TrainingContract` 绑定；全部 35 个在 test 解锁前原子落盘并进入带唯一 SHA-256 的 `CheckpointRegistry`。
 - [ ] train/dev/locked-IID/geometry-OOD/load-OOD/joint-OOD 的 geometry/case/boundary/load hash 零交集。
 - [ ] 至少 20% 预选 case 的 fine-ultrafine 审计通过；失败则 ABSTAIN 而非模型 No-Go。
+- [ ] coarse/fine/ultrafine 均满足代数残差 `<=1e-9`、能量误差 `<=1e-9`、最小面积/R² `>=1e-12`、最小三角形质量 `>=0.02` 和全部 query 可定位。
+- [ ] 每个“分区 × 断面族”有效 case 率 `>=95%`；失败 case 全部记录且未静默替换。
+- [ ] locked fine label 位于独立文件级 store；训练进程没有其路径，Python 私有字段未被当作安全边界。
+- [ ] `0.02R` wall-offset 只报告相对 fine 的牵引/合力差异；未声称绝对 traction-free 或全域平衡残差。
+- [ ] Residual50 wall-offset 指标同时通过冻结的绝对 cap 与 `1.10 × raw coarse + margin` 非恶化门槛。
 - [ ] locked-IID、geometry-OOD、load-OOD 仅评价一次，并报告所有种子、断面和失败切片。
 - [ ] 主 gate 使用父几何与训练种子的层级配对 bootstrap，不按点 bootstrap。
 - [ ] 只有全部预注册 gate 通过才表述“50% fine 训练标签非劣”；否则如实 No-Go/ABSTAIN。

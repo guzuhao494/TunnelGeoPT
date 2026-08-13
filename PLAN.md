@@ -197,8 +197,12 @@ v0.2 的圆洞 Stress-Lift 已按预注册门槛判为 No-Go，因此本节取�
 1. 增加真正改变归一化边界的连续宏观断面参数，冻结精确边界 hash；
 2. 以 `geometry_group_id` 为最小 split 单位，使同一父几何的全部载荷、网格和查询点继承同一 split；
 3. 同一条边界只改变网格尺寸，在独立公共查询点分别定位 coarse/fine 单元，不以单元中心最近邻配对；
-4. smoke 只验证接线，不生成正式结论；smoke 后冻结 formal config、salt、seeds、基线和门槛；
-5. 全部 checkpoint 冻结并哈希后才解锁全新 locked fine 标签，并只运行一次正式评价；
-6. 正式结果通过五种子、三类断面、IID/geometry-OOD/load-OOD、fine-ultrafine 与泄漏审计后，才允许称为“合成线弹性多保真标签效率成果”。
+4. smoke 只验证接线，不生成正式结论；其后以独立 dev-only 数据完成 fine-ultrafine 收敛和优化超参数校准；该门禁已通过且 locked 读取为 0；
+5. `configs/multifidelity_formal.json` 已转为 `frozen_preregistered_pre_generation`，允许生成 formal 数据，但仍保持 `formal_data_generated=false`、效果未计算、locked label 未打开；
+6. 正式 checkpoint 固定为 Scratch100、Direct100、Residual25/50/75/100、Mismatched50 × 5 seeds，共 35 个；每个 checkpoint 必须绑定 `TrainingContract` 并进入 `CheckpointRegistry`；
+7. locked fine label 使用独立文件级 store，训练进程不得收到其路径；全部 checkpoint 冻结并哈希后才由独立 evaluator 解锁，并对每个 locked 分区最多评价一次；
+8. `0.02R` wall-offset query 只计算相对 fine 的牵引/合力差异，不冒充精确洞壁 traction-free 或全域平衡残差；
+9. solver 代数/能量残差、三角形面积/质量、每分区每族 95% 有效率和 fine-ultrafine `3%/5%/4%` 门槛必须先通过，否则 ABSTAIN；
+10. 正式结果通过五种子、三类断面、IID/geometry-OOD/load-OOD、fine-ultrafine 与泄漏审计后，才允许称为“合成线弹性多保真标签效率成果”。
 
 不论结果如何，本阶段都不声称已学习破裂、损伤、岩爆、微观到现场迁移或工程预警。

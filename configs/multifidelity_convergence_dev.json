@@ -1,0 +1,73 @@
+{
+  "schema_version": "0.3.0-convergence-dev-v1",
+  "config_name": "fine_ultrafine_development_calibration",
+  "status": "frozen_development_calibration_before_execution",
+  "run_id": "mf-convergence-dev-v0.3.0",
+  "scope": "development_only_mesh_calibration_no_model_effect_claim",
+  "claim_exclusions": [
+    "model_effect",
+    "locked_test_effect",
+    "fracture",
+    "damage",
+    "rockburst",
+    "field_validity"
+  ],
+  "data_access": {
+    "allowed_split": "dev",
+    "locked_or_pseudo_test_labels_allowed": false,
+    "seed_namespace": "tunnelgeopt-v0.3-development-convergence-only"
+  },
+  "geometry": {
+    "section_families": ["circle", "horseshoe", "straight_wall_arch"],
+    "parents_per_family": 4,
+    "boundary_points": 192,
+    "radius": 1.0,
+    "roughness_amplitude_range": [0.008, 0.025],
+    "parameter_quantile_range": [0.15, 0.85],
+    "generator_seed": 313101
+  },
+  "loads": {
+    "per_geometry": 2,
+    "young_modulus_over_reference_stress": 500.0,
+    "poisson_ratio": 0.25,
+    "sigma1_over_reference_stress": [0.3, 0.8],
+    "sigma3_over_sigma1": [0.45, 0.85],
+    "principal_angle_deg": [-45.0, 45.0],
+    "generator_seed": 313103
+  },
+  "mesh": {
+    "outer_half_width_over_radius": 8.0,
+    "fine": {
+      "mesh_size_over_radius": 0.4,
+      "wall_size_over_radius": 0.0625,
+      "farfield_size_over_radius": 0.4
+    },
+    "ultrafine": {
+      "mesh_size_over_radius": 0.25,
+      "wall_size_over_radius": 0.03125,
+      "farfield_size_over_radius": 0.25
+    }
+  },
+  "query": {
+    "points_per_case": 256,
+    "nearfield_volume": 192,
+    "wall_offset": 32,
+    "farfield": 32,
+    "nearfield_distance_over_radius": [0.05, 2.0],
+    "wall_offset_over_radius": 0.02,
+    "generator_seed": 313107
+  },
+  "quality_gates": {
+    "required_case_count": 24,
+    "required_cases_per_family": 8,
+    "stress_frobenius_rell2_case_median_max": 0.03,
+    "stress_frobenius_rell2_case_p95_max": 0.05,
+    "stress_frobenius_rell2_each_family_median_max": 0.04,
+    "algebraic_residual_max": 1e-9,
+    "energy_closure_max": 1e-9,
+    "minimum_triangle_quality_min": 0.02,
+    "require_all_query_points_located": true,
+    "require_same_boundary_outer_domain_and_query": true,
+    "effect_claim_allowed": false
+  }
+}

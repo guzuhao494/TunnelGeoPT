@@ -1,0 +1,101 @@
+{
+  "checks": {
+    "algebraic_residual": true,
+    "all_query_points_located": true,
+    "effect_claim_allowed": false,
+    "energy_closure": true,
+    "minimum_triangle_quality": true,
+    "required_case_count": true,
+    "required_cases_per_family": true,
+    "same_boundary_outer_domain_and_query": true,
+    "stress_case_median": true,
+    "stress_case_p95": true,
+    "stress_each_family_median": true
+  },
+  "claim_boundary": "Development-only mesh calibration; no model, locked-test, fracture, rockburst, field-validity, or transfer claim is authorized.",
+  "data_access_audit": {
+    "authorized_checkpoint_ids": [],
+    "checkpoint_registry_hash": null,
+    "coarse_feature_case_reads": {
+      "dev": 0,
+      "locked_test": 0,
+      "train": 0
+    },
+    "denied_locked_fine_accesses": 0,
+    "events": [
+      {
+        "count": 24,
+        "event": "fine_labels_read",
+        "purpose": "development_fine_ultrafine_mesh_calibration"
+      }
+    ],
+    "fine_label_case_reads": {
+      "dev": 24,
+      "locked_test": 0,
+      "train": 0
+    },
+    "frozen_checkpoint_count_authorized": 0,
+    "locked_test_unlocked": false
+  },
+  "decision": "current_tiers_eligible_for_formal_freeze",
+  "design_inventory": {
+    "case_count": 24,
+    "case_count_by_family": {
+      "circle": 8,
+      "horseshoe": 8,
+      "straight_wall_arch": 8
+    },
+    "common_query_hash_count": 12,
+    "mesh_tiers_over_radius": {
+      "fine": {
+        "farfield_size_over_radius": 0.4,
+        "mesh_size_over_radius": 0.4,
+        "wall_size_over_radius": 0.0625
+      },
+      "outer_half_width_over_radius": 8.0,
+      "ultrafine": {
+        "farfield_size_over_radius": 0.25,
+        "mesh_size_over_radius": 0.25,
+        "wall_size_over_radius": 0.03125
+      }
+    },
+    "parent_geometry_count": 12,
+    "same_query_hash_for_fine_and_ultrafine_every_case": true,
+    "split": "dev"
+  },
+  "effect_claim_allowed": false,
+  "elapsed_seconds": 47.39639680000255,
+  "primary_metric": {
+    "case_count": 24,
+    "case_weighting": "each case equal for distribution summaries",
+    "family_case_counts": {
+      "circle": 8,
+      "horseshoe": 8,
+      "straight_wall_arch": 8
+    },
+    "family_medians": {
+      "circle": 0.017694535359408004,
+      "horseshoe": 0.022042811990048806,
+      "straight_wall_arch": 0.025639129278784794
+    },
+    "maximum": 0.03775678252423702,
+    "mean": 0.0223785020095366,
+    "median": 0.021162688509480623,
+    "name": "nearfield_area_weighted_stress_tensor_frobenius_relative_l2",
+    "p90": 0.029113606160268386,
+    "p95": 0.030363384576052296,
+    "shear_multiplier": 2.0
+  },
+  "solver_qc": {
+    "all_query_points_located": true,
+    "maximum_algebraic_residual": 2.960104000215885e-13,
+    "maximum_energy_closure": 2.2532215894306808e-14,
+    "minimum_triangle_quality": 0.6872970251584267,
+    "same_boundary_outer_domain_and_query": true
+  },
+  "solver_seconds": {
+    "maximum_per_case": 2.450934899999993,
+    "median_per_case": 1.830435750001925,
+    "total": 43.98454950002633
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "case_count": 24,
+  "case_distribution": {
+    "by_family": {
+      "circle": 8,
+      "horseshoe": 8,
+      "straight_wall_arch": 8
+    },
+    "split": "dev"
+  },
+  "common_query_contract": {
+    "same_hash_for_fine_and_ultrafine_every_case": true,
+    "unique_parent_query_hash_count": 12
+  },
+  "config_sha256": "215ea7d9082815bced14e4bdd3a39434b60a92dec61338d8fdd9a360e72a49ca",
+  "created_at_utc": "2026-08-13T11:15:38.594034+00:00",
+  "decision": "current_tiers_eligible_for_formal_freeze",
+  "effect_claim_allowed": false,
+  "files": {
+    "case_metrics.json": "60ae5bfe614fa9ec2230c02bb1822998807bdb2d04354c61fb280a0d2376e65b",
+    "config.snapshot.json": "1cd4f285de5b411b0089935c1daf06dd0f4a5b44dbdc22598a64112ee7607af7",
+    "environment.json": "40578ed5ae9eee8e7b4b76121a44118745a88061088ce3697538efe87eaf741f",
+    "metrics.json": "56daf68aeeb6a8680c6a6d75301099b6ee096d69264682c1e7720cc4201129f2",
+    "progress.jsonl": "a55c873a56db89f1c12b6bbf058fc96263fa121c108211fdd2ee9288a05e8c27"
+  },
+  "geometry_count": 12,
+  "locked_or_pseudo_test_labels_read": false,
+  "locked_test_fine_label_case_reads": 0,
+  "mesh_tiers_over_radius": {
+    "fine": {
+      "farfield_size_over_radius": 0.4,
+      "mesh_size_over_radius": 0.4,
+      "wall_size_over_radius": 0.0625
+    },
+    "outer_half_width_over_radius": 8.0,
+    "ultrafine": {
+      "farfield_size_over_radius": 0.25,
+      "mesh_size_over_radius": 0.25,
+      "wall_size_over_radius": 0.03125
+    }
+  },
+  "run_id": "mf-convergence-dev-v0.3.0",
+  "runner_sha256": "3778f8ab8257f6f90422acc4cc6806f804ef5470f0409113e852660a7423ef55",
+  "schema_version": "tunnelgeopt.multifidelity_convergence_manifest.v1",
+  "scope": "development_only_mesh_calibration_no_model_effect_claim",
+  "section_families": [
+    "circle",
+    "horseshoe",
+    "straight_wall_arch"
+  ],
+  "seed_namespace": "tunnelgeopt-v0.3-development-convergence-only",
+  "status": "complete"
+}

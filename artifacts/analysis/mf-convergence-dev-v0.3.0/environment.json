@@ -1,0 +1,25 @@
+{
+  "captured_at_utc": "2026-08-13T11:15:38.532282+00:00",
+  "config_sha256": "215ea7d9082815bced14e4bdd3a39434b60a92dec61338d8fdd9a360e72a49ca",
+  "git_head_at_execution": null,
+  "git_worktree_status_at_execution": [],
+  "packages": {
+    "gmsh": "4.15.2",
+    "numpy": "2.5.2",
+    "scikit-fem": "12.0.2",
+    "scipy": "1.18.0",
+    "tunnelgeopt": "0.1.0"
+  },
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.13 | packaged by Anaconda, Inc. | (main, Mar 19 2026, 20:16:45) [MSC v.1942 64 bit (AMD64)]",
+  "python_executable": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\.venv-gpu\\Scripts\\python.exe",
+  "runner_sha256": "3778f8ab8257f6f90422acc4cc6806f804ef5470f0409113e852660a7423ef55",
+  "source_file_sha256": {
+    "src/tunnelgeopt/elasticity.py": "2756b6ea95fe449b3abae53426b33741c74bc7acc711f1a14a0640c78f65fe6a",
+    "src/tunnelgeopt/field_sampling.py": "13f8df09458b5799aa530b295ac37bf19868948968eabd99289e69a85c07930e",
+    "src/tunnelgeopt/geometry.py": "fbf99770bf997c13eb37884ca06d5558d56b2aae1db5d8f9a07b1d2e8e0791ca",
+    "src/tunnelgeopt/mesh.py": "74bc3e41e099937e6cc09572b15d25c2cb211a5de35292dc819cdfadedb7487d",
+    "src/tunnelgeopt/multifidelity.py": "1e889f452aab68fcee66ec13dc11ab902aa5faee8342f3aacdbd6dcb74482868",
+    "src/tunnelgeopt/multifidelity_learning.py": "2bbe6666c971c4f2ad2b9b1ec606fd81fe187ed0305385dfdc8b01a1cc2ac8f5"
+  }
+}

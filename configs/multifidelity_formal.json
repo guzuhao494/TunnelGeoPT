@@ -1,0 +1,620 @@
+{
+  "schema_version": "tunnelgeopt.multifidelity.formal.v1",
+  "preregistration_id": "v0.3-mf-residual-prereg-v2",
+  "config_name": "multifidelity_residual_formal",
+  "run_id": "mf-residual-formal-v0.3.0",
+  "status": {
+    "state": "frozen_preregistered_pre_generation",
+    "formal_data_generated": false,
+    "formal_effect_computation_started": false,
+    "locked_labels_opened": false,
+    "requires_dev_convergence_pass": false,
+    "eligible_to_generate_formal_data": true,
+    "test_driven_rewrite_prohibited": true
+  },
+  "scope": "synthetic_two_dimensional_plane_strain_linear_elastic_coarse_to_fine_discretization_correction",
+  "claim_exclusions": [
+    "fracture",
+    "damage",
+    "rockburst",
+    "three_dimensional_dynamics",
+    "micro_to_field_transfer",
+    "field_prediction",
+    "engineering_truth"
+  ],
+  "hashing": {
+    "algorithm": "sha256",
+    "canonicalization": "utf8_json_sort_keys_compact_allow_nan_false_v1",
+    "canonicalization_equivalent_python": "json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode('utf-8')",
+    "config_hash_scope": "entire_parsed_config",
+    "embedded_digest": false,
+    "digest_storage": "formal_manifest.config_sha256",
+    "require_hashes_for": [
+      "config",
+      "geometry_manifest",
+      "case_manifest",
+      "query_manifest",
+      "sealed_label_files",
+      "training_contracts",
+      "checkpoint_registry",
+      "checkpoints",
+      "access_log",
+      "metrics",
+      "decision"
+    ]
+  },
+  "preformal_development_evidence": {
+    "mesh_convergence": {
+      "run_id": "mf-convergence-dev-v0.3.0",
+      "scope": "development_only_mesh_calibration_no_model_effect_claim",
+      "config_canonical_sha256": "215ea7d9082815bced14e4bdd3a39434b60a92dec61338d8fdd9a360e72a49ca",
+      "config_snapshot_file_sha256": "1cd4f285de5b411b0089935c1daf06dd0f4a5b44dbdc22598a64112ee7607af7",
+      "manifest_file_sha256": "08f930981aae218926fcd955936513f7d868ef43bc27f7ea4aa783c7c006c139",
+      "metrics_file_sha256": "56daf68aeeb6a8680c6a6d75301099b6ee096d69264682c1e7720cc4201129f2",
+      "case_count": 24,
+      "locked_test_fine_label_case_reads": 0,
+      "overall_median": 0.021162688509480623,
+      "overall_p95": 0.030363384576052296,
+      "family_medians": {
+        "circle": 0.017694535359408004,
+        "horseshoe": 0.022042811990048806,
+        "straight_wall_arch": 0.025639129278784794
+      },
+      "decision": "current_tiers_eligible_for_formal_freeze"
+    },
+    "optimization_calibration": {
+      "scope": "independent_smoke_train_dev_only_no_formal_or_locked_labels",
+      "formal_locked_label_reads": 0,
+      "candidate_max_epochs": 200,
+      "observed_best_epochs": {
+        "scratch_100": 194,
+        "direct_coarse_100": 198,
+        "residual_coarse_50": 138
+      },
+      "observed_residual_coarse_50_stop_epoch": 164,
+      "frozen_change": "max_epochs_200_to_300_and_patience_25_to_35",
+      "rationale": "scratch_and_direct_were_still_improving_near_the_200_epoch_cap_while_residual_50_had_already_early_stopped",
+      "all_other_optimization_fields_unchanged": true,
+      "effect_gate_changed": false
+    }
+  },
+  "identity_and_split": {
+    "split_unit": "geometry_group_id",
+    "split_salt": "tunnelgeopt-v0.3-mf-residual-20260813-v1",
+    "split_protocol": "salted_stratified_geometry_v1",
+    "section_stratified": true,
+    "bind_to_parent_split": [
+      "all_loads",
+      "all_mesh_fidelities",
+      "all_query_points",
+      "all_remeshes",
+      "all_augmentations"
+    ],
+    "cross_partition_zero_intersection": [
+      "geometry_group_id",
+      "boundary_float64_sha256",
+      "case_group_id",
+      "load_group_id"
+    ],
+    "legacy_v0_2_locked_test_zero_intersection": [
+      "geometry_group_id",
+      "boundary_float64_sha256",
+      "case_group_id",
+      "load_group_id"
+    ],
+    "normalization_fit_partition": "train_only",
+    "forbid_result_conditioned_replacement": true
+  },
+  "geometry": {
+    "section_families": [
+      "circle",
+      "horseshoe",
+      "straight_wall_arch"
+    ],
+    "boundary_points": 192,
+    "characteristic_radius": 1.0,
+    "outer_domain_rule": "boundary_extent_rectangle",
+    "outer_half_width_over_characteristic_extent": 8.0,
+    "roughness_amplitude_over_radius": [
+      0.008,
+      0.025
+    ],
+    "parameter_coordinate_system": "normalized_position_within_shape_parameter_bounds",
+    "id_parameter_position": [
+      0.15,
+      0.85
+    ],
+    "geometry_ood_parameter_position": {
+      "low": [
+        0.0,
+        0.1
+      ],
+      "high": [
+        0.9,
+        1.0
+      ],
+      "minimum_ood_parameters_per_geometry": 1
+    },
+    "continuous_parameters": {
+      "circle": [
+        "axis_ratio",
+        "superellipse_exponent"
+      ],
+      "horseshoe": [
+        "span_height_ratio",
+        "sidewall_height_ratio",
+        "crown_shape"
+      ],
+      "straight_wall_arch": [
+        "span_height_ratio",
+        "springline_height_ratio",
+        "crown_rise_span"
+      ]
+    },
+    "sampling_sequence": "scrambled_sobol",
+    "reject_self_intersection": true
+  },
+  "material_and_loads": {
+    "stress_sign_convention": "tension_positive_internal",
+    "young_modulus_over_reference_stress": 500.0,
+    "poisson_ratio": 0.25,
+    "id": {
+      "sigma1_over_reference_stress_compression_positive": [
+        0.3,
+        0.8
+      ],
+      "sigma3_over_sigma1": [
+        0.45,
+        0.85
+      ],
+      "principal_angle_deg": [
+        -45.0,
+        45.0
+      ]
+    },
+    "load_ood_subtypes": {
+      "low_lateral_ratio": {
+        "sigma3_over_sigma1": [
+          0.25,
+          0.35
+        ],
+        "principal_angle_deg": [
+          -45.0,
+          45.0
+        ]
+      },
+      "large_rotation": {
+        "sigma3_over_sigma1": [
+          0.45,
+          0.85
+        ],
+        "principal_angle_deg_union": [
+          [
+            -85.0,
+            -60.0
+          ],
+          [
+            60.0,
+            85.0
+          ]
+        ]
+      },
+      "joint_low_lateral_large_rotation": {
+        "sigma3_over_sigma1": [
+          0.25,
+          0.35
+        ],
+        "principal_angle_deg_union": [
+          [
+            -85.0,
+            -60.0
+          ],
+          [
+            60.0,
+            85.0
+          ]
+        ]
+      }
+    },
+    "load_ood_allocation_per_parent": {
+      "low_lateral_ratio": 1,
+      "large_rotation": 1,
+      "joint_low_lateral_large_rotation": 1
+    },
+    "farfield_stress_scale": "sqrt(sigma_yy^2+sigma_zz^2+2*tau_yz^2)_from_prescribed_load_only"
+  },
+  "dataset": {
+    "partitions": {
+      "train_id": {
+        "parent_geometries": 72,
+        "parents_per_section": 24,
+        "loads_per_parent": 4,
+        "cases": 288,
+        "label_access": "train"
+      },
+      "dev_id": {
+        "parent_geometries": 18,
+        "parents_per_section": 6,
+        "loads_per_parent": 4,
+        "cases": 72,
+        "label_access": "dev_selection_only"
+      },
+      "locked_iid": {
+        "parent_geometries": 30,
+        "parents_per_section": 10,
+        "loads_per_parent": 4,
+        "cases": 120,
+        "label_access": "sealed_locked"
+      },
+      "locked_geometry_ood": {
+        "parent_geometries": 30,
+        "parents_per_section": 10,
+        "loads_per_parent": 3,
+        "cases": 90,
+        "label_access": "sealed_locked"
+      },
+      "locked_load_ood": {
+        "parent_geometries": 30,
+        "parents_per_section": 10,
+        "loads_per_parent": 3,
+        "cases": 90,
+        "label_access": "sealed_locked"
+      },
+      "locked_joint_ood": {
+        "parent_geometries": 15,
+        "parents_per_section": 5,
+        "loads_per_parent": 3,
+        "cases": 45,
+        "label_access": "sealed_locked_report_only"
+      }
+    },
+    "total_parent_geometries": 195,
+    "total_cases": 705,
+    "generator_seeds": {
+      "train_dev": 310031,
+      "locked_iid": 310037,
+      "locked_geometry_ood": 310049,
+      "locked_load_ood": 310061,
+      "locked_joint_ood": 310073
+    },
+    "deterministic_substream_rule": "sha256(generator_seed,purpose,section,parent_index,load_index)",
+    "formal_data_manifest_status": "not_generated"
+  },
+  "mesh": {
+    "backend": "gmsh",
+    "element": "first_order_triangle",
+    "only_mesh_sizes_may_change_between_fidelity_tiers": true,
+    "tiers": {
+      "coarse": {
+        "mesh_size_over_radius": 0.8,
+        "wall_size_over_radius": 0.25,
+        "farfield_size_over_radius": 0.8
+      },
+      "fine": {
+        "mesh_size_over_radius": 0.4,
+        "wall_size_over_radius": 0.0625,
+        "farfield_size_over_radius": 0.4
+      },
+      "ultrafine_audit": {
+        "mesh_size_over_radius": 0.25,
+        "wall_size_over_radius": 0.03125,
+        "farfield_size_over_radius": 0.25
+      }
+    }
+  },
+  "query": {
+    "points_per_case": 512,
+    "nearfield_volume": 384,
+    "wall_offset": 64,
+    "farfield": 64,
+    "nearfield_scale": 3.2,
+    "farfield_scale": 3.0,
+    "nearfield_distance_over_radius": [
+      0.05,
+      2.0
+    ],
+    "wall_offset_over_radius": 0.02,
+    "generation": "before_any_fidelity_solve_from_boundary_and_deterministic_substream",
+    "coarse_fine_ultrafine_use_identical_query_hash": true,
+    "locator": "independent_point_in_triangle_plus_barycentric_recheck"
+  },
+  "quality_control": {
+    "solver_and_mesh": {
+      "max_nonfinite_fraction": 0.0,
+      "max_free_dof_algebraic_residual": 1e-9,
+      "max_clapeyron_relative_energy_error": 1e-9,
+      "min_triangle_signed_area_over_radius_squared": 1e-12,
+      "min_triangle_quality": 0.02,
+      "minimum_valid_case_fraction_per_partition_section": 0.95,
+      "require_explicit_wall_and_farfield_tags": true,
+      "require_no_element_centroid_inside_cavity": true,
+      "require_same_boundary_hash_and_outer_bounds_across_fidelities": true,
+      "require_all_query_points_located_in_each_required_mesh": true,
+      "required_fidelities_per_formal_case": [
+        "coarse",
+        "fine"
+      ],
+      "silent_case_replacement_allowed": false
+    },
+    "fine_ultrafine": {
+      "requires_independent_dev_convergence_pass_before_formal_generation": true,
+      "independent_dev_convergence_pass_recorded": true,
+      "formal_audit_fraction": 0.2,
+      "selection_unit": "case_group_id",
+      "selection_protocol": "salted_sha256_order_within_partition_and_section_then_ceil",
+      "minimum_selected_cases_per_partition_section": 3,
+      "expected_formal_audit_cases": 144,
+      "metric": "nearfield_area_weighted_tensor_frobenius_relative_l2_fine_vs_ultrafine",
+      "max_overall_median": 0.03,
+      "max_overall_p95": 0.05,
+      "max_any_section_median": 0.04,
+      "locked_audit_runs_inside_sealed_generator": true,
+      "locked_case_values_exposed_before_checkpoint_freeze": false,
+      "failure_classification": "ABSTAIN"
+    }
+  },
+  "learning": {
+    "methods": [
+      "coarse_only",
+      "scratch",
+      "direct_coarse",
+      "residual_coarse",
+      "mismatched_coarse"
+    ],
+    "fine_train_fractions": [
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "nested_parent_counts": {
+      "0.25": {
+        "total": 18,
+        "per_section": 6
+      },
+      "0.5": {
+        "total": 36,
+        "per_section": 12
+      },
+      "0.75": {
+        "total": 54,
+        "per_section": 18
+      },
+      "1.0": {
+        "total": 72,
+        "per_section": 24
+      }
+    },
+    "nested_selection_protocol": "single_salted_parent_order_prefix_within_each_section",
+    "strictly_nested_parent_subsets": true,
+    "method_fraction_matrix": {
+      "scratch": [
+        1.0
+      ],
+      "direct_coarse": [
+        1.0
+      ],
+      "residual_coarse": [
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "mismatched_coarse": [
+        0.5
+      ]
+    },
+    "expected_checkpoint_count": 35,
+    "training_seeds": [
+      103,
+      211,
+      307,
+      401,
+      509
+    ],
+    "model": {
+      "point_input_width": 14,
+      "base_feature_width": 11,
+      "coarse_feature_width": 3,
+      "hidden_width": 64,
+      "global_context_blocks": 3,
+      "activation": "gelu",
+      "output_width": 3
+    },
+    "optimization": {
+      "optimizer": "adamw",
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "case_batch_size": 8,
+      "max_epochs": 300,
+      "early_stopping_patience": 35,
+      "early_stopping_min_delta": 0.00001,
+      "selection_partition": "dev_id",
+      "deterministic_algorithms": true,
+      "silent_seed_restart_allowed": false
+    },
+    "training_loss_region_weights": {
+      "nearfield_volume": 0.8,
+      "wall_offset": 0.15,
+      "farfield": 0.05,
+      "normalization": "each_region_weights_sum_to_its_declared_mass"
+    },
+    "fairness": {
+      "shared_architecture_and_optimizer": true,
+      "scratch_coarse_channels": "fixed_zero",
+      "direct_target": "fine_stress",
+      "residual_target": "fine_minus_coarse_stress",
+      "mismatched_rule": "fixed_derangement_within_section_no_self_match",
+      "dev_used_for_early_stopping_only": true
+    },
+    "formal_integrity": {
+      "require_training_selection_bound_to_actual_batch": true,
+      "require_training_contract_per_checkpoint": true,
+      "required_training_contract_type": "TrainingContract",
+      "required_checkpoint_registry_type": "CheckpointRegistry",
+      "require_checkpoint_sha256_unique": true,
+      "require_atomic_checkpoint_write": true
+    }
+  },
+  "sealed_evaluation": {
+    "public_input_store": "public_inputs_and_coarse_fields",
+    "train_dev_label_store": "train_dev_fine_labels",
+    "locked_label_stores": {
+      "locked_iid": "sealed_locked_iid_fine_labels",
+      "locked_geometry_ood": "sealed_locked_geometry_ood_fine_labels",
+      "locked_load_ood": "sealed_locked_load_ood_fine_labels",
+      "locked_joint_ood": "sealed_locked_joint_ood_fine_labels"
+    },
+    "security_boundary": "separate_file_store_and_evaluator_process_not_python_private_attribute",
+    "trainer_must_not_receive_locked_label_path": true,
+    "authorization_prerequisites": [
+      "all_expected_training_contracts_valid",
+      "all_expected_checkpoints_registered",
+      "checkpoint_registry_frozen_and_hashed",
+      "config_and_data_manifests_hashed",
+      "access_log_has_zero_locked_label_reads"
+    ],
+    "max_evaluation_calls_per_locked_partition": 1,
+    "checkpoint_count_required_before_authorization": 35,
+    "individual_locked_metrics_available_to_training_process": false,
+    "access_log_append_only": true
+  },
+  "evaluation": {
+    "primary_metric": {
+      "name": "nearfield_area_weighted_tensor_frobenius_relative_l2",
+      "component_squared_weights": [
+        1.0,
+        1.0,
+        2.0
+      ],
+      "per_case_formula": "sqrt(sum_i(w_i*((dyy)^2+(dzz)^2+2*(dyz)^2))/sum_i(w_i*((fyy)^2+(fzz)^2+2*(fyz)^2)))",
+      "aggregation": "mean_loads_within_parent_then_mean_parents_within_section_then_equal_mean_of_three_sections"
+    },
+    "bootstrap": {
+      "replicates": 20000,
+      "paired": true,
+      "levels": [
+        "training_seed",
+        "parent_geometry_within_section"
+      ],
+      "all_parent_loads_remain_together": true,
+      "one_sided_upper_confidence_level": 0.95,
+      "two_sided_interval_level": 0.95,
+      "max_primary_ratio_interval_total_width": 0.1
+    },
+    "wall_offset_physics": {
+      "scope": "wall_offset_queries_at_0.02R_not_the_exact_traction_free_boundary",
+      "normal_source": "frozen_boundary_outward_into_rock_normal_paired_to_each_wall_offset_query",
+      "traction_discrepancy_formula": "D_t(M,F)=sqrt(sum_i(a_i*norm((Sigma_M_i-Sigma_F_i)*n_i)^2))/S_inf",
+      "resultant_discrepancy_formula": "D_r(M,F)=norm(sum_i(a_i*(Sigma_M_i-Sigma_F_i)*n_i))/S_inf",
+      "arc_weights": "a_i_nonnegative_and_sum_to_one",
+      "stress_scale": "S_inf_from_prescribed_farfield_only",
+      "explicitly_not": [
+        "absolute_traction_free_residual",
+        "exact_wall_traction",
+        "global_domain_equilibrium_residual"
+      ],
+      "gate_candidate": "residual_coarse_at_0.5",
+      "require_both_absolute_and_coarse_nonworsening": true,
+      "coarse_nonworsening": {
+        "max_multiplier": 1.1,
+        "traction_additive_margin_over_S_inf": 0.005,
+        "resultant_additive_margin_over_S_inf": 0.0025,
+        "traction_gate_formula": "D_t(M,F)<=1.10*D_t(C,F)+0.005",
+        "resultant_gate_formula": "D_r(M,F)<=1.10*D_r(C,F)+0.0025"
+      },
+      "absolute_caps": {
+        "locked_iid": {
+          "max_traction_discrepancy": 0.1,
+          "max_resultant_discrepancy": 0.05
+        },
+        "locked_geometry_ood": {
+          "max_traction_discrepancy": 0.15,
+          "max_resultant_discrepancy": 0.08
+        },
+        "locked_load_ood": {
+          "max_traction_discrepancy": 0.15,
+          "max_resultant_discrepancy": 0.08
+        },
+        "locked_joint_ood_report_only": {
+          "max_traction_discrepancy": 0.2,
+          "max_resultant_discrepancy": 0.1
+        }
+      }
+    },
+    "mandatory_reports": [
+      "all_training_seeds",
+      "all_section_families",
+      "each_locked_partition",
+      "each_load_ood_subtype",
+      "mean_median_p90",
+      "nonfinite_count",
+      "solver_and_mesh_qc",
+      "wall_offset_traction_and_resultant_discrepancy",
+      "runtime_and_peak_memory",
+      "all_failed_or_invalid_cases"
+    ]
+  },
+  "scientific_decision": {
+    "status": "not_run",
+    "ratios": {
+      "R_s": "residual_coarse_0.5/scratch_1.0",
+      "R_d": "residual_coarse_0.5/direct_coarse_1.0",
+      "R_c": "residual_coarse_0.5/coarse_only"
+    },
+    "upper_95_ci_gates": {
+      "locked_iid": {
+        "R_s": 1.02,
+        "R_d": 1.02,
+        "R_c": 0.7
+      },
+      "locked_geometry_ood": {
+        "R_s": 1.05,
+        "R_d": 1.05,
+        "R_c": 0.8
+      },
+      "locked_load_ood": {
+        "R_s": 1.05,
+        "R_d": 1.05,
+        "R_c": 0.8
+      }
+    },
+    "seed_stability": {
+      "minimum_passing_seeds": 4,
+      "total_seeds": 5,
+      "iid_max_R_s_and_R_d": 1.05,
+      "geometry_ood_max_R_s_and_R_d": 1.1,
+      "load_ood_max_R_s_and_R_d": 1.1
+    },
+    "section_robustness": {
+      "ratio_definition": "max(residual_0.5/scratch_1.0,residual_0.5/direct_1.0)",
+      "iid_max_any_section": 1.1,
+      "iid_max_for_at_least_two_sections": 1.02,
+      "minimum_iid_sections_at_strict_gate": 2,
+      "ood_subtype_max_point_ratio_to_each_full_label_baseline": 1.15
+    },
+    "joint_ood_role": "mandatory_report_not_primary_go_gate",
+    "go_requires": [
+      "all_data_solver_mesh_leakage_and_fine_ultrafine_qc_valid",
+      "all_primary_upper_ci_gates_pass",
+      "seed_stability_pass",
+      "section_robustness_pass",
+      "wall_offset_physics_pass",
+      "zero_nonfinite_predictions",
+      "primary_ratio_interval_widths_at_most_0.10",
+      "locked_evaluation_contract_pass"
+    ],
+    "classification": {
+      "GO": "all_validity_and_effect_gates_pass",
+      "NO_GO": "experiment_valid_but_one_or_more_effect_or_robustness_gates_fail",
+      "ABSTAIN": "leakage_test_tuning_convergence_solver_mesh_qc_seed_count_interval_width_or_evaluation_contract_invalid"
+    },
+    "after_locked_labels_open": {
+      "threshold_or_method_rewrite_allowed": false,
+      "debug_on_locked_values_allowed": false,
+      "rerun_requires_new_version_and_new_salt": true,
+      "prior_locked_set_must_be_declared_seen_and_cannot_remain_locked": true
+    },
+    "passing_claim": "synthetic_linear_elastic_multifidelity_label_efficiency_only"
+  }
+}

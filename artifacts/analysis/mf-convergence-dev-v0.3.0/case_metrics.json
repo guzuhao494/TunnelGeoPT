@@ -1,0 +1,1228 @@
+{
+  "cases": [
+    {
+      "case_group_id": "b027cdea2f9358ddd5de432c05ea391e8c44e1a69ab10ff1e4047f5b646bc295",
+      "case_index": 0,
+      "element_counts": {
+        "fine": 13076,
+        "ultrafine": 37004
+      },
+      "geometry_group_id": "a46429e713ff29cbdd5d6b7e98be05a25a7852620a6f51900a2c2fe3f6ca4640",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "52d4fe182ccb26361322aa435dbf8f35bbc93d8afdebb2f3e044db0e10bba83d",
+      "point_count": 256,
+      "query_hash": "9532cc1fbb690d180e868faeec45591906303e06cdd1cfcd5b744fc656ceed12",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "circle",
+      "sigma_inf_tension_positive": [
+        [
+          -0.744220966270193,
+          -0.031088754166459592
+        ],
+        [
+          -0.031088754166459592,
+          -0.6186842771775212
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.412044713648115e-14,
+          "energy_closure": 3.539913679096822e-15,
+          "minimum_triangle_quality": 0.7548216928678632
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.4426315141294385e-13,
+          "energy_closure": 5.966894526730151e-15,
+          "minimum_triangle_quality": 0.7121345970806321
+        }
+      },
+      "solver_seconds": 2.149540899998101,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.017519048878144625
+    },
+    {
+      "case_group_id": "63cf1b4880a193524d1c165cb7d3e57b6efc507789ac741e1cafc37d1b0425e9",
+      "case_index": 1,
+      "element_counts": {
+        "fine": 13076,
+        "ultrafine": 37004
+      },
+      "geometry_group_id": "a46429e713ff29cbdd5d6b7e98be05a25a7852620a6f51900a2c2fe3f6ca4640",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "e66c43b1a01d43cd82bd1f43ba971f520fe557b03ec00183dc9a4b3cfac78e6a",
+      "point_count": 256,
+      "query_hash": "9532cc1fbb690d180e868faeec45591906303e06cdd1cfcd5b744fc656ceed12",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "circle",
+      "sigma_inf_tension_positive": [
+        [
+          -0.29425497042164905,
+          -0.04679764905761416
+        ],
+        [
+          -0.04679764905761416,
+          -0.28716677433014165
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.320062848940757e-14,
+          "energy_closure": 3.778285490983607e-15,
+          "minimum_triangle_quality": 0.7548216928678632
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.4848809115926986e-13,
+          "energy_closure": 1.9624668954139298e-15,
+          "minimum_triangle_quality": 0.7121345970806321
+        }
+      },
+      "solver_seconds": 1.8734246000021813,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.01744264658671885
+    },
+    {
+      "case_group_id": "5a7ec8d9b563746abfb1dce819dd684e7f00e78f2b385a56734041c361a8fce2",
+      "case_index": 2,
+      "element_counts": {
+        "fine": 13268,
+        "ultrafine": 37432
+      },
+      "geometry_group_id": "c0a8bfc1467fdb4406180fa063d02805ec558f5833cedd1e3114bc3dc994abd1",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "005d1774df19fd9400a081b0e98e7d57602d97705489a16ccd25cea67ee84486",
+      "point_count": 256,
+      "query_hash": "386d494dc0899595195b8340ac7885572d8e5908bd06e27e12309b707e8031db",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "circle",
+      "sigma_inf_tension_positive": [
+        [
+          -0.7782695469042744,
+          -0.03833106854296317
+        ],
+        [
+          -0.03833106854296317,
+          -0.557345006207078
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.76302049898194e-14,
+          "energy_closure": 7.615955639030568e-15,
+          "minimum_triangle_quality": 0.7638855081691432
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.582851026758212e-13,
+          "energy_closure": 5.655134228811262e-15,
+          "minimum_triangle_quality": 0.6872970251584267
+        }
+      },
+      "solver_seconds": 1.9290361000021221,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.01963515112272923
+    },
+    {
+      "case_group_id": "7af96493d1cbb4ff174260a8c25fc8e99eb4493274116f7e44369ee145aa5c2a",
+      "case_index": 3,
+      "element_counts": {
+        "fine": 13268,
+        "ultrafine": 37432
+      },
+      "geometry_group_id": "c0a8bfc1467fdb4406180fa063d02805ec558f5833cedd1e3114bc3dc994abd1",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "4b9d58c9ac80444d621279506d052619b3e6912acc1eb97de22cb832fa80f58e",
+      "point_count": 256,
+      "query_hash": "386d494dc0899595195b8340ac7885572d8e5908bd06e27e12309b707e8031db",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "circle",
+      "sigma_inf_tension_positive": [
+        [
+          -0.36253108180060484,
+          -0.005008729767420162
+        ],
+        [
+          -0.005008729767420162,
+          -0.26046661640638874
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.607221626436158e-14,
+          "energy_closure": 8.47361706019245e-15,
+          "minimum_triangle_quality": 0.7638855081691432
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.599726710850415e-13,
+          "energy_closure": 1.8051690872791172e-15,
+          "minimum_triangle_quality": 0.6872970251584267
+        }
+      },
+      "solver_seconds": 1.9287306999976863,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.01953468659357397
+    },
+    {
+      "case_group_id": "054637480dab3740c1c42cbb9aec6f88003d56d28cd1cd91f63c6f0a8d28c212",
+      "case_index": 4,
+      "element_counts": {
+        "fine": 13040,
+        "ultrafine": 36128
+      },
+      "geometry_group_id": "d1f98f977ad96dd61900417b0ff38e7c0b43b627ad03e7f897a28f2b2ebd830a",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "8bcae3401d83cb3f2a1308409ec568180d106ed3bee4efa2e9dbe86a0861b27f",
+      "point_count": 256,
+      "query_hash": "8234fad8351122856d2e2955bbaf10a58a7c2d8d859f7216be975ca4bcbe931d",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "circle",
+      "sigma_inf_tension_positive": [
+        [
+          -0.4244487132028717,
+          0.13181367502799413
+        ],
+        [
+          0.13181367502799413,
+          -0.39759690750310667
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 1.0740466188339925e-13,
+          "energy_closure": 7.162573674875527e-15,
+          "minimum_triangle_quality": 0.7418531330283614
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.718631452551383e-13,
+          "energy_closure": 7.94518387462418e-15,
+          "minimum_triangle_quality": 0.7352801121789753
+        }
+      },
+      "solver_seconds": 1.8206632000001264,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.02072581025370296
+    },
+    {
+      "case_group_id": "f302dacfc4d99fad6cef70e4c9cabcdfafa50534ebdd81f97ed65c68630c660d",
+      "case_index": 5,
+      "element_counts": {
+        "fine": 13040,
+        "ultrafine": 36128
+      },
+      "geometry_group_id": "d1f98f977ad96dd61900417b0ff38e7c0b43b627ad03e7f897a28f2b2ebd830a",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "49cfcc0e495c2bf9b302d3da8712385cbfb2abfd2ab12a2753a7c59947e24032",
+      "point_count": 256,
+      "query_hash": "8234fad8351122856d2e2955bbaf10a58a7c2d8d859f7216be975ca4bcbe931d",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "circle",
+      "sigma_inf_tension_positive": [
+        [
+          -0.501692896761281,
+          -0.017021366942684628
+        ],
+        [
+          -0.017021366942684628,
+          -0.3496528729817025
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 8.874333532187042e-14,
+          "energy_closure": 6.80734878760994e-16,
+          "minimum_triangle_quality": 0.7418531330283614
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.406851873948459e-13,
+          "energy_closure": 6.798080275049852e-16,
+          "minimum_triangle_quality": 0.7352801121789753
+        }
+      },
+      "solver_seconds": 1.8245395999983884,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.017870021840671383
+    },
+    {
+      "case_group_id": "5a4c2a78b7d720f2db2763f659f6045a935a82fc4965938d0afccbd533851cca",
+      "case_index": 6,
+      "element_counts": {
+        "fine": 13188,
+        "ultrafine": 36016
+      },
+      "geometry_group_id": "dd4735a58a8b3ec2bca275786bc0983f5fd8f815680b7ab8211e26159bb5fbfd",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "80827606a4e36ff4a4e62ae8defe19e1907a17d4dc0190344f796364bcbe8f4a",
+      "point_count": 256,
+      "query_hash": "0e7094502fcec90aab8767291aa291a4ea11c74518ec50f7824139c54aaf8624",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "circle",
+      "sigma_inf_tension_positive": [
+        [
+          -0.5043009350367407,
+          -0.036806673302193615
+        ],
+        [
+          -0.036806673302193615,
+          -0.4621309536180717
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 8.962707366131359e-14,
+          "energy_closure": 3.770113268680376e-15,
+          "minimum_triangle_quality": 0.752796513825649
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.369664168071197e-13,
+          "energy_closure": 4.222731934903242e-15,
+          "minimum_triangle_quality": 0.7471435035231757
+        }
+      },
+      "solver_seconds": 1.8363319000054616,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.016879583245537698
+    },
+    {
+      "case_group_id": "a9d14d5a68249e0a32280c68ce4bcb5244a361cbeebca103eea1f4252bf0ff17",
+      "case_index": 7,
+      "element_counts": {
+        "fine": 13188,
+        "ultrafine": 36016
+      },
+      "geometry_group_id": "dd4735a58a8b3ec2bca275786bc0983f5fd8f815680b7ab8211e26159bb5fbfd",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "a4ab8204779bfadcbe3b7632c944c39e34a4e8f8b01f69b152eae0336238b3a3",
+      "point_count": 256,
+      "query_hash": "0e7094502fcec90aab8767291aa291a4ea11c74518ec50f7824139c54aaf8624",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "circle",
+      "sigma_inf_tension_positive": [
+        [
+          -0.37346430432764993,
+          0.07168961429718379
+        ],
+        [
+          0.07168961429718379,
+          -0.26775726876787276
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.939605893556098e-14,
+          "energy_closure": 3.634282001965053e-15,
+          "minimum_triangle_quality": 0.752796513825649
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.4864128881170304e-13,
+          "energy_closure": 3.2669912797597603e-15,
+          "minimum_triangle_quality": 0.7471435035231757
+        }
+      },
+      "solver_seconds": 1.845570500001486,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.01717192468378211
+    },
+    {
+      "case_group_id": "4ee98ccf80325cc42c5aba4781d24d4756ce7d1c5caa2122f95ab808b2c9bdbf",
+      "case_index": 8,
+      "element_counts": {
+        "fine": 11216,
+        "ultrafine": 30373
+      },
+      "geometry_group_id": "2b69955c2deaf0f1c03195dfd27972365967336435a0b1fcb5769aa7e0f17b67",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "8f09c200e06c9ea623ddf72703efd43540f7d03bed1a531924449bd3c867f99e",
+      "point_count": 256,
+      "query_hash": "5db9d53868a99bce3b378a3cd0fd04e81841ac0892c30786f31f1b5f672a7001",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "horseshoe",
+      "sigma_inf_tension_positive": [
+        [
+          -0.6988396592336013,
+          -0.0762169619771001
+        ],
+        [
+          -0.0762169619771001,
+          -0.6901598554483668
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 8.870950253385848e-14,
+          "energy_closure": 4.050968697114386e-15,
+          "minimum_triangle_quality": 0.7314269498192081
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.4210705893821666e-13,
+          "energy_closure": 1.025995523763681e-14,
+          "minimum_triangle_quality": 0.7339279245029128
+        }
+      },
+      "solver_seconds": 1.7266268000021228,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.021308295474325525
+    },
+    {
+      "case_group_id": "648a4adc0dfd88e64ca0ef8f97ee5934e49b534e3c084f6bfb26386e46eeae27",
+      "case_index": 9,
+      "element_counts": {
+        "fine": 11216,
+        "ultrafine": 30373
+      },
+      "geometry_group_id": "2b69955c2deaf0f1c03195dfd27972365967336435a0b1fcb5769aa7e0f17b67",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "f8245ac6e3e9932087263932c22d788bd92e3db15ea82fd7d7840d3b783ae495",
+      "point_count": 256,
+      "query_hash": "5db9d53868a99bce3b378a3cd0fd04e81841ac0892c30786f31f1b5f672a7001",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "horseshoe",
+      "sigma_inf_tension_positive": [
+        [
+          -0.34417130988287226,
+          0.07596421812914544
+        ],
+        [
+          0.07596421812914544,
+          -0.30124726671026675
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.552776114199437e-14,
+          "energy_closure": 8.411081545082759e-15,
+          "minimum_triangle_quality": 0.7314269498192081
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.466376443563454e-13,
+          "energy_closure": 7.878174984144744e-15,
+          "minimum_triangle_quality": 0.7339279245029128
+        }
+      },
+      "solver_seconds": 1.697923699997773,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.024786170506890363
+    },
+    {
+      "case_group_id": "0bca90681084a503caf9291d96f25bfa514f9fff7501e1c19af8f2f431f07df2",
+      "case_index": 10,
+      "element_counts": {
+        "fine": 9440,
+        "ultrafine": 17686
+      },
+      "geometry_group_id": "33e8bdd1d51137f201fa9b47d22f5923e5e59d60d9e36a85d10c4d7cadaa8b59",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "f6c2d1372962d6fc6cc3064170576f43bed5216d037fc49a93cd7dfb127c0812",
+      "point_count": 256,
+      "query_hash": "9afe39602c433737e866fc6718f327f7d64c366886e0cb983322f8db4199cdc8",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "horseshoe",
+      "sigma_inf_tension_positive": [
+        [
+          -0.7548454319277349,
+          0.12089695401298695
+        ],
+        [
+          0.12089695401298695,
+          -0.4406733626445321
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.105876394780068e-14,
+          "energy_closure": 1.9405767635597895e-15,
+          "minimum_triangle_quality": 0.7537023239022648
+        },
+        "ultrafine": {
+          "algebraic_residual": 1.0906209573520933e-13,
+          "energy_closure": 5.280677461438759e-16,
+          "minimum_triangle_quality": 0.7605571796555576
+        }
+      },
+      "solver_seconds": 0.9275416000018595,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.024138092024282194
+    },
+    {
+      "case_group_id": "a2f04bcd16ae52c64d2999a164052c4113291f93c4be0b8893449747282e16d1",
+      "case_index": 11,
+      "element_counts": {
+        "fine": 9440,
+        "ultrafine": 17686
+      },
+      "geometry_group_id": "33e8bdd1d51137f201fa9b47d22f5923e5e59d60d9e36a85d10c4d7cadaa8b59",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "1505c648379aa4a7a734c770b454f714523960aee1417188888aae90007b4876",
+      "point_count": 256,
+      "query_hash": "9afe39602c433737e866fc6718f327f7d64c366886e0cb983322f8db4199cdc8",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "horseshoe",
+      "sigma_inf_tension_positive": [
+        [
+          -0.6732654005315262,
+          -0.11746456817620987
+        ],
+        [
+          -0.11746456817620987,
+          -0.5061249712910796
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 8.809081327200881e-14,
+          "energy_closure": 2.6624193903029448e-15,
+          "minimum_triangle_quality": 0.7537023239022648
+        },
+        "ultrafine": {
+          "algebraic_residual": 1.0893127913321283e-13,
+          "energy_closure": 2.2787459530397975e-15,
+          "minimum_triangle_quality": 0.7605571796555576
+        }
+      },
+      "solver_seconds": 0.9323638999994728,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.02259869495427093
+    },
+    {
+      "case_group_id": "ea2a3754c3406bda7a707702f205c68fc32ada15495a916fea585c2c7f7d7954",
+      "case_index": 12,
+      "element_counts": {
+        "fine": 12056,
+        "ultrafine": 32543
+      },
+      "geometry_group_id": "49dacd9754e00b1cda541800c52a9082e1231703282f961cdb09ed1b687b49f4",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "d2548d985c7d3dbdd1812138d0bba2830ae02b55c134d019edd7e6ef50e68a21",
+      "point_count": 256,
+      "query_hash": "8e3515178bb337d0f246b3ee98fe24ad9ca7593b59f6da281436f6fc25e9aa5b",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "horseshoe",
+      "sigma_inf_tension_positive": [
+        [
+          -0.40605569329041274,
+          -0.023207236698583752
+        ],
+        [
+          -0.023207236698583752,
+          -0.34026239963738386
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.449690772431327e-14,
+          "energy_closure": 5.479116057036047e-15,
+          "minimum_triangle_quality": 0.7597606301834996
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.4256701634820005e-13,
+          "energy_closure": 0.0,
+          "minimum_triangle_quality": 0.7434254140339027
+        }
+      },
+      "solver_seconds": 1.6417568000033498,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.02084618338999652
+    },
+    {
+      "case_group_id": "f0d7ed25601dd1ea0a5255cdb2b7da76033ff1e3952f63a58332bd4e06b1e168",
+      "case_index": 13,
+      "element_counts": {
+        "fine": 12056,
+        "ultrafine": 32543
+      },
+      "geometry_group_id": "49dacd9754e00b1cda541800c52a9082e1231703282f961cdb09ed1b687b49f4",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "ff5dbac9f674366717253cfd1c73358b636f9feadfa07fbf9f7c0c9f9b75016c",
+      "point_count": 256,
+      "query_hash": "8e3515178bb337d0f246b3ee98fe24ad9ca7593b59f6da281436f6fc25e9aa5b",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "horseshoe",
+      "sigma_inf_tension_positive": [
+        [
+          -0.5789478061791321,
+          0.055374663331497265
+        ],
+        [
+          0.055374663331497265,
+          -0.3292715640946091
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 1.0063871631663953e-13,
+          "energy_closure": 2.9234836082681423e-15,
+          "minimum_triangle_quality": 0.7597606301834996
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.584077976546482e-13,
+          "energy_closure": 4.032756827376019e-15,
+          "minimum_triangle_quality": 0.7434254140339027
+        }
+      },
+      "solver_seconds": 1.808559500001138,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.02233633074590005
+    },
+    {
+      "case_group_id": "f4fbb6c05ec7c49fe390093f8ea8466d9333fb8d4d5b47b2f2f0e9fdba3bb2ff",
+      "case_index": 14,
+      "element_counts": {
+        "fine": 11142,
+        "ultrafine": 31545
+      },
+      "geometry_group_id": "51f2bcf8135c7cbf37707366ef0ebff6db96e3ab32889a8cd20c222a643f4d1e",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "3f0fe742967247f02c0596bb3f15cc23a78083fb2050df758420386f9d15f11b",
+      "point_count": 256,
+      "query_hash": "e33799487f00a049dad95eb17640a4794d150e76d2ae619aca18b30eac480696",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "horseshoe",
+      "sigma_inf_tension_positive": [
+        [
+          -0.6100647370268372,
+          0.09467788170112684
+        ],
+        [
+          0.09467788170112684,
+          -0.5636156690584322
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.593805414810678e-14,
+          "energy_closure": 4.602048412381722e-16,
+          "minimum_triangle_quality": 0.7626957356802432
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.4205680195741735e-13,
+          "energy_closure": 7.330583986139447e-15,
+          "minimum_triangle_quality": 0.7307178467135855
+        }
+      },
+      "solver_seconds": 1.5714911000031861,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.02174929323419756
+    },
+    {
+      "case_group_id": "2dd84e4e750eba01c37635fba32bbf32dcce0c359cd206d5b0398693f0ac9685",
+      "case_index": 15,
+      "element_counts": {
+        "fine": 11142,
+        "ultrafine": 31545
+      },
+      "geometry_group_id": "51f2bcf8135c7cbf37707366ef0ebff6db96e3ab32889a8cd20c222a643f4d1e",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "b7b738870c33f95b0fbb410cf48f7241619c2b86ba2e118bc31ad1b4a44c50eb",
+      "point_count": 256,
+      "query_hash": "e33799487f00a049dad95eb17640a4794d150e76d2ae619aca18b30eac480696",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "horseshoe",
+      "sigma_inf_tension_positive": [
+        [
+          -0.5046471582580535,
+          0.01975729719414849
+        ],
+        [
+          0.01975729719414849,
+          -0.3576213849645551
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.245554010493761e-14,
+          "energy_closure": 6.905615887853449e-15,
+          "minimum_triangle_quality": 0.7626957356802432
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.376651834843147e-13,
+          "energy_closure": 8.926009317208281e-15,
+          "minimum_triangle_quality": 0.7307178467135855
+        }
+      },
+      "solver_seconds": 1.5905696000045282,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.021017081544635722
+    },
+    {
+      "case_group_id": "45c597d2a1e8fc15d8fdfbe53fc09ecf357ae957fe9e669973ed44183933e2bd",
+      "case_index": 16,
+      "element_counts": {
+        "fine": 12060,
+        "ultrafine": 34848
+      },
+      "geometry_group_id": "68d6a7a64b3c7ef93a248bb1e03ddf87928482eca7f46e06e5aace09a1a9874f",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "920d6f2555d201037197060abd28dcfa2e85d558c38a2e85c2ece54360d3d725",
+      "point_count": 256,
+      "query_hash": "b84a1be3535d94cb2254794b9f7d7c76f480a9448a8e7aca1bff432d88f46787",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "straight_wall_arch",
+      "sigma_inf_tension_positive": [
+        [
+          -0.6848974568356143,
+          -0.052962039183709314
+        ],
+        [
+          -0.052962039183709314,
+          -0.40273594158730025
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.5485070962893e-14,
+          "energy_closure": 9.58871178472203e-16,
+          "minimum_triangle_quality": 0.7485757404565561
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.508925827154044e-13,
+          "energy_closure": 2.3875754450071073e-15,
+          "minimum_triangle_quality": 0.7443378543054899
+        }
+      },
+      "solver_seconds": 1.8092575999980909,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.03050817323023058
+    },
+    {
+      "case_group_id": "de0b8854c7d2f83073b17c606c96f6fc979058f09220f1a64754e99892c146d0",
+      "case_index": 17,
+      "element_counts": {
+        "fine": 12060,
+        "ultrafine": 34848
+      },
+      "geometry_group_id": "68d6a7a64b3c7ef93a248bb1e03ddf87928482eca7f46e06e5aace09a1a9874f",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "afc7c8661bb47427fad0c17b67c6afce9965626f765e7048919ccdb4a37c3cf1",
+      "point_count": 256,
+      "query_hash": "b84a1be3535d94cb2254794b9f7d7c76f480a9448a8e7aca1bff432d88f46787",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "straight_wall_arch",
+      "sigma_inf_tension_positive": [
+        [
+          -0.6414053885014875,
+          0.05407431755657002
+        ],
+        [
+          0.05407431755657002,
+          -0.5581844682455771
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.400239600376586e-14,
+          "energy_closure": 4.085814756664941e-16,
+          "minimum_triangle_quality": 0.7485757404565561
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.47316919456465e-13,
+          "energy_closure": 1.1120710333773012e-14,
+          "minimum_triangle_quality": 0.7443378543054899
+        }
+      },
+      "solver_seconds": 1.8171343000067282,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.03775678252423702
+    },
+    {
+      "case_group_id": "1e12e423fae39b76b00178649f73f0ec1e9c00fcf069ec0636af9ff4cf629ae0",
+      "case_index": 18,
+      "element_counts": {
+        "fine": 14042,
+        "ultrafine": 39636
+      },
+      "geometry_group_id": "9d5cf36301a8cd2366bef78cfed46a4bbbe66833fb3209a24632aa7bb345b1e8",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "101003b3177de454b98e8f29d90b1a119804215579aba26e3e91ed18872dc8f5",
+      "point_count": 256,
+      "query_hash": "f8cdb21a8f6e6bb495249584d7a1fa58bd00b4a2fed9d3febc663fe03604bc2f",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "straight_wall_arch",
+      "sigma_inf_tension_positive": [
+        [
+          -0.4214276078976139,
+          -0.011353218630673878
+        ],
+        [
+          -0.011353218630673878,
+          -0.23314367824986346
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.925775197904198e-14,
+          "energy_closure": 3.558100346906299e-15,
+          "minimum_triangle_quality": 0.7247037281699243
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.692874714186145e-13,
+          "energy_closure": 1.382722683704043e-14,
+          "minimum_triangle_quality": 0.7230389806704636
+        }
+      },
+      "solver_seconds": 2.013040900004853,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.028111884284241002
+    },
+    {
+      "case_group_id": "199d2cfc59a9b57d1efc86ccfa22bbbc85dfb6bda173ccf6607f88bf8cdc4df8",
+      "case_index": 19,
+      "element_counts": {
+        "fine": 14042,
+        "ultrafine": 39636
+      },
+      "geometry_group_id": "9d5cf36301a8cd2366bef78cfed46a4bbbe66833fb3209a24632aa7bb345b1e8",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "db6f0902d24274e0eff482701de002c7a5e1dd43b7afbd8fb35399a3965f6ff6",
+      "point_count": 256,
+      "query_hash": "f8cdb21a8f6e6bb495249584d7a1fa58bd00b4a2fed9d3febc663fe03604bc2f",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "straight_wall_arch",
+      "sigma_inf_tension_positive": [
+        [
+          -0.6883463691886117,
+          -0.07351246594833313
+        ],
+        [
+          -0.07351246594833313,
+          -0.48602019811455527
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 9.884739852809944e-14,
+          "energy_closure": 1.0279226677945447e-15,
+          "minimum_triangle_quality": 0.7247037281699243
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.715339078420039e-13,
+          "energy_closure": 2.2532215894306808e-14,
+          "minimum_triangle_quality": 0.7230389806704636
+        }
+      },
+      "solver_seconds": 2.0470035999969696,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.029542915535708696
+    },
+    {
+      "case_group_id": "90a7c289b2eab8c6c53d17f9dd6873595627da9c93fe5554153a1ebb34f647ec",
+      "case_index": 20,
+      "element_counts": {
+        "fine": 14522,
+        "ultrafine": 40540
+      },
+      "geometry_group_id": "a80899741b44ea8762f0f7c5f8bae582094008bee7287da5d36f72705aada4ad",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "524d879238ac9f66865da34a9f7dcb41e888c852a4acd15e5c42d1cd6415e199",
+      "point_count": 256,
+      "query_hash": "454903a4b7031594f94b94bf67c9f1eaabbb31f480fe9ac5a02f4c94c70c3da2",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "straight_wall_arch",
+      "sigma_inf_tension_positive": [
+        [
+          -0.4450629606364698,
+          0.04630475252747367
+        ],
+        [
+          0.04630475252747367,
+          -0.31384356208780123
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 1.06089398657701e-13,
+          "energy_closure": 4.046465077475008e-15,
+          "minimum_triangle_quality": 0.769033471263416
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.6845566687973345e-13,
+          "energy_closure": 1.3521084893648735e-14,
+          "minimum_triangle_quality": 0.7500629390213908
+        }
+      },
+      "solver_seconds": 2.074085500004003,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.023166374273328585
+    },
+    {
+      "case_group_id": "91d2eb262644d93b25e99d6027e18306fa6db358c26aec88e398aa7d8248cc6f",
+      "case_index": 21,
+      "element_counts": {
+        "fine": 14522,
+        "ultrafine": 40540
+      },
+      "geometry_group_id": "a80899741b44ea8762f0f7c5f8bae582094008bee7287da5d36f72705aada4ad",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "99f2bccdafb90627396facff9085b760280a6ff1837f257b4929522314ccdbd6",
+      "point_count": 256,
+      "query_hash": "454903a4b7031594f94b94bf67c9f1eaabbb31f480fe9ac5a02f4c94c70c3da2",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "straight_wall_arch",
+      "sigma_inf_tension_positive": [
+        [
+          -0.39809646147528077,
+          0.005427438389147696
+        ],
+        [
+          0.005427438389147696,
+          -0.30101804046331065
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 1.0262478627412856e-13,
+          "energy_closure": 4.729203545867362e-15,
+          "minimum_triangle_quality": 0.769033471263416
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.643491510667787e-13,
+          "energy_closure": 1.929559680871419e-14,
+          "minimum_triangle_quality": 0.7500629390213908
+        }
+      },
+      "solver_seconds": 2.227062099998875,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.021884814477052466
+    },
+    {
+      "case_group_id": "635dd7a6cc73238c45df71829851e3889e0321f892089a466a9ebf7878086351",
+      "case_index": 22,
+      "element_counts": {
+        "fine": 15972,
+        "ultrafine": 45440
+      },
+      "geometry_group_id": "d779d8d766bd8735cd35b191f5724b36041a90a6664b115858e2152f878e80f3",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "507fede66f6385a02d4ea3eb27c2b6cd5f3dfc2812813b8abb0c7ac323594a3a",
+      "point_count": 256,
+      "query_hash": "70a94d898ac2861fbfa6cbc4e38cf9a4459630a773d3a42dafedee7d69ee8c0c",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "straight_wall_arch",
+      "sigma_inf_tension_positive": [
+        [
+          -0.442992136561286,
+          0.06599351140449886
+        ],
+        [
+          0.06599351140449886,
+          -0.267564982597165
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 1.1470730220599106e-13,
+          "energy_closure": 1.6455139029063843e-15,
+          "minimum_triangle_quality": 0.7626814850550065
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.9069628828212243e-13,
+          "energy_closure": 7.14330986104222e-15,
+          "minimum_triangle_quality": 0.7175547561122502
+        }
+      },
+      "solver_seconds": 2.441360099997837,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.020750019736479854
+    },
+    {
+      "case_group_id": "ce750f3c69c8ea76e6f46e89cb305d1f57192a15f63e20b8335f590928a81d88",
+      "case_index": 23,
+      "element_counts": {
+        "fine": 15972,
+        "ultrafine": 45440
+      },
+      "geometry_group_id": "d779d8d766bd8735cd35b191f5724b36041a90a6664b115858e2152f878e80f3",
+      "identity_qc": {
+        "same_frozen_boundary": true,
+        "same_outer_bounds": true,
+        "same_query_hash": true
+      },
+      "load_group_id": "aaf95a94e3d97a9d3a2cbc4211fe1f944150eeb6372a48192e4cbde85850e2df",
+      "point_count": 256,
+      "query_hash": "70a94d898ac2861fbfa6cbc4e38cf9a4459630a773d3a42dafedee7d69ee8c0c",
+      "query_qc": {
+        "fine": {
+          "all_points_located": true
+        },
+        "ultrafine": {
+          "all_points_located": true
+        }
+      },
+      "section_family": "straight_wall_arch",
+      "sigma_inf_tension_positive": [
+        [
+          -0.5303884695055722,
+          -0.13770979298227679
+        ],
+        [
+          -0.13770979298227679,
+          -0.4374521945687385
+        ]
+      ],
+      "solver_qc": {
+        "fine": {
+          "algebraic_residual": 1.1247503028433094e-13,
+          "energy_closure": 5.265041932215341e-15,
+          "minimum_triangle_quality": 0.7626814850550065
+        },
+        "ultrafine": {
+          "algebraic_residual": 2.960104000215885e-13,
+          "energy_closure": 2.7487201051130956e-15,
+          "minimum_triangle_quality": 0.7175547561122502
+        }
+      },
+      "solver_seconds": 2.450934899999993,
+      "split": "dev",
+      "stress_frobenius_rell2": 0.019804069088240405
+    }
+  ]
+}

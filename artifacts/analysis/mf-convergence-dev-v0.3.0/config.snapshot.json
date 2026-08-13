@@ -1,0 +1,95 @@
+{
+  "claim_exclusions": [
+    "model_effect",
+    "locked_test_effect",
+    "fracture",
+    "damage",
+    "rockburst",
+    "field_validity"
+  ],
+  "config_name": "fine_ultrafine_development_calibration",
+  "data_access": {
+    "allowed_split": "dev",
+    "locked_or_pseudo_test_labels_allowed": false,
+    "seed_namespace": "tunnelgeopt-v0.3-development-convergence-only"
+  },
+  "geometry": {
+    "boundary_points": 192,
+    "generator_seed": 313101,
+    "parameter_quantile_range": [
+      0.15,
+      0.85
+    ],
+    "parents_per_family": 4,
+    "radius": 1.0,
+    "roughness_amplitude_range": [
+      0.008,
+      0.025
+    ],
+    "section_families": [
+      "circle",
+      "horseshoe",
+      "straight_wall_arch"
+    ]
+  },
+  "loads": {
+    "generator_seed": 313103,
+    "per_geometry": 2,
+    "poisson_ratio": 0.25,
+    "principal_angle_deg": [
+      -45.0,
+      45.0
+    ],
+    "sigma1_over_reference_stress": [
+      0.3,
+      0.8
+    ],
+    "sigma3_over_sigma1": [
+      0.45,
+      0.85
+    ],
+    "young_modulus_over_reference_stress": 500.0
+  },
+  "mesh": {
+    "fine": {
+      "farfield_size_over_radius": 0.4,
+      "mesh_size_over_radius": 0.4,
+      "wall_size_over_radius": 0.0625
+    },
+    "outer_half_width_over_radius": 8.0,
+    "ultrafine": {
+      "farfield_size_over_radius": 0.25,
+      "mesh_size_over_radius": 0.25,
+      "wall_size_over_radius": 0.03125
+    }
+  },
+  "quality_gates": {
+    "algebraic_residual_max": 1e-09,
+    "effect_claim_allowed": false,
+    "energy_closure_max": 1e-09,
+    "minimum_triangle_quality_min": 0.02,
+    "require_all_query_points_located": true,
+    "require_same_boundary_outer_domain_and_query": true,
+    "required_case_count": 24,
+    "required_cases_per_family": 8,
+    "stress_frobenius_rell2_case_median_max": 0.03,
+    "stress_frobenius_rell2_case_p95_max": 0.05,
+    "stress_frobenius_rell2_each_family_median_max": 0.04
+  },
+  "query": {
+    "farfield": 32,
+    "generator_seed": 313107,
+    "nearfield_distance_over_radius": [
+      0.05,
+      2.0
+    ],
+    "nearfield_volume": 192,
+    "points_per_case": 256,
+    "wall_offset": 32,
+    "wall_offset_over_radius": 0.02
+  },
+  "run_id": "mf-convergence-dev-v0.3.0",
+  "schema_version": "0.3.0-convergence-dev-v1",
+  "scope": "development_only_mesh_calibration_no_model_effect_claim",
+  "status": "frozen_development_calibration_before_execution"
+}
