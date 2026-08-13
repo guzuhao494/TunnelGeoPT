@@ -21,6 +21,11 @@ tmp/
 *.zarr/
 artifacts/experiment/*-dry-run*/
 
+# Formal-run caches contain per-case binary payloads and sidecar hashes.  The
+# curated manifests/results are committed explicitly; these local stores are not.
+artifacts/experiment/*/data/.generator_case_cache/
+artifacts/experiment/*/data/.sealed_generator_store/
+
 # Local IDE and operating-system files.
 .vscode/
 .idea/

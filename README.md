@@ -1,9 +1,16 @@
-# TunnelGeoPT v0.2
+# TunnelGeoPT
 
 [![CI](https://github.com/guzuhao494/TunnelGeoPT/actions/workflows/ci.yml/badge.svg)](https://github.com/guzuhao494/TunnelGeoPT/actions/workflows/ci.yml)
 
 面向硬岩隧洞的物理感知合成数据与预训练实验平台。项目借鉴
 [GeoPT](https://github.com/Physics-Scaling/GeoPT)“先学习廉价几何—边界关系，再用较少昂贵物理样本适配”的思路，但不复刻其代码。
+
+> **v0.3 formal result (2026-08-13): `ABSTAIN`.** 705/705 个多保真
+> 线弹性 case 和全部数值/访问审计通过，但 IID 与 geometry-OOD 的主比率
+> Bootstrap 区间宽度超过预注册上限，因此不允许作 GO 或 NO-GO 效应主张。
+> `Residual50` 的诊断结果在 load OOD 上优于两个学习基线，在 IID/geometry
+> OOD 上却未稳定优于 `Direct100`。完整证据和边界见
+> [`RESULT_SUMMARY.md`](artifacts/experiment/mf-residual-formal-v0.3.0/RESULT_SUMMARY.md)。
 
 v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久化的二维线弹性里程碑：程序可以为圆形、马蹄形和直墙拱形隧洞生成有限元网格，求解均质各向同性平面应变开挖增量，并将位移、应变、应力和应变能保存为独立 B-elastic 数据记录。
 

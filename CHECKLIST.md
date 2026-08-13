@@ -131,3 +131,13 @@
 - [ ] locked-IID、geometry-OOD、load-OOD 仅评价一次，并报告所有种子、断面和失败切片。
 - [ ] 主 gate 使用父几何与训练种子的层级配对 bootstrap，不按点 bootstrap。
 - [ ] 只有全部预注册 gate 通过才表述“50% fine 训练标签非劣”；否则如实 No-Go/ABSTAIN。
+
+### v0.3 formal 执行记录
+
+- [x] 三族参数化边界、三级身份、公共 query 与 coarse/fine 边界一致性通过。
+- [x] 35 个公平 checkpoint 与嵌套 25/50/75/100% 父几何子集完成并冻结。
+- [x] 705/705 case 通过 solver/mesh QC；144-case fine-ultrafine 审计通过。
+- [x] 训练进程未获 locked 路径；冻结前 locked read=0；4 个 sealed store 各开一次。
+- [x] IID/geometry/load/joint 四分区共 140 次 checkpoint 评估恰好执行一次。
+- [x] 最终判定按预注册优先级记录为 ABSTAIN，未放宽区间或效应门槛。
+- [ ] 用全新身份完成有功效的 v0.4 复现；当前 v0.3 不作标签效率主张。

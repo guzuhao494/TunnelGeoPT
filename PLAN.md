@@ -206,3 +206,20 @@ v0.2 的圆洞 Stress-Lift 已按预注册门槛判为 No-Go，因此本节取�
 10. 正式结果通过五种子、三类断面、IID/geometry-OOD/load-OOD、fine-ultrafine 与泄漏审计后，才允许称为“合成线弹性多保真标签效率成果”。
 
 不论结果如何，本阶段都不声称已学习破裂、损伤、岩爆、微观到现场迁移或工程预警。
+
+### 11.1 v0.3 正式结果（2026-08-13）
+
+- 五阶段正式运行已在 clean/pushed implementation HEAD
+  `0f4cc0d504b35092928eb33e43bbbca0d213b545` 完成；705/705 case、35/35
+  checkpoint、140/140 锁定分区评估以及全部数值/访问合同通过。
+- 最终分类为 **ABSTAIN**，而不是 No-Go：IID 与 geometry-OOD 的
+  `Residual50/Scratch100` 双侧 95% 区间宽度分别为 `0.131422` 和
+  `0.112845`，超过预注册最大宽度 `0.10`。有效性失败优先于效应失败。
+- 诊断上，Residual50 在 IID/geometry-OOD 未证明 50% fine-label 效率；在
+  load/joint OOD 显著优于学习基线但仍劣于 raw coarse，并且 load-OOD
+  wall-offset 门失败。Mismatch50 在全部分区最差，说明正确 coarse-fine
+  配对确有信息，但不足以支持主张。
+- 当前 705 个 case 的全部身份永久记为 seen。下一次确认性运行必须新版本、
+  新 salt、新身份并保持原科学阈值；先依据本次父几何层级方差做功效设计。
+- 公开结果与 SHA-256 清单见
+  `artifacts/experiment/mf-residual-formal-v0.3.0/RESULT_SUMMARY.md`。
