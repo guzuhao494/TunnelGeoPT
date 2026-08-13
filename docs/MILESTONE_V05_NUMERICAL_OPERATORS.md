@@ -1,6 +1,6 @@
 # v0.5 数值算子里程碑：载荷基分解与应力恢复
 
-日期：2026-08-13
+日期：2026-08-13；独立载荷基确认更新：2026-08-14
 
 本里程碑是在 v0.3 多保真正式实验 `ABSTAIN` 后进行的开发性转向。
 v0.3 的 705 个 case 已全部看过，因此本页涉及这些标签的结果都属于
@@ -49,9 +49,17 @@ sigma_query = B_9(geometry, query) @ Sigma_farfield
 而是求解三个规范载荷并保存每点九通道响应基；其余载荷通过确定性矩阵乘法生成。
 这既减少重复求解，也把线性叠加留在可审计的物理层，而不是要求神经网络重新学习。
 
-该验证使用了 seen v0.3 标签，所以还需要在全新几何上用三个规范基载荷和独立
-direct-FEM held-out 载荷做一次冻结确认。即使确认通过，结论也仅限当前二维
-线弹性求解层，不覆盖几何泛化、网格收敛、损伤、接触、断裂或岩爆动力学。
+seen-data 开发之后，冻结确认已在 clean、已推送实现提交 `44d244e` 上完成。
+相对于冻结的 v0.2/v0.3 正式身份排除源，圆形、马蹄形和直墙拱形各采用一个
+新几何身份；每个几何复用同一 mesh/query，分别直接求解三个规范基载荷和五个
+held-out 载荷，共 `24/24` 次求解、零失败。15 个 held-out 面内总应力重建的
+RelL2 中位数为 `4.886e-15`、最大值为 `5.882e-15`，17 个身份、求解器、网格、
+响应重建门全部通过。独立结果审计复算了全部聚合门和执行账本，结论为
+`LINEAR_ELASTIC_LOAD_AXIS_FACTORIZATION_CONFIRMED`。
+
+这证明的是三个**各自固定**几何/材料/细网格/查询系统内的二维小应变平面应变
+线弹性载荷轴分解，不证明不同几何之间的泛化、网格或材料泛化，也不覆盖损伤、
+接触、断裂或岩爆动力学。
 
 ## 3. P1 应力恢复：体内改善，壁面失败
 
@@ -105,6 +113,7 @@ GeoPT 的九维是三步 vector-distance；这里的九维是 `3 x 3` 应力响�
 
 - v0.4 停止记录：`artifacts/analysis/v04-structured-prototype-stop/`
 - 载荷基开发结果：`artifacts/development/linear-load-basis-v0.5-development/`
+- 载荷基独立确认：`artifacts/confirmation/linear-load-basis-v0.5.0/`
 - 应力恢复开发结果：`artifacts/development/stress-recovery-v0.5-dev/`
 - 边界投影重设计结果：`artifacts/development/stress-recovery-boundary-v0.5.1-dev/`
 - 核心实现：`src/tunnelgeopt/load_basis.py`、`src/tunnelgeopt/stress_recovery.py`

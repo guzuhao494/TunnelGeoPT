@@ -2,10 +2,11 @@
 
 ## Status
 
-The confirmation plan is implemented and can be validated without calling the
-solver. It has **not** been executed. No confirmation artifact may exist until
-the implementation commit is tracked, clean, pushed, and explicitly approved
-by commit hash.
+The frozen confirmation completed on 2026-08-14 from clean, pushed
+implementation commit `44d244e344a0e40dbf33fdaa21cc823b8f46a85a`.
+Its classification is `LINEAR_ELASTIC_LOAD_AXIS_FACTORIZATION_CONFIRMED`.
+All 24 direct solves completed, all 17 gates passed, and the public result is
+stored under `artifacts/confirmation/linear-load-basis-v0.5.0/`.
 
 This protocol tests one narrow proposition: for each fixed geometry, material,
 fine mesh, and query grid in the present two-dimensional small-strain
@@ -131,3 +132,26 @@ and pushing the frozen hashes, is:
 
 Do not run this command from the implementation worktree before the critical
 source hashes in the config have been frozen to the pushed files.
+
+## Confirmed result
+
+The run completed all `24/24` planned solves with zero failures and evaluated
+all `15` held-out loads. The primary query total in-plane stress RelL2 was:
+
+- median: `4.885724690966474e-15`;
+- maximum: `5.882054174085674e-15`.
+
+Maximum auxiliary reconstruction errors were `9.5927e-16` for nodal
+displacement, `1.2359e-14` for element incremental stress, `1.2921e-14` for
+query incremental stress, and `4.6708e-15` for the report-only `sigma_xx`.
+The maximum algebraic residual was `2.0815e-13`; maximum energy-closure error
+was `1.3998e-14`. An independent result audit recomputed every aggregate gate,
+verified the 24-case ledger and basis/held-out separation, and found no
+non-finite values, absolute machine paths, or identity intersections with the
+frozen v0.2/v0.3 exclusion sources.
+
+The SHA-256 of `confirmation.json` is
+`b86efe9e283f4ee1f00cb2d8cb01d754475fb9a8ddf1e34338d01ecd5c89e736`.
+The artifact retains the complete execution ledger and per-held-out errors,
+but not the full field tensors; reproducing field-level RelL2 from raw arrays
+therefore requires rerunning the direct solves.

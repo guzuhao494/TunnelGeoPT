@@ -21,6 +21,15 @@
 > 略微恶化，因此同样记录为 STOP。结果、限制和数据路线见
 > [`MILESTONE_V05_NUMERICAL_OPERATORS.md`](docs/MILESTONE_V05_NUMERICAL_OPERATORS.md)。
 
+> **v0.5 load-basis confirmation (2026-08-14): `CONFIRMED` within the frozen
+> linear-elastic scope.** 在 clean、已推送的实现提交 `44d244e` 上，圆形、马蹄形和
+> 直墙拱形三个新身份各执行 `3` 个规范基载荷与 `5` 个 direct-FEM held-out 载荷，
+> 共 `24/24` 次求解、`15` 次独立重建。面内总应力 RelL2 的中位数为
+> `4.886e-15`、最大值为 `5.882e-15`，全部 17 个身份、数值和物理 QC 门通过。
+> 这只确认固定几何/材料/网格/查询条件下的二维小应变线弹性载荷轴分解，绝不表示
+> 几何泛化、破裂、损伤或岩爆能力。证据见
+> [`RESULT_SUMMARY.md`](artifacts/confirmation/linear-load-basis-v0.5.0/RESULT_SUMMARY.md)。
+
 v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久化的二维线弹性里程碑：程序可以为圆形、马蹄形和直墙拱形隧洞生成有限元网格，求解均质各向同性平面应变开挖增量，并将位移、应变、应力和应变能保存为独立 B-elastic 数据记录。
 
 ## 当前证据边界

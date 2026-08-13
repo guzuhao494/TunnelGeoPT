@@ -237,9 +237,12 @@ v0.2 的圆洞 Stress-Lift 已按预注册门槛判为 No-Go，因此本节取�
   unseen/formal 实验。
 - [x] 完成边界兼容切向增量投影的独立 seen-development 重设计验证；牵引/合力
   非恶化通过，但 wall-offset 全应力仍恶化，冻结为第二个 STOP。
-- [ ] 在 clean/pushed 实现 HEAD 上，用全新几何和 direct-FEM held-out 载荷确认
-  九通道载荷轴分解；该确认仍只适用于二维小应变线弹性层。
+- [x] 在 clean/pushed 实现 HEAD `44d244e` 上，用三个相对冻结 v0.2/v0.3 排除源
+  为新身份的几何完成 `24/24` 次 direct FEM：15 个 held-out 面内总应力重建
+  RelL2 中位数/最大值为 `4.886e-15/5.882e-15`，17 个门全部通过，分类为
+  `LINEAR_ELASTIC_LOAD_AXIS_FACTORIZATION_CONFIRMED`。该确认仍只适用于每个
+  固定几何/材料/网格/查询系统内的二维小应变线弹性层。
 - [ ] 恢复路线需在新 development screen 上解决切向应力偏差后才可冻结；载荷基
-  可独立做新几何 direct-FEM 确认。破裂/损伤仍由未来 C 层求解器或实验数据负责。
+  已独立完成新几何 direct-FEM 确认。破裂/损伤仍由未来 C 层求解器或实验数据负责。
 
 完整指标与证据边界见 `docs/MILESTONE_V05_NUMERICAL_OPERATORS.md`。
