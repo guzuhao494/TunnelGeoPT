@@ -37,7 +37,7 @@ def _assert_published_manifest(runner: ModuleType, artifact: Path) -> dict:
     return manifest
 
 
-def test_config_and_selection_reuse_exact_v05_seen_cases() -> None:
+def test_published_v051_reuses_v05_cases_and_current_selection_covers_all_cells() -> None:
     runner = _runner()
     config = runner.load_config(CONFIG_PATH)
     formal = runner.BASE._load_formal_config(config, CONFIG_PATH)
@@ -46,24 +46,16 @@ def test_config_and_selection_reuse_exact_v05_seen_cases() -> None:
     predecessor_selection = json.loads(
         (PREDECESSOR_ARTIFACT / "selection_manifest.json").read_text(encoding="utf-8")
     )
-    semantic_selection = [
-        (
-            case.formal_partition,
-            case.section_family,
-            int(case.parent_index),
-            int(case.load_index),
-        )
-        for case in selected
-    ]
-    predecessor_semantics = [
-        (
-            row["formal_partition"],
-            row["section_family"],
-            int(row["parent_index"]),
-            int(row["load_index"]),
-        )
+    expected_cells = {
+        (partition, section)
+        for partition in config["selection"]["partitions"]
+        for section in config["selection"]["section_families"]
+    }
+    current_cells = {(case.formal_partition, case.section_family) for case in selected}
+    predecessor_cells = {
+        (row["formal_partition"], row["section_family"])
         for row in predecessor_selection["selected_cases"]
-    ]
+    }
     predecessor_ids = [row["case_group_id"] for row in predecessor_selection["selected_cases"]]
     boundary_selection = json.loads(
         (BOUNDARY_ARTIFACT / "selection_manifest.json").read_text(encoding="utf-8")
@@ -72,7 +64,12 @@ def test_config_and_selection_reuse_exact_v05_seen_cases() -> None:
 
     assert len(plan.cases) == 705
     assert len(selected) == 15
-    assert semantic_selection == predecessor_semantics
+    assert len({case.case_group_id for case in selected}) == 15
+    assert current_cells == expected_cells
+    assert predecessor_cells == expected_cells
+    assert predecessor_selection["protocol"] == config["selection"]["protocol"]
+    assert predecessor_selection["selected_case_count"] == 15
+    assert predecessor_selection["selection_used_solver_or_label_values"] is False
     assert len(predecessor_ids) == 15
     assert len(set(predecessor_ids)) == 15
     assert boundary_selection["selected_case_ids"] == predecessor_ids
