@@ -30,6 +30,12 @@
 > 几何泛化、破裂、损伤或岩爆能力。证据见
 > [`RESULT_SUMMARY.md`](artifacts/confirmation/linear-load-basis-v0.5.0/RESULT_SUMMARY.md)。
 
+> **论文 Stage-1 候选范围（2026-08-14）：等待显式确认。** 现有线弹性载荷基只作为
+> 后续方法引理和固定弹性骨架，不单独包装为论文创新。推荐主线是先验证二维准静态
+> 相场脆性断裂求解器，再检验“精确弹性基 + 只学习不可逆损伤残差”是否真能节省
+> 断裂轨迹标签。范围、反证和论文大纲见 [`RESEARCH_SCOPE.md`](paper/RESEARCH_SCOPE.md) 与
+> [`PAPER_OUTLINE.md`](paper/PAPER_OUTLINE.md)。
+
 v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久化的二维线弹性里程碑：程序可以为圆形、马蹄形和直墙拱形隧洞生成有限元网格，求解均质各向同性平面应变开挖增量，并将位移、应变、应力和应变能保存为独立 B-elastic 数据记录。
 
 ## 当前证据边界

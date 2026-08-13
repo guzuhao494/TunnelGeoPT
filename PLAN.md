@@ -246,3 +246,24 @@ v0.2 的圆洞 Stress-Lift 已按预注册门槛判为 No-Go，因此本节取�
   已独立完成新几何 direct-FEM 确认。破裂/损伤仍由未来 C 层求解器或实验数据负责。
 
 完整指标与证据边界见 `docs/MILESTONE_V05_NUMERICAL_OPERATORS.md`。
+
+## 13. 论文主线：C-fracture 开发门禁（2026-08-14）
+
+当前论文问题已从“线弹性载荷基本身是否成立”转为：在二维准静态
+脆性相场断裂的合成硬岩隧洞范围内，将每个断面的三载荷线弹性响应基作为
+固定物理骨架、仅学习不可逆损伤与应力残差，能否用 `50%` 断裂轨迹达到
+同架构 `Scratch100`。
+
+当前只允许执行 solver/schema/QC 的 development pilot：
+
+1. 主求解器候选为 MOOSE 相场断裂；本地 scikit-fem 实现只能作交叉验证原型；
+2. 先通过完好弹性、MOOSE `crack2d_iso`、Miehe 拉伸/剪切、三网格、能量与不可逆门禁；
+3. 然后生成 `3 断面 x 3 材料档 x 4 载荷路径 = 36` 条 development-only 轨迹；
+4. 其中 `12` 条按断面×路径平衡做 ultrafine 复算；36 个冻结 cell 不得静默替换；
+5. Phase-1 不切 train/dev/test、不训练模型、不声称标签效率；
+6. 只有 solver 验证与 36 轨迹资源/方差审计通过，才允许冻结 EBR-DNO 开发训练合同；
+7. 只有 development 上 `EBR-DNO50` 相对 `Scratch100` 有稳定趋势且物理门不恶化，
+   才可新建 formal locked 身份。
+
+详细 RQ、反证、基线、统计与论文边界见 `paper/RESEARCH_SCOPE.md` 和
+`paper/PAPER_OUTLINE.md`。这一阶段仍不是动力岩爆、微震或现场验证。

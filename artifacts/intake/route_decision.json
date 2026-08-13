@@ -1,0 +1,31 @@
+{
+  "schema": "tunnelgeopt.paper_intake.route_decision.v1",
+  "date": "2026-08-14",
+  "status": "awaiting_explicit_stage1_confirmation",
+  "current_state": [
+    "baseline_ready",
+    "analysis_ready"
+  ],
+  "not_current_state": [
+    "fracture_main_result_ready",
+    "paper_ready"
+  ],
+  "selected_candidate_route": "c_fracture_solver_schema_qc_pilot",
+  "selected_research_question": "Can an elastic-basis-conditioned causal damage operator trained with 50 percent of high-fidelity fracture trajectories match an equal-architecture end-to-end operator trained with 100 percent on unseen tunnel geometries and loading paths?",
+  "immediate_authorization_if_confirmed": [
+    "implement_separate_c_fracture_schema",
+    "validate_phase_field_solver",
+    "generate_36_development_only_trajectories",
+    "run_12_ultrafine_audits",
+    "measure_runtime_storage_and_variance"
+  ],
+  "not_authorized_by_stage1": [
+    "generate_new_locked_fracture_labels",
+    "claim_label_efficiency",
+    "claim_dynamic_rockburst",
+    "claim_micro_to_tunnel_transfer",
+    "claim_field_validity"
+  ],
+  "fallback_route": "narrow_elastic_methods_paper_with_lower_novelty",
+  "recommended_route": "c_fracture_solver_schema_qc_pilot"
+}

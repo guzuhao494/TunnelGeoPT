@@ -157,3 +157,20 @@
   每几何五个 direct-FEM held-out 载荷上独立确认；24/24 求解、17/17 门通过。
 - [x] 当前结果与文档继续保留“线弹性数值算子不等于岩爆/破裂模型”的边界；
   后续 C 层仍须单独的损伤/断裂求解器或实验标签和新验证协议。
+
+## K. C-fracture 论文路线开发门禁
+
+- [x] 完成现有 v0.2-v0.5 证据信任分级，明确当前为 `baseline_ready + analysis_ready`，
+  不是 fracture-paper-ready。
+- [x] 冻结一句 RQ、可证伪效果门、主指标、强基线和不可声称边界的
+  Stage-1 研究范围候选。
+- [x] 将线弹性载荷基降级为方法引理/固定骨架，不再当作论文核心创新。
+- [x] 将旧 `configs/pilot.json` 判定为不可直接复用；新 Phase-1 删除动力、3D、
+  节理、AE、随机非均质和旧 Stress-Lift 效果门。
+- [ ] 用户确认 Stage-1 范围后，创建独立 C-fracture schema 与新 pilot config。
+- [ ] MOOSE `crack2d_iso` 在 WSL 或可复现容器中实际运行通过，版本和环境哈希落盘。
+- [ ] 本地相场原型与 MOOSE 在完好弹性、预缺口拉伸/剪切上交叉验证。
+- [ ] 三网格、加载步、长度尺度、能量、残差与不可逆门全部通过。
+- [ ] 完成 36 条 development-only 轨迹和 12 条 ultrafine 复算，无静默替换。
+- [ ] 完成资源、方差和计划效能审计；不达标则 STOP，不创建 locked 数据。
+- [ ] 只在 development launch 门通过后冻结 EBR-DNO 模型与 formal 240-parent 候选合同。
