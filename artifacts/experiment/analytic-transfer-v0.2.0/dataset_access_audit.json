@@ -1,0 +1,471 @@
+{
+  "materialized_cases": {
+    "train": 168,
+    "dev": 36,
+    "locked_test": 36
+  },
+  "label_case_reads": {
+    "train": 2514,
+    "dev": 648,
+    "locked_test": 648
+  },
+  "denied_locked_test_accesses": 0,
+  "locked_test_unlocked": true,
+  "frozen_checkpoint_count_authorized": 18,
+  "events": [
+    {
+      "event": "materialized",
+      "split": "train",
+      "purpose": "initial_train_build",
+      "new_case_count": 168
+    },
+    {
+      "event": "materialized",
+      "split": "dev",
+      "purpose": "initial_dev_build",
+      "new_case_count": 36
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 168,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 168,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 168,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 134,
+      "splits": [
+        "train"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "dev"
+      ]
+    },
+    {
+      "event": "locked_test_authorized",
+      "frozen_checkpoint_count": 18
+    },
+    {
+      "event": "materialized",
+      "split": "locked_test",
+      "purpose": "post_freeze_locked_evaluation",
+      "new_case_count": 36
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    },
+    {
+      "event": "label_read",
+      "purpose": "finetuning_or_evaluation",
+      "case_count": 36,
+      "splits": [
+        "locked_test"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,232 @@
+{
+  "array_manifest": {
+    "area": {
+      "dtype": "<f8",
+      "sha256": "d374c6be5ad09ad8546f8ea990779490905e68e6f25d14fe8a0564a3fc26fd49",
+      "shape": [
+        5392
+      ]
+    },
+    "centers": {
+      "dtype": "<f8",
+      "sha256": "9dc42b07ed1a4b65f9153c2b1fbf84d0b0d277715382d4e270ba3629a152e4e5",
+      "shape": [
+        5392,
+        2
+      ]
+    },
+    "delta_stress": {
+      "dtype": "<f8",
+      "sha256": "ac8117b0fc45a79b0d2153c0d9c2e206253085eb761f76ac2ba230d6c604bbf7",
+      "shape": [
+        5392,
+        3
+      ]
+    },
+    "elements": {
+      "dtype": "<i8",
+      "sha256": "25856d001643b11cbc0f6323d3882a99b1bf8b047de34804750d6678d0230e86",
+      "shape": [
+        5392,
+        3
+      ]
+    },
+    "energy_density": {
+      "dtype": "<f8",
+      "sha256": "1646ba75ae31d1121b4d688fa14bdf0b1096deebe334e2d463aac598864a9956",
+      "shape": [
+        5392
+      ]
+    },
+    "farfield_facets": {
+      "dtype": "<i8",
+      "sha256": "6a60e67eef47b0204e987c59214ef79e8484b2a15146f3e954d2416c6fcf5713",
+      "shape": [
+        108,
+        2
+      ]
+    },
+    "nodes": {
+      "dtype": "<f8",
+      "sha256": "9851600da8e43df3b14df3e55b4fd100a1868eb232788315440cc655717801f1",
+      "shape": [
+        2801,
+        2
+      ]
+    },
+    "sigma_inf": {
+      "dtype": "<f8",
+      "sha256": "b7cf0803a0136edf98174b462e56d5639ea1877d87764b1d221b4a64107e0faf",
+      "shape": [
+        2,
+        2
+      ]
+    },
+    "sigma_xx": {
+      "dtype": "<f8",
+      "sha256": "f05e9fa777b12d6e2a7c266ff21222f435909c55a88bc73254386575316af87e",
+      "shape": [
+        5392
+      ]
+    },
+    "strain": {
+      "dtype": "<f8",
+      "sha256": "761f9999a160d7c6c796eb384487c28c7c4e006f3361cb28ba44b9d21f45355e",
+      "shape": [
+        5392,
+        3
+      ]
+    },
+    "stress": {
+      "dtype": "<f8",
+      "sha256": "49d2edbb754c7aafbe153d8833d537a38df93140028e41da4eda970cdcceaf58",
+      "shape": [
+        5392,
+        3
+      ]
+    },
+    "u": {
+      "dtype": "<f8",
+      "sha256": "223ad10dd3c06a2068a32fbcd12f4e608a41a3019e355d00d92c6e321fa1ef8c",
+      "shape": [
+        2801,
+        2
+      ]
+    },
+    "wall_facets": {
+      "dtype": "<i8",
+      "sha256": "8a1dee0d7cc2555d594e7bda06642b56a716be2bcbdebd3b435b769f802941ba",
+      "shape": [
+        102,
+        2
+      ]
+    }
+  },
+  "arrays_file_sha256": "bd1cc24d1d9ebf58965986cc490ffaafd892b1c84d7327bf3fe5f498bcc659ae",
+  "case_group_id": "8b6ad3923b84830bda99058292c675fccad4ad9aaa0cde013eb61ed8295e7367",
+  "config_hash": "d4e0f621b848c68041a7811b992bc659af2356021e0fb0e091ed3bb7fa424bd2",
+  "content_sha256": "8e0ddbdd966ea2909c3bceeae7cb77170837347fcb64fcfb4547bcbba181aa43",
+  "coordinate_order": [
+    "y",
+    "z"
+  ],
+  "diagnostics": {
+    "algebraic_residual": 4.130160768853517e-14,
+    "energy": 0.002703195082262937,
+    "energy_closure": 3.3690865704202837e-15,
+    "energy_discretization_error": 2.4064904074430597e-15,
+    "external_work": 0.005406390164525869,
+    "residual_norm": 1.6939458168348838e-14,
+    "stiffness_symmetry_error": 6.674347615026846e-17
+  },
+  "dtype": "float64",
+  "env": {
+    "captured_at_utc": "2026-08-13T07:51:11.048672+00:00",
+    "git": {
+      "commit": "5e3be0238873c9e99fc598d8f81fbebc30ec9db9",
+      "dirty": true
+    },
+    "machine": "AMD64",
+    "packages": {
+      "gmsh": "4.15.2",
+      "numpy": "2.5.2",
+      "scikit-fem": "12.0.2",
+      "scipy": "1.18.0",
+      "tunnelgeopt": "0.1.0"
+    },
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",
+    "python": "3.13.5 | packaged by Anaconda, Inc. | (main, Jun 12 2025, 16:37:03) [MSC v.1929 64 bit (AMD64)]",
+    "python_executable": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\.venv\\Scripts\\python.exe"
+  },
+  "material": {
+    "lame_lambda": 260.0,
+    "poisson_ratio": 0.25,
+    "shear_modulus": 260.0,
+    "young_modulus": 650.0
+  },
+  "mesh_content_sha256": "eea24fccf9cd52e1afd555f5248a5f719c57bdb44611a07b2fb7d907edc03eb5",
+  "mesh_id": "eea24fccf9cd52e1afd555f5248a5f719c57bdb44611a07b2fb7d907edc03eb5",
+  "mesh_metadata": {
+    "coordinate_order": [
+      "y",
+      "z"
+    ],
+    "domain": "outer_rectangle_minus_single_closed_cavity",
+    "element_count": 5392,
+    "element_order": 1,
+    "energy_measure": "per_unit_tunnel_axis_thickness",
+    "farfield_facet_count": 108,
+    "farfield_mesh_size": 0.6,
+    "formulation": "P1_vector_small_strain_plane_strain",
+    "generator": "gmsh-python-api",
+    "gmsh_algorithm": 6,
+    "gmsh_version": "4.15.2",
+    "incremental_farfield_displacement": 0,
+    "mesh_size": 0.6,
+    "minimum_element_area": 0.0015330605504815752,
+    "minimum_triangle_quality": 0.7460355134658374,
+    "node_count": 2801,
+    "normal_convention": "rock_domain_outward_wall_normal_points_into_cavity",
+    "strain_component_order": [
+      "yy",
+      "zz",
+      "gamma_yz"
+    ],
+    "stress_component_order": [
+      "yy",
+      "zz",
+      "yz"
+    ],
+    "stress_sign": "tension_positive",
+    "wall_facet_count": 102,
+    "wall_incremental_traction": "-Sigma_inf@n_domain",
+    "wall_mesh_size": 0.125
+  },
+  "meta": {
+    "derived_record_id": "8facc88b163245a5385eedda87c740d2b7d26cdcfbbf95a997806362bce7fe06",
+    "input_stress_sign": "compression_positive",
+    "mesh_tier": "medium",
+    "reference_length_m": 1.0,
+    "reference_stress_pa": 1.0,
+    "run_id": "b-elastic-v0.2.0",
+    "section_family": "straight_wall_arch",
+    "solver_stress_sign": "tension_positive",
+    "split": "dev"
+  },
+  "physical_tags": {
+    "farfield": 2,
+    "rock": 1,
+    "wall": 1
+  },
+  "schema": "tunnelgeopt.b_elastic",
+  "schema_version": 1,
+  "sigma_xx_inf": -0.42,
+  "sign_convention": "tension_positive",
+  "strain_component_order": [
+    "yy",
+    "zz",
+    "gamma_yz"
+  ],
+  "stress_component_order": [
+    "yy",
+    "zz",
+    "yz"
+  ],
+  "units": {
+    "area": "m^2",
+    "centers": "m",
+    "delta_stress": "Pa",
+    "energy": "J/m",
+    "energy_density": "J/m^3",
+    "external_work": "J/m",
+    "nodes": "m",
+    "relative_diagnostics": "1",
+    "residual_norm": "N/m",
+    "sigma_inf": "Pa",
+    "sigma_xx": "Pa",
+    "strain": "1",
+    "stress": "Pa",
+    "u": "m"
+  }
+}

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tunnelgeopt"
-version = "0.1.0"
+version = "0.2.0"
 description = "Physics-aware synthetic pre-training data for hard-rock tunnels"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -24,9 +24,20 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+elastic = [
+  "scipy>=1.15,<2",
+  "scikit-fem>=12,<13",
+  "gmsh>=4.13,<5"
+]
+learn = [
+  "torch>=2.8,<2.13"
+]
 dev = [
   "pytest>=8.0",
-  "ruff>=0.6"
+  "ruff>=0.6",
+  "scipy>=1.15,<2",
+  "scikit-fem>=12,<13",
+  "gmsh>=4.13,<5"
 ]
 
 [project.scripts]

@@ -1,0 +1,46 @@
+{
+  "schema_version": "0.2.0",
+  "release": "v0.2-milestone",
+  "source_commit": "236631cfea2c27b657bd4e639b9e3bdbb5b0c81b",
+  "source_branch": "codex/elastic-milestone",
+  "recorded_at": "2026-08-13",
+  "working_tree_clean_before_release_manifest": true,
+  "decisions": {
+    "b_elastic": {
+      "status": "go",
+      "scope": "homogeneous_isotropic_small_strain_plane_strain_solver_emulation_only",
+      "decision_path": "artifacts/experiment/b-elastic-v0.2.0/decision.json",
+      "decision_sha256": "99978d07bc5819355bb2e5bada3468c3ccec7de9156deb1b650fd577c9830966",
+      "run_manifest_path": "artifacts/experiment/b-elastic-v0.2.0/run_manifest.json",
+      "run_manifest_sha256": "4fd5b03062dc9812af7f336eb2785b4638706dea1bf65e31d71d9082a778e0da"
+    },
+    "analytic_transfer": {
+      "status": "no_go",
+      "scope": "circle_only_kirsch_label_efficiency_smoke",
+      "gate_path": "artifacts/experiment/analytic-transfer-v0.2.0/gate.json",
+      "gate_sha256": "99b9420685efe74d8be545b11ce4f838240641375e4fb02407d8333f61574104",
+      "locked_results_path": "artifacts/experiment/analytic-transfer-v0.2.0/locked_test_results.json",
+      "locked_results_sha256": "763558e7e326ee241978d314aeb85c5a6d3755641f7d4affbceb709ac8e2f35a"
+    }
+  },
+  "verification": {
+    "core_pytest": "97 passed, 3 skipped because Torch is an optional dependency in the core environment",
+    "gpu_transfer_pytest": "15 passed",
+    "ruff": "passed",
+    "format_check": "passed",
+    "remote_ci": "GitHub Actions tests on Python 3.11 and 3.12 plus the CPU-PyTorch learning smoke passed",
+    "wheel_build": "tunnelgeopt-0.2.0-py3-none-any.whl built successfully",
+    "cli_e2e": "elastic-solve, elastic-validate, and SI-scale elastic-kirsch passed",
+    "b_elastic_inventory": "42 of 42 file hashes matched; 18 of 18 semantic records reloaded",
+    "analytic_checkpoint_inventory": "18 of 18 checkpoint hashes matched; all weights finite",
+    "locked_test_audit": "0 pre-freeze test materializations or reads; 18 evaluation calls after freeze"
+  },
+  "excluded_claims": [
+    "fracture",
+    "damage",
+    "rockburst_mechanism",
+    "field_prediction",
+    "engineering_truth"
+  ],
+  "report": "docs/MILESTONE_V0.2.md"
+}

@@ -1,0 +1,19 @@
+{
+  "captured_at_utc": "2026-08-13T07:51:11.048672+00:00",
+  "git": {
+    "commit": "5e3be0238873c9e99fc598d8f81fbebc30ec9db9",
+    "dirty": true
+  },
+  "machine": "AMD64",
+  "packages": {
+    "gmsh": "4.15.2",
+    "numpy": "2.5.2",
+    "scikit-fem": "12.0.2",
+    "scipy": "1.18.0",
+    "tunnelgeopt": "0.1.0"
+  },
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",
+  "python": "3.13.5 | packaged by Anaconda, Inc. | (main, Jun 12 2025, 16:37:03) [MSC v.1929 64 bit (AMD64)]",
+  "python_executable": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\.venv\\Scripts\\python.exe"
+}

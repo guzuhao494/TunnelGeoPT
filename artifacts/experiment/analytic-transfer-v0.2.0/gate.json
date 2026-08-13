@@ -1,0 +1,51 @@
+{
+  "status": "no_go",
+  "passing_scope": "analytic_transfer_pipeline_milestone_only",
+  "per_seed_candidate_vs_reference": {
+    "17": {
+      "center_ratio": 1.1659584996528038,
+      "lower": 1.1193174117108227,
+      "upper": 1.2099043827726366,
+      "replicates": 10000,
+      "confidence": 0.95,
+      "passes_ratio_gate": false
+    },
+    "29": {
+      "center_ratio": 0.6379826542834923,
+      "lower": 0.6121408354567285,
+      "upper": 0.6624270883662842,
+      "replicates": 10000,
+      "confidence": 0.95,
+      "passes_ratio_gate": true
+    },
+    "43": {
+      "center_ratio": 1.6179544837154154,
+      "lower": 1.5565841366364843,
+      "upper": 1.6787260417264622,
+      "replicates": 10000,
+      "confidence": 0.95,
+      "passes_ratio_gate": false
+    }
+  },
+  "seed_pass_count": 1,
+  "candidate_center_better_than_static": true,
+  "candidate_center_better_than_random": false,
+  "shuffled_control_passes_same_gate": [
+    false,
+    true,
+    false
+  ],
+  "wall_farfield_violation_deltas": {
+    "wall_traction_relative_l2": 0.0007463781914825614,
+    "farfield_stress_relative_l2": 0.002433473378180423
+  },
+  "physics_violation_gate_passed": true,
+  "formal_gate_status": "not_evaluated_by_this_smoke",
+  "claim_exclusions": [
+    "noncircular_tunnel_transfer",
+    "fracture",
+    "damage",
+    "rockburst",
+    "field_validity"
+  ]
+}

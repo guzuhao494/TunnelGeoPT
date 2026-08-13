@@ -1,0 +1,19 @@
+{
+  "checked_at": "2026-08-13T15:32:00+08:00",
+  "environment": ".venv-gpu",
+  "python": "3.12",
+  "torch": "2.11.0+cu128",
+  "cuda_runtime": "12.8",
+  "cuda_available": true,
+  "device": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+  "compute_capability": [
+    12,
+    0
+  ],
+  "smoke": {
+    "operation": "1024_by_1024_cuda_matrix_multiply",
+    "peak_memory_bytes": 16908288,
+    "status": "passed"
+  },
+  "claim_scope": "real_cuda_tensor_compute_only_not_model_training_result"
+}

@@ -1,0 +1,63 @@
+{
+  "checks": {
+    "affine_patch": true,
+    "all_18_medium_cases_generic_qc_and_schema": true,
+    "frozen_manifest_written_before_solver": true,
+    "kirsch_three_load_three_mesh": true,
+    "planned_cases_attempted_exactly_once_no_replacements": true
+  },
+  "claim_boundary": "validated synthetic homogeneous isotropic small-strain plane-strain elasticity only",
+  "excluded_claims": [
+    "fracture",
+    "damage",
+    "rockburst_mechanism",
+    "field_prediction",
+    "engineering_truth"
+  ],
+  "failed_checks": [],
+  "kirsch_gate": {
+    "loads": {
+      "equal_biaxial": {
+        "all_generic_qc_passed": true,
+        "annulus_stress_relative_l2_by_tier": {
+          "coarse": 0.04508551579377957,
+          "fine": 0.028578154224933677,
+          "medium": 0.03462837760663298
+        },
+        "fine_below_threshold": true,
+        "monotonic_coarse_to_fine": true,
+        "passed": true,
+        "uniaxial_scf_below_threshold": null
+      },
+      "pure_shear": {
+        "all_generic_qc_passed": true,
+        "annulus_stress_relative_l2_by_tier": {
+          "coarse": 0.07021497471838727,
+          "fine": 0.04425354083179013,
+          "medium": 0.05456381875403679
+        },
+        "fine_below_threshold": true,
+        "monotonic_coarse_to_fine": true,
+        "passed": true,
+        "uniaxial_scf_below_threshold": null
+      },
+      "uniaxial": {
+        "all_generic_qc_passed": true,
+        "annulus_stress_relative_l2_by_tier": {
+          "coarse": 0.06283704520129006,
+          "fine": 0.04184233928009762,
+          "medium": 0.050229267999032795
+        },
+        "fine_below_threshold": true,
+        "monotonic_coarse_to_fine": true,
+        "passed": true,
+        "uniaxial_scf_below_threshold": true
+      }
+    },
+    "passed": true
+  },
+  "next_action": "generate a larger split-safe B-elastic corpus and train the first surrogate baseline",
+  "passed": true,
+  "passing_scope": "permission_to_generate_elastic_solver_emulation_data_only",
+  "status": "go"
+}

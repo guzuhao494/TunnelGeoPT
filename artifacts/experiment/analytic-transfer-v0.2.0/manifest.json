@@ -1,0 +1,516 @@
+{
+  "run_id": "analytic-transfer-v0.2.0",
+  "mode": "full",
+  "status": "completed",
+  "started_at_utc": "2026-08-13T08:05:12.397891+00:00",
+  "command": "scripts\\run_analytic_transfer.py --mode full --device cuda",
+  "config_path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\configs\\analytic_transfer_smoke.json",
+  "config_sha256": "e2c533421aa547228d69785fc490d14bec4095128506a145e54ff92ac4c56d44",
+  "config_name": "kirsch_analytic_transfer_smoke",
+  "environment": {
+    "python": "3.12.13 | packaged by Anaconda, Inc. | (main, Mar 19 2026, 20:16:45) [MSC v.1942 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.0",
+    "torch": "2.11.0+cu128",
+    "torch_cuda_runtime": "12.8",
+    "cuda_available": true,
+    "device": "cuda",
+    "cuda_device_name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU"
+  },
+  "claim_scope": "analytic_circle_pipeline_only",
+  "claim_exclusions": [
+    "noncircular_tunnel_transfer",
+    "fracture",
+    "damage",
+    "rockburst",
+    "field_validity"
+  ],
+  "test_used_for_model_selection": false,
+  "elapsed_seconds": 416.9010526999991,
+  "locked_test_evaluation_calls": 18,
+  "actual_locked_test_forward_passes": 54,
+  "actual_locked_test_forward_batches": 270,
+  "locked_test_label_case_reads": 648,
+  "dataset_access_audit": {
+    "materialized_cases": {
+      "train": 168,
+      "dev": 36,
+      "locked_test": 36
+    },
+    "label_case_reads": {
+      "train": 2514,
+      "dev": 648,
+      "locked_test": 648
+    },
+    "denied_locked_test_accesses": 0,
+    "locked_test_unlocked": true,
+    "frozen_checkpoint_count_authorized": 18,
+    "events": [
+      {
+        "event": "materialized",
+        "split": "train",
+        "purpose": "initial_train_build",
+        "new_case_count": 168
+      },
+      {
+        "event": "materialized",
+        "split": "dev",
+        "purpose": "initial_dev_build",
+        "new_case_count": 36
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 168,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 168,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 168,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 134,
+        "splits": [
+          "train"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "dev"
+        ]
+      },
+      {
+        "event": "locked_test_authorized",
+        "frozen_checkpoint_count": 18
+      },
+      {
+        "event": "materialized",
+        "split": "locked_test",
+        "purpose": "post_freeze_locked_evaluation",
+        "new_case_count": 36
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      },
+      {
+        "event": "label_read",
+        "purpose": "finetuning_or_evaluation",
+        "case_count": 36,
+        "splits": [
+          "locked_test"
+        ]
+      }
+    ]
+  },
+  "gate_status": "no_go",
+  "formal_gate_status": "not_evaluated_by_this_smoke",
+  "result_paths": {
+    "training_audit": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\training_audit.json",
+    "checkpoint_index": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoint_index.json",
+    "dataset_access_audit": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\dataset_access_audit.json",
+    "locked_test_results": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\locked_test_results.json",
+    "gate": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\gate.json",
+    "progress": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\progress.jsonl"
+  }
+}

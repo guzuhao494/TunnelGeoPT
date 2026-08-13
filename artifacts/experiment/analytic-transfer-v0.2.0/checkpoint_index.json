@@ -1,0 +1,92 @@
+{
+  "scratch_80__seed-17": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\scratch_80__seed-17.pt",
+    "sha256": "0d1194c1bb1b751916e41618d76aa1851545756ac4b624a4be827c3b29e50ac2",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "scratch_80__seed-29": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\scratch_80__seed-29.pt",
+    "sha256": "81eb6f625c2cb2c6697ff0cdce42e616404482c118799c213078e900cb1dfce7",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "scratch_80__seed-43": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\scratch_80__seed-43.pt",
+    "sha256": "73a8cafe908c3ac9bd54b5b5f139d5f63f94be55a1a7b04ad1de4aa29cd6a315",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "scratch_100__seed-17": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\scratch_100__seed-17.pt",
+    "sha256": "24656cf81dfb84c855582c282ff45b32c8d3a83fd6d36a3e13b433e6ab5c5b0e",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "scratch_100__seed-29": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\scratch_100__seed-29.pt",
+    "sha256": "f2d321e0f3a8be3f97e3f5bb34b8a10830ee8d1ad419c766e77e41dfae1c98dd",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "scratch_100__seed-43": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\scratch_100__seed-43.pt",
+    "sha256": "f3689fb4b1e442142cf46ca9477c908ee01ca2dc781bf571dd3508b1aa65f80b",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "static_geometry_80__seed-17": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\static_geometry_80__seed-17.pt",
+    "sha256": "117b14114563b517faf124662712cba625bc4ca4348d6b13c2debd2e48f8f42e",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "static_geometry_80__seed-29": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\static_geometry_80__seed-29.pt",
+    "sha256": "336c2f5f0bb8d195fe838c7b46cb4f3529814ff59fec7cfa67d94a3afcf90c7f",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "static_geometry_80__seed-43": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\static_geometry_80__seed-43.pt",
+    "sha256": "64e26a288ebc62e8cb73cdce60d50dd29ec9748395ecb94d4b3dc991d5c310e2",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "random_lift_80__seed-17": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\random_lift_80__seed-17.pt",
+    "sha256": "ecaf48253f9a78e632381e385576d37c70b2c72d980fe252b162802d690f9699",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "random_lift_80__seed-29": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\random_lift_80__seed-29.pt",
+    "sha256": "94b5f39abc57acbc691fea3d03b9bec1feb096f066e2da0609d1a458fce29a12",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "random_lift_80__seed-43": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\random_lift_80__seed-43.pt",
+    "sha256": "cd2bbbd7f396dc5f1dcbfa3152cf9058018e9f175460cda5da356174a8481c54",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "shuffled_stress_lift_80__seed-17": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\shuffled_stress_lift_80__seed-17.pt",
+    "sha256": "3372f0cdbe11865f8565fedac23bc3819a4a0cea0153f805dd30837347f7208c",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "shuffled_stress_lift_80__seed-29": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\shuffled_stress_lift_80__seed-29.pt",
+    "sha256": "f885502eed6e8cbb63184cb5780303c2927d57d70de5087474d3775977704ad1",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "shuffled_stress_lift_80__seed-43": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\shuffled_stress_lift_80__seed-43.pt",
+    "sha256": "998e01869a41a5ec1fc75de0093d72bf194bbf8de106dcb1062389098185c482",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "stress_lift_80__seed-17": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\stress_lift_80__seed-17.pt",
+    "sha256": "7ef0a23d233fb73558ffeb53a94bc621f4c3e12d1c109b266cb5ac3ac872ce2d",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "stress_lift_80__seed-29": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\stress_lift_80__seed-29.pt",
+    "sha256": "ad7110384ddcf649fa47e81fd512dd8f95c165d23a6dfca0da36a35aeea6f1d2",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  },
+  "stress_lift_80__seed-43": {
+    "path": "C:\\Users\\17196\\Documents\\日常\\TunnelGeoPT\\artifacts\\experiment\\analytic-transfer-v0.2.0\\checkpoints\\stress_lift_80__seed-43.pt",
+    "sha256": "5b1e3c5ce51fee0219b6764e2563f08ebabdac8fe9b0ef0384858fc9d58370a1",
+    "status": "trained_and_frozen_cpu_checkpoint"
+  }
+}

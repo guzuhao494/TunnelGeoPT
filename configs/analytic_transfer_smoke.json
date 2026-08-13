@@ -1,0 +1,161 @@
+{
+  "schema_version": "0.2.0",
+  "config_name": "kirsch_analytic_transfer_smoke",
+  "status": "preregistered_before_run",
+  "scope": "pipeline_and_directional_pretraining_screen_on_analytic_circle_only",
+  "claim_exclusions": [
+    "noncircular_tunnel_transfer",
+    "fracture",
+    "damage",
+    "rockburst",
+    "field_validity"
+  ],
+  "research_question": "Does correctly conditioned principal-stress lifting improve case-level Kirsch stress surrogate data efficiency relative to scratch, static geometry, random lifting, and shuffled conditioning?",
+  "dataset": {
+    "source": "closed_form_kirsch_stress",
+    "case_count": 240,
+    "section": "circle",
+    "radius": 1.0,
+    "sigma1_tension_positive": -1.0,
+    "sigma3_over_sigma1": {
+      "min": 0.2,
+      "max": 0.8
+    },
+    "sigma1_azimuth_rad": {
+      "min": 0.0,
+      "max_exclusive": 3.141592653589793
+    },
+    "sampling": "deterministic_scrambled_sobol",
+    "sampling_seed": 20260813,
+    "points_per_case": {
+      "annulus_volume": 384,
+      "wall": 64,
+      "farfield": 64,
+      "total": 512
+    },
+    "annulus_radius_over_radius": [
+      1.02,
+      4.0
+    ],
+    "farfield_radius_over_radius": 8.0,
+    "output_components": [
+      "sigma_yy_over_abs_sigma1",
+      "sigma_zz_over_abs_sigma1",
+      "tau_yz_over_abs_sigma1"
+    ]
+  },
+  "split": {
+    "unit": "case_group_id",
+    "case_hash": "sha256_of_canonical_load_case",
+    "strata": "four_sigma_ratio_bins_times_four_azimuth_sectors",
+    "assignment": "hash_order_with_global_largest_remainder",
+    "counts": {
+      "train": 168,
+      "dev": 36,
+      "locked_test": 36
+    },
+    "pretraining_access": "train_cases_only",
+    "bind_to_same_split": [
+      "all_query_points",
+      "all_lifted_prompts",
+      "all_augmentations",
+      "all_training_fractions"
+    ]
+  },
+  "model": {
+    "family": "shared_deepsets_point_operator",
+    "point_input_width": 11,
+    "hidden_width": 96,
+    "global_context_blocks": 4,
+    "activation": "gelu",
+    "pooling": "mean",
+    "pretrain_output_width": 9,
+    "finetune_output_width": 3,
+    "replace_output_head_before_finetune": true,
+    "full_backbone_finetune": true
+  },
+  "methods": [
+    "scratch_80",
+    "scratch_100",
+    "static_geometry_80",
+    "random_lift_80",
+    "shuffled_stress_lift_80",
+    "stress_lift_80"
+  ],
+  "pretraining": {
+    "trajectory_steps": 3,
+    "principal_direction_condition": "[0,sin(alpha),cos(alpha),1-K]",
+    "stress_lift_step_magnitude": "base_step_times_1_minus_K",
+    "random_lift": "uniform_direction_with_matched_step_distribution",
+    "shuffled_control": "permute_alpha_and_K_within_training_pool_only",
+    "static_target": "t0_vector_distance_repeated_to_nine_channels"
+  },
+  "high_fidelity_fraction": {
+    "candidate": 0.8,
+    "reference": 1.0,
+    "nested_case_subsets": true,
+    "subset_order": "case_group_id_hash"
+  },
+  "optimization": {
+    "training_seeds": [
+      17,
+      29,
+      43
+    ],
+    "optimizer": "adamw",
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "case_batch_size": 8,
+    "max_epochs": 200,
+    "early_stopping": {
+      "split": "dev",
+      "patience": 25,
+      "min_delta": 0.0001
+    },
+    "same_budget_across_methods": true
+  },
+  "metrics": {
+    "primary": "case_mean_stress_frobenius_relative_l2",
+    "primary_definition": "per_case_norm([dyy,dzz,sqrt(2)*dyz])/norm([yy,zz,sqrt(2)*yz])_then_equal_case_mean",
+    "lower_is_better": true,
+    "secondary": [
+      "wall_traction_relative_l2",
+      "farfield_stress_relative_l2",
+      "peak_wall_hoop_stress_relative_error",
+      "rotation_equivariance_relative_error"
+    ],
+    "bootstrap": {
+      "unit": "case_group_id",
+      "paired": true,
+      "stratified_by_load": true,
+      "replicates": 10000,
+      "confidence": 0.95,
+      "seed": 20260813
+    }
+  },
+  "smoke_go_no_go": {
+    "candidate": "stress_lift_80",
+    "reference": "scratch_100",
+    "max_upper_95_percent_ci_error_ratio": 1.05,
+    "minimum_seed_pass_count": 2,
+    "seed_count": 3,
+    "require_candidate_center_better_than_static_80": true,
+    "require_candidate_center_better_than_random_80": true,
+    "require_shuffled_control_to_fail_same_gate": true,
+    "max_absolute_wall_or_farfield_violation_increase": 0.01,
+    "critical_failures": [
+      "cross_split_case_leakage",
+      "pretraining_reads_dev_or_test_case",
+      "test_used_for_model_selection",
+      "different_backbone_or_training_budget",
+      "nonfinite_metric"
+    ],
+    "passing_scope": "analytic_transfer_pipeline_milestone_only"
+  },
+  "formal_gate_unchanged": {
+    "max_upper_95_percent_ci_error_ratio": 1.02,
+    "minimum_training_seeds": 5,
+    "minimum_seed_pass_fraction": 0.8,
+    "status": "not_evaluated_by_this_smoke"
+  }
+}

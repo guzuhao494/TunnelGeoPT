@@ -1,0 +1,161 @@
+{
+  "schema_version": "0.2.0",
+  "config_name": "b_elastic_milestone",
+  "status": "preregistered_before_run",
+  "run_id": "b-elastic-v0.2.0",
+  "scope": "validated_synthetic_plane_strain_tunnel_elasticity_only",
+  "claim_exclusions": [
+    "fracture",
+    "damage",
+    "rockburst_mechanism",
+    "field_prediction",
+    "engineering_truth"
+  ],
+  "physics": {
+    "kinematics": "two_dimensional_small_strain_plane_strain",
+    "material": "homogeneous_isotropic_linear_elastic",
+    "body_force": 0.0,
+    "internal_stress_sign": "tension_positive",
+    "input_rock_stress_sign": "compression_positive_converted_at_boundary",
+    "unknown_components": [
+      "u_y",
+      "u_z"
+    ],
+    "strain_components": [
+      "epsilon_yy",
+      "epsilon_zz",
+      "gamma_yz"
+    ],
+    "stress_components": [
+      "sigma_yy",
+      "sigma_zz",
+      "tau_yz"
+    ],
+    "excavation_increment": {
+      "farfield_incremental_displacement": 0.0,
+      "wall_incremental_traction": "-Sigma_inf_times_domain_outward_normal",
+      "total_stress": "Sigma_inf_plus_delta_sigma"
+    }
+  },
+  "cases": {
+    "section_families": [
+      "circle",
+      "horseshoe",
+      "straight_wall_arch"
+    ],
+    "cases_per_section": 6,
+    "total_cases": 18,
+    "roughness_amplitude_over_radius": [
+      0.0,
+      0.01,
+      0.02
+    ],
+    "youngs_modulus_over_reference_stress": [
+      350.0,
+      500.0,
+      650.0
+    ],
+    "poisson_ratio": [
+      0.2,
+      0.25,
+      0.3
+    ],
+    "sigma1_over_reference_stress_compression_positive": [
+      0.3,
+      0.5,
+      0.7
+    ],
+    "sigma3_over_sigma1": [
+      0.35,
+      0.6,
+      0.8
+    ],
+    "sigma1_azimuth_deg": [
+      -45.0,
+      0.0,
+      45.0
+    ]
+  },
+  "split": {
+    "unit": "case_group_id",
+    "method": "sha256_sort_within_section_then_largest_remainder",
+    "fractions": {
+      "train": 0.7,
+      "dev": 0.15,
+      "locked_test": 0.15
+    },
+    "expected_counts_per_section": {
+      "train": 4,
+      "dev": 1,
+      "locked_test": 1
+    },
+    "pretraining_access": "train_only"
+  },
+  "mesh": {
+    "backend": "gmsh",
+    "element": "first_order_triangle",
+    "farfield_half_width_over_radius": 8.0,
+    "tiers": {
+      "coarse": {
+        "wall_size_over_radius": 0.25,
+        "farfield_size_over_radius": 0.8
+      },
+      "medium": {
+        "wall_size_over_radius": 0.125,
+        "farfield_size_over_radius": 0.6
+      },
+      "fine": {
+        "wall_size_over_radius": 0.0625,
+        "farfield_size_over_radius": 0.4
+      }
+    }
+  },
+  "kirsch_validation": {
+    "section": "circle",
+    "roughness_amplitude_over_radius": 0.0,
+    "comparison_annulus_radius_over_radius": [
+      1.25,
+      3.0
+    ],
+    "exclude_farfield_boundary_distance_over_radius": 1.0,
+    "load_cases": [
+      "uniaxial",
+      "equal_biaxial",
+      "pure_shear"
+    ],
+    "max_fine_area_weighted_stress_relative_l2": 0.08,
+    "max_uniaxial_stress_concentration_relative_error": 0.1,
+    "require_monotonic_error_improvement": true
+  },
+  "quality_control": {
+    "max_nonfinite_fraction": 0.0,
+    "max_matrix_symmetry_relative_error": 1e-12,
+    "max_free_dof_algebraic_residual": 1e-9,
+    "max_clapeyron_relative_error": 1e-9,
+    "max_patch_stress_relative_error": 1e-9,
+    "min_triangle_signed_area": 1e-12,
+    "require_explicit_wall_and_farfield_tags": true,
+    "require_no_element_centroid_inside_cavity": true
+  },
+  "minimum_outputs": [
+    "nodes_yz_over_radius",
+    "triangles",
+    "wall_facets",
+    "farfield_facets",
+    "displacement_over_radius",
+    "strain_element",
+    "stress_total_over_reference_stress",
+    "sigma_xx_over_reference_stress",
+    "strain_energy_density_over_reference_stress",
+    "diagnostics",
+    "case_group_id",
+    "mesh_id",
+    "config_hash",
+    "environment"
+  ],
+  "milestone_decision": {
+    "status": "not_run",
+    "go_requires_all_applicable_checks": true,
+    "passing_scope": "permission_to_generate_elastic_solver_emulation_data_only"
+  }
+}
