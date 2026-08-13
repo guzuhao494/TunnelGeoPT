@@ -185,6 +185,9 @@ evaluation.
 - figures, tables, English manuscript source, references, appendix, and PDF;
 - public evidence package with hashes and private-label boundary documented.
 
+The implementation candidate and validation ladder are specified separately in
+[`FRACTURE_SOLVER_BLUEPRINT.md`](FRACTURE_SOLVER_BLUEPRINT.md).
+
 ## Sources already verified at scope stage
 
 - GeoPT, ICLR 2026 paper and official code;
