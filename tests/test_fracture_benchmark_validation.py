@@ -20,6 +20,8 @@ from tunnelgeopt.fracture_benchmark_validation import (
 
 def test_frozen_mesh_verified_solver_not_run_status_and_six_case_order() -> None:
     config = load_fracture_sent_sens_config()
+    assert SCHEMA_VERSION == "tunnelgeopt.fracture.sent_sens.development_protocol.v1"
+    assert PROTOCOL_ID == "miehe-sent-sens-three-grid-development-v1.1"
     assert config["schema_version"] == SCHEMA_VERSION
     assert config["protocol_id"] == PROTOCOL_ID
     assert len(FROZEN_CANONICAL_SHA256) == 64
@@ -140,7 +142,7 @@ def test_three_mesh_tiers_follow_ell_and_bulk_rules() -> None:
     assert [case.bulk_h_target_mm for case in sent_cases] == [0.03, 0.015, 0.0075]
     assert config["mesh"]["refined_corridor_max_edge_over_target"] == 1.15
     assert config["mesh"]["damage_component_threshold"] == 0.5
-    assert config["mesh"]["damage_escape_action"] == "STOP_REMESH_BEFORE_RERUN"
+    assert config["mesh"]["damage_escape_action"] == "STOP_INVALID"
     sent, sens = config["loading"]["benchmarks"]
     assert sent["refined_corridor"] == {
         "definition": "buffer_around_horizontal_tip_to_right_boundary_segment",
@@ -160,6 +162,7 @@ def test_topology_and_per_tier_qc_fail_closed_before_convergence_claim() -> None
     config = load_fracture_sent_sens_config()
     topology = config["topology_qc"]
     assert topology["any_failure_action"] == "STOP_INVALID"
+    assert config["mesh"]["damage_escape_action"] == topology["any_failure_action"]
     assert "no_triangle_crosses_the_open_slit" in topology["required"]
     assert (
         "every_open_notch_face_facet_has_exactly_one_adjacent_rock_element" in topology["required"]
@@ -250,6 +253,12 @@ def test_decision_routes_do_not_promote_benchmark_readiness_to_paper_go() -> Non
                 {"unmeasured_DOF_scaling_exponent_allowed": True}
             ),
             "DOF",
+        ),
+        (
+            lambda value: value["mesh"].update(
+                {"damage_escape_action": "STOP_REMESH_BEFORE_RERUN"}
+            ),
+            "damage corridor escape",
         ),
     ],
 )

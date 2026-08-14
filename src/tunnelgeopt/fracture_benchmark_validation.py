@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = "tunnelgeopt.fracture.sent_sens.development_protocol.v1"
-PROTOCOL_ID = "miehe-sent-sens-three-grid-development-v1"
+PROTOCOL_ID = "miehe-sent-sens-three-grid-development-v1.1"
 BENCHMARK_IDS = ("sent", "sens")
 MESH_TIERS = ("coarse", "medium", "fine")
 CASE_COUNT = 6
@@ -28,7 +28,7 @@ CASE_COUNT = 6
 # SHA-256 of canonical JSON (sorted keys, compact separators, UTF-8).  The
 # value is intentionally pinned: changing any scientific or decision field
 # requires a new protocol version instead of silently relaxing this validator.
-FROZEN_CANONICAL_SHA256 = "59975e7832faedaca11210b452b80ca981335a9a9d3cf850b55d7ae2430445e1"
+FROZEN_CANONICAL_SHA256 = "d10036cfe1a0fa54600acae5d5f04425014074ec3d8ebace9e8f284251d8a20d"
 
 _EXPECTED_TOP_LEVEL = {
     "schema_version",
@@ -226,7 +226,7 @@ def _validate_semantics(config: Mapping[str, Any]) -> None:
             "config top-level keys differ from the frozen SENT/SENS contract"
         )
     if config["schema_version"] != SCHEMA_VERSION or config["protocol_id"] != PROTOCOL_ID:
-        raise FractureBenchmarkContractError("schema_version or protocol_id is not frozen v1")
+        raise FractureBenchmarkContractError("schema_version or protocol_id is not frozen v1.1")
 
     status = _require_mapping(config["status"], "status")
     expected_status = {
@@ -313,6 +313,10 @@ def _validate_semantics(config: Mapping[str, Any]) -> None:
 
     ell = _number(material["regularization_length_ell_mm"], "material.ell")
     mesh = _require_mapping(config["mesh"], "mesh")
+    if mesh.get("damage_escape_action") != "STOP_INVALID":
+        raise FractureBenchmarkContractError(
+            "damage corridor escape must fail closed as STOP_INVALID"
+        )
     tiers = _require_sequence(mesh.get("tiers"), "mesh.tiers")
     expected_tiers = (("coarse", 0.5), ("medium", 0.25), ("fine", 0.125))
     if len(tiers) != 3:
@@ -373,7 +377,7 @@ def validate_fracture_sent_sens_config(config: Mapping[str, Any]) -> None:
     digest = _canonical_sha256(root)
     if digest != FROZEN_CANONICAL_SHA256:
         raise FractureBenchmarkContractError(
-            "config differs from frozen canonical SENT/SENS v1; create a new protocol version "
+            "config differs from frozen canonical SENT/SENS v1.1; create a new protocol version "
             f"instead (sha256={digest})"
         )
 

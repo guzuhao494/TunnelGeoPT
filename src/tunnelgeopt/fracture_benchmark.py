@@ -14,13 +14,20 @@ from the second coordinate column.
 from __future__ import annotations
 
 import hashlib
+import importlib
+import importlib.metadata
 import json
 import math
 import os
+import platform
+import re
+import stat
+import subprocess
 import tempfile
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any
@@ -45,6 +52,8 @@ FloatArray = NDArray[np.float64]
 IntArray = NDArray[np.int64]
 
 PROBE_SCHEMA = "tunnelgeopt.fracture.sent_sens.intact_probe.v1"
+PROBE_RESULT_SCHEMA = "tunnelgeopt.fracture.sent_sens.probe_result.v1"
+PROBE_MANIFEST_SCHEMA = "tunnelgeopt.fracture.sent_sens.probe_artifact_manifest.v1"
 _COORDINATE_TOLERANCE_MM = 2.0e-12
 _FORCE_FLOOR_KN = 1.0e-15
 _MOMENT_FLOOR_KN_MM = 1.0e-15
@@ -53,6 +62,71 @@ _ENERGY_FLOOR_KN_MM = 1.0e-18
 
 class FractureBenchmarkPreflightError(ValueError):
     """Raised before solving when protocol, mesh, or loading identities differ."""
+
+
+class ProbeProvenanceError(RuntimeError):
+    """Raised when the exact clean, pushed project identity cannot be proven."""
+
+
+@dataclass(frozen=True)
+class ProbeSourceFile:
+    """One project-relative member of the conservative probe source closure."""
+
+    path: str
+    sha256: str
+    size_bytes: int
+
+
+@dataclass(frozen=True)
+class ProbeProjectSnapshot:
+    """Clean pushed Git state and exact source closure captured before a probe."""
+
+    expected_project_head: str
+    project_head: str
+    upstream_head: str
+    upstream_ref: str
+    config_path: str
+    runner_path: str
+    source_files: tuple[ProbeSourceFile, ...]
+    source_inventory_sha256: str
+    captured_utc: str
+    _project_root: Path
+
+    def as_dict(self) -> dict[str, Any]:
+        lock_present = any(
+            source.path.endswith(".lock") or source.path == "pylock.toml"
+            for source in self.source_files
+        )
+        return {
+            "expected_project_head": self.expected_project_head,
+            "project_head": self.project_head,
+            "upstream_head": self.upstream_head,
+            "upstream_ref": self.upstream_ref,
+            "config_path": self.config_path,
+            "runner_path": self.runner_path,
+            "source_closure": {
+                "strategy": (
+                    "all_sorted_src_tunnelgeopt_top_level_python_plus_runner_actual_config_"
+                    "pyproject_git_control_files_and_root_lockfiles"
+                ),
+                "inventory_sha256": self.source_inventory_sha256,
+                "files": [asdict(source) for source in self.source_files],
+                "dependency_lock_present": lock_present,
+                "environment_exactly_reconstructible_from_lock": lock_present,
+            },
+            "captured_utc": self.captured_utc,
+            "preflight_full_worktree_clean": True,
+        }
+
+
+@dataclass(frozen=True)
+class ProbeArtifactBundle:
+    """Hashes of both immutable files published in one exclusive run leaf."""
+
+    result_sha256: str
+    manifest_sha256: str
+    result_size_bytes: int
+    manifest_size_bytes: int
 
 
 @dataclass(frozen=True)
@@ -95,6 +169,10 @@ class FractureBenchmarkProbe:
     mesh_plan_sha256: str
     mesh_topology_sha256: str
     bvp_mesh_sha256: str
+    node_count: int
+    element_count: int
+    top_node_count: int
+    bottom_node_count: int
     material: Mapping[str, float]
     prescribed_U_mm: tuple[float, ...]
     steps: tuple[ProbeStep, ...]
@@ -115,6 +193,12 @@ class FractureBenchmarkProbe:
             "mesh_plan_sha256": self.mesh_plan_sha256,
             "mesh_topology_sha256": self.mesh_topology_sha256,
             "bvp_mesh_sha256": self.bvp_mesh_sha256,
+            "mesh_counts": {
+                "node_count": self.node_count,
+                "element_count": self.element_count,
+                "top_node_count": self.top_node_count,
+                "bottom_node_count": self.bottom_node_count,
+            },
             "material": dict(self.material),
             "prescribed_U_mm": list(self.prescribed_U_mm),
             "steps": [asdict(step) for step in self.steps],
@@ -124,6 +208,346 @@ class FractureBenchmarkProbe:
             "projection_interpretation": self.projection_interpretation,
             "authorizes_medium_fine_or_formal_run": (self.authorizes_medium_fine_or_formal_run),
         }
+
+
+def _utc_now() -> str:
+    return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def _git_text(project_root: Path, *arguments: str) -> str:
+    completed = subprocess.run(
+        ("git", *arguments),
+        cwd=project_root,
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="strict",
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip() or "unknown git error"
+        raise ProbeProvenanceError(f"git {' '.join(arguments)} failed: {detail}")
+    return completed.stdout.strip()
+
+
+def _project_relative_file(project_root: Path, path: str | Path, name: str) -> tuple[Path, str]:
+    root = project_root.resolve(strict=True)
+    resolved = Path(path).resolve(strict=True)
+    try:
+        relative = resolved.relative_to(root)
+    except ValueError as exc:
+        raise ProbeProvenanceError(f"{name} must be inside the project root") from exc
+    if not resolved.is_file():
+        raise ProbeProvenanceError(f"{name} must be a regular file")
+    return resolved, relative.as_posix()
+
+
+def _probe_source_paths(
+    project_root: Path, *, config_path: str | Path, runner_path: str | Path
+) -> tuple[tuple[Path, str], ...]:
+    root = project_root.resolve(strict=True)
+    package_root = root / "src" / "tunnelgeopt"
+    package_sources = sorted(package_root.glob("*.py"), key=lambda item: item.name)
+    if not package_sources or not (package_root / "__init__.py").is_file():
+        raise ProbeProvenanceError("src/tunnelgeopt/*.py closure is missing __init__.py")
+    candidates: list[Path] = [
+        *package_sources,
+        root / "pyproject.toml",
+        root / ".gitignore",
+        root / ".gitattributes",
+    ]
+    candidates.extend(
+        sorted(
+            (
+                path
+                for path in root.iterdir()
+                if path.is_file() and (path.suffix == ".lock" or path.name == "pylock.toml")
+            ),
+            key=lambda item: item.name,
+        )
+    )
+    candidates.extend((Path(runner_path), Path(config_path)))
+
+    closure: dict[str, Path] = {}
+    for candidate in candidates:
+        resolved, relative = _project_relative_file(root, candidate, "probe source")
+        closure[relative] = resolved
+    return tuple((closure[relative], relative) for relative in sorted(closure))
+
+
+def _source_inventory(
+    project_root: Path, *, config_path: str | Path, runner_path: str | Path
+) -> tuple[tuple[ProbeSourceFile, ...], str]:
+    sources: list[ProbeSourceFile] = []
+    for resolved, relative in _probe_source_paths(
+        project_root, config_path=config_path, runner_path=runner_path
+    ):
+        _git_text(project_root, "ls-files", "--error-unmatch", "--", relative)
+        payload = resolved.read_bytes()
+        sources.append(
+            ProbeSourceFile(
+                path=relative,
+                sha256=hashlib.sha256(payload).hexdigest(),
+                size_bytes=len(payload),
+            )
+        )
+    canonical = json.dumps(
+        [asdict(source) for source in sources], sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return tuple(sources), hashlib.sha256(canonical).hexdigest()
+
+
+def capture_probe_project_preflight(
+    project_root: str | Path,
+    *,
+    expected_project_head: str,
+    config_path: str | Path,
+    runner_path: str | Path,
+) -> ProbeProjectSnapshot:
+    """Bind a probe to an exact clean commit already present at its upstream."""
+
+    root = Path(project_root).resolve(strict=True)
+    expected = expected_project_head.strip().lower()
+    if re.fullmatch(r"[0-9a-f]{40}", expected) is None:
+        raise ProbeProvenanceError("expected project HEAD must be a full 40-character SHA-1")
+    git_root = Path(_git_text(root, "rev-parse", "--show-toplevel")).resolve(strict=True)
+    if git_root != root:
+        raise ProbeProvenanceError("project_root is not the Git worktree root")
+    head = _git_text(root, "rev-parse", "HEAD").lower()
+    upstream_head = _git_text(root, "rev-parse", "@{upstream}").lower()
+    upstream_ref = _git_text(root, "rev-parse", "--abbrev-ref", "@{upstream}")
+    if not (head == upstream_head == expected):
+        raise ProbeProvenanceError(
+            "probe requires project HEAD == upstream HEAD == --expected-project-head"
+        )
+    status = _git_text(root, "status", "--porcelain=v1", "--untracked-files=all")
+    if status:
+        raise ProbeProvenanceError("probe preflight requires a completely clean worktree")
+    module_files = {
+        "tunnelgeopt.fracture_benchmark": "fracture_benchmark.py",
+        "tunnelgeopt.fracture": "fracture.py",
+        "tunnelgeopt.fracture_benchmark_mesh": "fracture_benchmark_mesh.py",
+        "tunnelgeopt.fracture_benchmark_validation": "fracture_benchmark_validation.py",
+        "tunnelgeopt.fracture_bvp": "fracture_bvp.py",
+    }
+    for module_name, filename in module_files.items():
+        module = importlib.import_module(module_name)
+        origin = getattr(module, "__file__", None)
+        expected_origin = root / "src" / "tunnelgeopt" / filename
+        if origin is None or Path(origin).resolve(strict=True) != expected_origin.resolve(
+            strict=True
+        ):
+            raise ProbeProvenanceError(f"imported {module_name} module is outside this worktree")
+    _, config_relative = _project_relative_file(root, config_path, "config")
+    _, runner_relative = _project_relative_file(root, runner_path, "runner")
+    sources, digest = _source_inventory(root, config_path=config_path, runner_path=runner_path)
+    return ProbeProjectSnapshot(
+        expected_project_head=expected,
+        project_head=head,
+        upstream_head=upstream_head,
+        upstream_ref=upstream_ref,
+        config_path=config_relative,
+        runner_path=runner_relative,
+        source_files=sources,
+        source_inventory_sha256=digest,
+        captured_utc=_utc_now(),
+        _project_root=root,
+    )
+
+
+def verify_probe_project_postflight(snapshot: ProbeProjectSnapshot) -> str:
+    """Recheck Git/source identity and cleanliness immediately before result writes."""
+
+    root = snapshot._project_root
+    head = _git_text(root, "rev-parse", "HEAD").lower()
+    upstream = _git_text(root, "rev-parse", "@{upstream}").lower()
+    if not (head == upstream == snapshot.expected_project_head):
+        raise ProbeProvenanceError("project or upstream HEAD changed during the probe")
+    sources, digest = _source_inventory(
+        root,
+        config_path=root / snapshot.config_path,
+        runner_path=root / snapshot.runner_path,
+    )
+    if sources != snapshot.source_files or digest != snapshot.source_inventory_sha256:
+        raise ProbeProvenanceError("probe source closure changed during the probe")
+    status = _git_text(root, "status", "--porcelain=v1", "--untracked-files=all")
+    if status:
+        raise ProbeProvenanceError("probe postflight found worktree changes created during solving")
+    return _utc_now()
+
+
+def probe_runtime_environment() -> dict[str, Any]:
+    """Return a host-path-free runtime/package/thread summary for the artifact."""
+
+    package_versions: dict[str, str | None] = {}
+    for distribution in ("tunnelgeopt", "numpy", "scipy", "scikit-fem", "gmsh"):
+        try:
+            package_versions[distribution] = importlib.metadata.version(distribution)
+        except importlib.metadata.PackageNotFoundError:
+            package_versions[distribution] = None
+    thread_names = (
+        "OMP_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+        "BLIS_NUM_THREADS",
+    )
+    return {
+        "python": {
+            "implementation": platform.python_implementation(),
+            "version": platform.python_version(),
+        },
+        "platform": {
+            "system": platform.system(),
+            "release": platform.release(),
+            "machine": platform.machine(),
+        },
+        "packages": package_versions,
+        "threads": {
+            "logical_cpu_count": os.cpu_count(),
+            "environment": {name: os.environ.get(name) for name in thread_names},
+        },
+    }
+
+
+def _require_finite_json(value: Any, path: str = "artifact") -> None:
+    if value is None or isinstance(value, (str, bool, int)):
+        return
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError(f"{path} contains a non-finite float")
+        return
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            if not isinstance(key, str):
+                raise TypeError(f"{path} contains a non-string mapping key")
+            _require_finite_json(child, f"{path}.{key}")
+        return
+    if isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            _require_finite_json(child, f"{path}[{index}]")
+        return
+    raise TypeError(f"{path} contains unsupported JSON value {type(value).__name__}")
+
+
+def _canonical_json_bytes(value: Mapping[str, Any]) -> bytes:
+    _require_finite_json(value)
+    return (
+        json.dumps(
+            value,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+        + b"\n"
+    )
+
+
+def _reject_host_path_strings(value: Any, project_root: Path, path: str = "artifact") -> None:
+    """Reject a local project-root substring before JSON escaping can hide it."""
+
+    forbidden = str(project_root).replace("\\", "/").casefold()
+    if isinstance(value, str):
+        normalized = value.replace("\\", "/").casefold()
+        if forbidden and forbidden in normalized:
+            raise ProbeProvenanceError(f"{path} contains the local project path")
+        return
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            _reject_host_path_strings(key, project_root, f"{path}.<key>")
+            _reject_host_path_strings(child, project_root, f"{path}.{key}")
+        return
+    if isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            _reject_host_path_strings(child, project_root, f"{path}[{index}]")
+
+
+def _path_is_reparse_point(path: Path) -> bool:
+    try:
+        attributes = os.lstat(path).st_file_attributes
+    except AttributeError:
+        return path.is_symlink()
+    except FileNotFoundError:
+        return False
+    return bool(attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+
+
+def _git_path_is_ignored(project_root: Path, relative_path: str) -> bool:
+    completed = subprocess.run(
+        ("git", "check-ignore", "--quiet", "--no-index", "--", relative_path),
+        cwd=project_root,
+        check=False,
+        capture_output=True,
+    )
+    if completed.returncode == 0:
+        return True
+    if completed.returncode == 1:
+        return False
+    detail = completed.stderr.decode("utf-8", errors="replace").strip() or "unknown git error"
+    raise ProbeProvenanceError(f"git check-ignore failed: {detail}")
+
+
+def _write_exclusive_file(path: Path, payload: bytes) -> None:
+    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.link(temporary_name, path)
+        os.unlink(temporary_name)
+    except BaseException:
+        try:
+            os.unlink(temporary_name)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def reserve_probe_output_directory(
+    project_root: str | Path, output_directory: str | Path
+) -> tuple[Path, str]:
+    """Exclusively reserve an empty in-project run leaf before mesh generation."""
+
+    root = Path(project_root).resolve(strict=True)
+    candidate = Path(output_directory)
+    if not candidate.is_absolute():
+        candidate = root / candidate
+    target = Path(os.path.abspath(candidate))
+    try:
+        relative = target.relative_to(root).as_posix()
+    except ValueError as exc:
+        raise ProbeProvenanceError(
+            "probe output directory must be inside the project root"
+        ) from exc
+    if target == root:
+        raise ProbeProvenanceError("probe output directory must be a unique child run leaf")
+    if target.exists() or target.is_symlink():
+        raise FileExistsError(f"probe output directory already exists: {target}")
+    relative_parts = Path(relative).parts
+    if any(part.casefold() == ".git" for part in relative_parts):
+        raise ProbeProvenanceError("probe output directory must not be inside .git")
+    parent = root
+    for part in relative_parts[:-1]:
+        parent = parent / part
+        if (parent.exists() or parent.is_symlink()) and _path_is_reparse_point(parent):
+            raise ProbeProvenanceError(
+                "probe output directory must not traverse a symlink, junction, or reparse point"
+            )
+    ignored_candidates = (
+        relative,
+        f"{relative}/result.json",
+        f"{relative}/artifact_manifest.json",
+    )
+    if any(_git_path_is_ignored(root, candidate) for candidate in ignored_candidates):
+        raise ProbeProvenanceError(
+            "probe output directory or artifact files must not be ignored by Git"
+        )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.mkdir(exist_ok=False)
+    return target, relative
 
 
 def _require_mapping(value: Any, name: str) -> Mapping[str, Any]:
@@ -504,6 +928,10 @@ def run_intact_fracture_benchmark_probe(
         mesh_plan_sha256=before.mesh_plan_sha256,
         mesh_topology_sha256=before.mesh_topology_sha256,
         bvp_mesh_sha256=before.bvp_mesh_sha256,
+        node_count=before.node_count,
+        element_count=before.element_count,
+        top_node_count=before.top_node_count,
+        bottom_node_count=before.bottom_node_count,
         material=MappingProxyType(
             {
                 "young_modulus_kN_per_mm2": material.young_modulus,
@@ -523,48 +951,127 @@ def run_intact_fracture_benchmark_probe(
     )
 
 
-def write_probe_artifact_atomic(probe: FractureBenchmarkProbe, destination: str | Path) -> str:
-    """Atomically write canonical JSON and return its SHA-256 (no host paths stored)."""
+def write_probe_artifact_atomic(
+    probe: FractureBenchmarkProbe,
+    output_directory: str | Path,
+    *,
+    project_snapshot: ProbeProjectSnapshot,
+    started_utc: str,
+    completed_utc: str,
+    sanitized_command: Sequence[str],
+    solver_options: FractureSolverOptions,
+    runtime_environment: Mapping[str, Any],
+) -> ProbeArtifactBundle:
+    """Publish ``result.json`` and its manifest in a never-reused run leaf.
 
-    target = Path(destination)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    payload = (
-        json.dumps(
-            probe.as_dict(),
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-            allow_nan=False,
-        ).encode("utf-8")
-        + b"\n"
-    )
-    digest = hashlib.sha256(payload).hexdigest()
-    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{target.name}.", dir=target.parent)
+    The leaf is reserved with ``mkdir(exist_ok=False)`` and each file is opened
+    exclusively.  An interrupted write intentionally leaves an unusable leaf;
+    evidence is never retried into, replaced, or completed by a later writer.
+    """
+
+    root = project_snapshot._project_root
+    target = Path(output_directory).resolve(strict=False)
     try:
-        with os.fdopen(descriptor, "wb") as stream:
-            stream.write(payload)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary_name, target)
-    except BaseException:
-        try:
-            os.unlink(temporary_name)
-        except FileNotFoundError:
-            pass
-        raise
-    return digest
+        output_relative = target.relative_to(root).as_posix()
+    except ValueError as exc:
+        raise ProbeProvenanceError(
+            "probe output directory must be inside the project root"
+        ) from exc
+    if target == root:
+        raise ProbeProvenanceError("probe output directory must be a unique child run leaf")
+    if not target.is_dir() or any(target.iterdir()):
+        raise ProbeProvenanceError("probe output leaf was not exclusively reserved and empty")
+    postflight_utc = verify_probe_project_postflight(project_snapshot)
+    command = list(sanitized_command)
+    if not command or not all(isinstance(argument, str) and argument for argument in command):
+        raise ValueError("sanitized_command must contain non-empty strings")
+    result = {
+        "schema": PROBE_RESULT_SCHEMA,
+        "status": probe.status,
+        "claim_boundary": probe.claim_boundary,
+        "timing": {
+            "started_utc": started_utc,
+            "completed_utc": completed_utc,
+            "postflight_verified_utc": postflight_utc,
+        },
+        "execution": {
+            "sanitized_command": command,
+            "solver_options": asdict(solver_options),
+            "runtime_environment": dict(runtime_environment),
+        },
+        "project_provenance": project_snapshot.as_dict(),
+        "postflight": {
+            "head_equals_upstream_equals_expected": True,
+            "source_inventory_unchanged": True,
+            "full_worktree_clean_rechecked_with_reserved_empty_leaf": True,
+        },
+        "evidence_scope": {
+            "single_case_only": True,
+            "paired_sent_sens_campaign_supported": False,
+            "real_probe_allowed": False,
+            "real_probe_definition": "paired_sent_sens_campaign_for_paper_evidence",
+            "paper_evidence_eligible": False,
+        },
+        "probe": probe.as_dict(),
+    }
+    _reject_host_path_strings(result, root)
+    result_payload = _canonical_json_bytes(result)
+    result_sha256 = hashlib.sha256(result_payload).hexdigest()
+    manifest = {
+        "schema": PROBE_MANIFEST_SCHEMA,
+        "status": "IMMUTABLE_EXCLUSIVE_PROBE_ARTIFACT_SET",
+        "output_directory": output_relative,
+        "project_head": project_snapshot.project_head,
+        "source_inventory_sha256": project_snapshot.source_inventory_sha256,
+        "artifacts": [
+            {
+                "path": "result.json",
+                "sha256": result_sha256,
+                "size_bytes": len(result_payload),
+            }
+        ],
+        "manifest_sha256_reporting": "returned_by_writer_and_printed_by_cli_not_self_embedded",
+        "authorizes_medium_fine_or_formal_run": False,
+        "single_case_only": True,
+        "real_probe_allowed": False,
+        "paper_evidence_eligible": False,
+    }
+    _reject_host_path_strings(manifest, root)
+    manifest_payload = _canonical_json_bytes(manifest)
+    manifest_sha256 = hashlib.sha256(manifest_payload).hexdigest()
+
+    _write_exclusive_file(target / "result.json", result_payload)
+    # Completion marker is deliberately linked last. A leaf without this file
+    # is interrupted evidence and must never be resumed.
+    _write_exclusive_file(target / "artifact_manifest.json", manifest_payload)
+    return ProbeArtifactBundle(
+        result_sha256=result_sha256,
+        manifest_sha256=manifest_sha256,
+        result_size_bytes=len(result_payload),
+        manifest_size_bytes=len(manifest_payload),
+    )
 
 
 __all__ = [
+    "PROBE_MANIFEST_SCHEMA",
+    "PROBE_RESULT_SCHEMA",
     "PROBE_SCHEMA",
     "FractureBenchmarkPreflight",
     "FractureBenchmarkPreflightError",
     "FractureBenchmarkProbe",
+    "ProbeArtifactBundle",
+    "ProbeProjectSnapshot",
+    "ProbeProvenanceError",
+    "ProbeSourceFile",
     "ProbeStep",
     "benchmark_material",
     "build_prescribed_displacement_states",
+    "capture_probe_project_preflight",
     "lame_to_young_poisson",
     "preflight_fracture_benchmark",
+    "probe_runtime_environment",
+    "reserve_probe_output_directory",
     "run_intact_fracture_benchmark_probe",
+    "verify_probe_project_postflight",
     "write_probe_artifact_atomic",
 ]

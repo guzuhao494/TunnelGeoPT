@@ -1,7 +1,11 @@
 # SENT/SENS three-grid development protocol
 
-Status: **protocol frozen; real-Gmsh mesh contract verified; fracture solver not
-run**. The machine-readable source of truth is
+Status: **protocol v1.1 frozen; real-Gmsh mesh contract verified; fracture solver
+not run**. Before the first numerical benchmark run, v1.1 resolves an ambiguity
+in v1: escape of the tip-seeded damage component from the frozen refinement
+corridor is unambiguously `STOP_INVALID`, matching the topology-QC and decision
+precedence. The schema remains v1 because no field shape changed. The
+machine-readable source of truth is
 [`configs/fracture_sent_sens_v1.json`](../configs/fracture_sent_sens_v1.json).
 All six SENT/SENS x coarse/medium/fine mesh contracts have been generated with
 the real Gmsh path and audited for their frozen topology, physical labels, and
@@ -174,9 +178,11 @@ meshing conventions, not claims about an exact crack trajectory.
 
 Within the tagged corridor, every edge must satisfy
 `h_max <= 1.15 h_target`. The connected `d>=0.5` component seeded at the notch
-tip must stay inside the corridor. Escape yields `STOP_REMESH_BEFORE_RERUN`;
-the result cannot be called a mesh-convergence failure while the crack has left
-the resolved region.
+tip must stay inside the corridor. Escape yields `STOP_INVALID`; the escaped
+run cannot be retained as numerical evidence or called a mesh-convergence
+failure. Remeshing is the recommended corrective action, but a changed mesh or
+corridor requires a new protocol version and the complete affected benchmark
+must be rerun.
 
 Before any solve, each tier must pass all slit adjacency, no-crossing,
 physical-label, positive-oriented-area, and corridor-size checks. Any topology

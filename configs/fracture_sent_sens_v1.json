@@ -1,6 +1,6 @@
 {
   "schema_version": "tunnelgeopt.fracture.sent_sens.development_protocol.v1",
-  "protocol_id": "miehe-sent-sens-three-grid-development-v1",
+  "protocol_id": "miehe-sent-sens-three-grid-development-v1.1",
   "status": {
     "state": "protocol_frozen_mesh_contract_verified_solver_not_run",
     "development_only": true,
@@ -227,7 +227,7 @@
     "refined_corridor_max_edge_over_target": 1.15,
     "damage_component_threshold": 0.5,
     "damage_component_must_remain_inside_refined_corridor": true,
-    "damage_escape_action": "STOP_REMESH_BEFORE_RERUN"
+    "damage_escape_action": "STOP_INVALID"
   },
   "topology_qc": {
     "required": [
