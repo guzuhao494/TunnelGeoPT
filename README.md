@@ -39,8 +39,10 @@
 > 分区卸荷。v3 加载适配器及 development-only scheduled API 已覆盖这些路径，
 > 求解器也会从最终同一 `(u,d)` 输出结点力；schema v3 则能从原始量重算反力、
 > 分项路径功和能量不平衡。development-only 轨迹适配已接入冻结 schedule
-> 重放、减半重试、全局平衡和保存-重载-复验；但精细网格轨迹、SENT/SENS
-> 三网格基准和完整标签生成器仍未闭合，所以禁止生成训练标签。固定版本 MOOSE
+> 重放、减半重试、全局平衡和保存-重载-复验。SENT/SENS 的冻结协议、
+> 显式零厚度双裂面网格、位移控制 BVP 和受限完整体探针现已实现；六档真实
+> Gmsh 网格通过拓扑与尺寸审计，但耦合轨迹、三网格收敛和完整标签生成器仍未
+> 闭合，所以禁止生成训练标签。固定版本 MOOSE
 > 的官方 `crack2d_iso` 自测已经独立通过；本地与 MOOSE 在同一 TRI3 网格和
 > 边界条件下的 3 个完好弹性与 3 个固定非均匀 P1 损伤平衡算例也已通过
 > `1e-6` 冻结门。这仍不是裂纹演化或岩爆验证。范围、反证和论文大纲见
@@ -57,7 +59,7 @@ v0.2 已从几何数据生成器推进到一个可计算、可验证、可持久
 | 本机科学栈 | Windows Python 环境已实测 NumPy、SciPy、scikit-fem、Gmsh 的导入、网格和稀疏计算 |
 | GPU 实算 | Windows Python 3.12 + PyTorch `2.11.0+cu128` 已在 RTX 5070 Ti Laptop GPU 上完成 CUDA smoke，并完成 6 方法 × 3 种子的圆洞解析迁移训练；后者结果为 No-Go，只适用于解析圆洞筛查 |
 | WSL2 | Ubuntu 24.04、Git 和同一 GPU 的可见性已通过；官方 MOOSE conda 栈与 `combined-opt` 已构建，固定 `crack2d_iso` 自测及本地-MOOSE 同网格固定状态比较均已运行通过并留存哈希证据 |
-| C-fracture 调试层 | 本地 P1 AT2 spectral-split 内核、不可逆 active-set、schema v3、冻结开发协议、裂纹带网格、v3 P1-P4 scheduled loading、反力/路径功、development-only 轨迹减半重试与全局平衡已实现并测试；同网格固定损伤 MOOSE 比较已通过；精细网格轨迹、完整生成器和 SENT/SENS 尚未完成 |
+| C-fracture 调试层 | 本地 P1 AT2 spectral-split 内核、不可逆 active-set、schema v3、冻结开发协议、裂纹带网格、v3 P1-P4 scheduled loading、反力/路径功、development-only 轨迹减半重试与全局平衡已实现并测试；同网格固定损伤 MOOSE 比较已通过；SENT/SENS 六档显式裂面网格及位移控制适配已通过合同审计，但耦合轨迹、三网格结果和完整生成器尚未完成 |
 | 尚未实现 | 可接受的高保真断裂标签集、动态破坏、微震/AE 波形、FDEM/DEM、实验校准和现场迁移 |
 
 因此，B 层当前是**静态、均质、各向同性、小应变线弹性**结果，不是岩爆、岩体破裂或现场预测结果。schema 明确不允许使用全零 `damage`、`velocity` 或 `dissipation` 字段冒充高保真标签。

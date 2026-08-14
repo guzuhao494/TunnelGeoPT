@@ -1,0 +1,388 @@
+{
+  "schema_version": "tunnelgeopt.fracture.sent_sens.development_protocol.v1",
+  "protocol_id": "miehe-sent-sens-three-grid-development-v1",
+  "status": {
+    "state": "protocol_frozen_mesh_contract_verified_solver_not_run",
+    "development_only": true,
+    "mesh_contract_implemented_and_audited": true,
+    "mesh_contract_verification_scope": "six_Gmsh_meshes_SENT_SENS_x_coarse_medium_fine_topology_labels_and_size_contract_only",
+    "fracture_solver_runs_completed": false,
+    "benchmark_results_available": false,
+    "current_decision": "ABSTAIN_NOT_RUN",
+    "phase1_pilot_authorized": false,
+    "formal_or_paper_claim_allowed": false
+  },
+  "scope": {
+    "purpose": "local_AT2_coupled_crack_evolution_three_grid_prerequisite",
+    "spatial_dimension": 2,
+    "kinematics": "plane_strain",
+    "regime": "quasi_static_rate_independent",
+    "element_family": "first_order_triangles",
+    "claim_boundary": "development_validation_only_not_exact_Miehe_reproduction",
+    "does_not_validate": [
+      "hard_rock_tunnel_trajectory",
+      "dynamic_rockburst",
+      "fragment_ejection",
+      "three_dimensional_fracture",
+      "experimental_or_field_prediction",
+      "paper_level_effect_claim"
+    ]
+  },
+  "evidence_basis": {
+    "primary_source": {
+      "citation": "Miehe, Hofacker and Welschinger (2010), Computer Methods in Applied Mechanics and Engineering 199, 2765-2778",
+      "doi": "10.1016/j.cma.2010.04.011",
+      "publisher_url": "https://www.sciencedirect.com/science/article/pii/S0045782510001283",
+      "facts_used": [
+        "unit_square_with_horizontal_left_edge_notch_to_center_at_midheight",
+        "single_edge_notch_tension_and_shear_boundary_loading_families",
+        "lame_lambda_121.15_kN_per_mm2",
+        "shear_modulus_80.77_kN_per_mm2",
+        "critical_fracture_energy_2.7e-3_kN_per_mm",
+        "reported_regularization_lengths_0.015_and_0.0075_mm",
+        "rate_independent_eta_zero_results",
+        "tension_first_500_increments_1e-5_mm_then_1e-6_mm",
+        "shear_increment_1e-5_mm"
+      ]
+    },
+    "tunnelgeopt_supplemental_conventions": [
+      "coordinate_remap_to_y_vertical_z_horizontal",
+      "explicit_zero_width_double_face_slit_topology",
+      "plane_strain_P1_triangle_discretization",
+      "ell_fixed_to_0.015_mm_for_three_grid_study",
+      "residual_stiffness_k_1e-8",
+      "initial_damage_and_history_zero_in_rock",
+      "three_mesh_tiers_and_refined_corridors",
+      "solver_QC_convergence_path_and_cost_gates"
+    ],
+    "digitized_sanity_envelopes": {
+      "source": "manual_digitization_of_primary_source_figures_for_sanity_only",
+      "not_reference_arrays_or_exact_gold": true,
+      "mismatch_action": "ABSTAIN_REFERENCE_AMBIGUITY"
+    },
+    "public_implementations": {
+      "role": "implementation_cross_read_only_not_numerical_gold",
+      "phasefieldx_url": "https://phasefieldx.readthedocs.io/en/latest/auto_examples/PhaseFieldFracture/plot_1712.html",
+      "phast_url": "https://github.com/CEMS-Lab/PhAST/blob/main/docs/user_guide/setup_problems.md"
+    }
+  },
+  "coordinate_system": {
+    "order": "y_vertical_then_z_horizontal",
+    "units": {
+      "length": "mm",
+      "force": "kN",
+      "stress": "kN_per_mm2",
+      "fracture_energy": "kN_per_mm"
+    },
+    "domain_bounds_mm": {
+      "y": [0.0, 1.0],
+      "z": [0.0, 1.0]
+    }
+  },
+  "geometry": {
+    "body": "unit_square_coupon",
+    "notch": {
+      "type": "explicit_zero_width_double_face_slit",
+      "line_mm": {
+        "y": 0.5,
+        "z": [0.0, 0.5]
+      },
+      "upper_and_lower_face_nodes_distinct_except_shared_tip": true,
+      "initial_damage_d0": 0.0,
+      "initial_history_H0_kN_per_mm2": 0.0,
+      "damage_is_not_seeded_to_represent_the_notch": true
+    },
+    "boundary_labels": [
+      "bottom",
+      "top",
+      "left_upper",
+      "left_lower",
+      "right",
+      "notch_upper",
+      "notch_lower",
+      "notch_tip"
+    ]
+  },
+  "material": {
+    "homogeneous_isotropic": true,
+    "lame_lambda_kN_per_mm2": 121.15,
+    "shear_modulus_kN_per_mm2": 80.77,
+    "critical_fracture_energy_kN_per_mm": 0.0027,
+    "regularization_length_ell_mm": 0.015,
+    "viscosity_eta": 0.0
+  },
+  "fracture_model": {
+    "model": "AT2",
+    "damage_convention": "d=0_intact_d=1_fully_damaged",
+    "degradation": "g(d)=(1-d)^2+k",
+    "residual_stiffness_k": 1e-8,
+    "split": "three_dimensional_spectral_strain_split_under_plane_strain_epsilon_xx_zero",
+    "history": "integration_point_H_n=max(H_previous,psi_plus_current)",
+    "irreversibility": "bound_constrained_d_n_greater_equal_d_previous_and_0_le_d_n_le_1"
+  },
+  "loading": {
+    "common": {
+      "bottom_y0": {
+        "u_y_mm": 0.0,
+        "u_z_mm": 0.0
+      },
+      "lateral_and_notch_faces": "traction_free",
+      "displacement_control": "monotone",
+      "store_every_prescribed_state": true
+    },
+    "benchmarks": [
+      {
+        "id": "sent",
+        "name": "single_edge_notch_tension",
+        "top_y1": {
+          "u_y_mm": "U",
+          "u_z_mm": 0.0
+        },
+        "reaction_component": "sum_top_reaction_y_kN",
+        "reaction_sign_for_curve": "positive_opening_magnitude",
+        "segments": [
+          {
+            "start_U_mm": 0.0,
+            "end_U_mm": 0.005,
+            "increment_mm": 0.00001,
+            "accepted_increment_count": 500,
+            "include_start": true,
+            "include_end": true
+          },
+          {
+            "start_U_mm": 0.005,
+            "end_U_mm": 0.0065,
+            "increment_mm": 0.000001,
+            "accepted_increment_count": 1500,
+            "include_start": false,
+            "include_end": true
+          }
+        ],
+        "required_state_count": 2001,
+        "final_U_mm": 0.0065,
+        "refined_corridor": {
+          "definition": "buffer_around_horizontal_tip_to_right_boundary_segment",
+          "centerline_yz_mm": [[0.5, 0.5], [0.5, 1.0]],
+          "half_width_mm": 0.1,
+          "notch_face_and_tip_refinement_distance_mm": 0.05
+        }
+      },
+      {
+        "id": "sens",
+        "name": "single_edge_notch_shear",
+        "top_y1": {
+          "u_y_mm": 0.0,
+          "u_z_mm": "U"
+        },
+        "reaction_component": "sum_top_reaction_z_kN",
+        "reaction_sign_for_curve": "positive_shear_magnitude",
+        "segments": [
+          {
+            "start_U_mm": 0.0,
+            "end_U_mm": 0.015,
+            "increment_mm": 0.00001,
+            "accepted_increment_count": 1500,
+            "include_start": true,
+            "include_end": true
+          }
+        ],
+        "required_state_count": 1501,
+        "final_U_mm": 0.015,
+        "refined_corridor": {
+          "definition": "buffer_around_tip_to_lower_right_diagonal_segment",
+          "centerline_yz_mm": [[0.5, 0.5], [0.0, 1.0]],
+          "half_width_mm": 0.15,
+          "notch_face_and_tip_refinement_distance_mm": 0.05
+        }
+      }
+    ]
+  },
+  "mesh": {
+    "backend": "gmsh",
+    "element": "first_order_triangle",
+    "same_geometry_boundary_labels_and_loading_across_tiers": true,
+    "tiers": [
+      {
+        "id": "coarse",
+        "h_target_over_ell_in_refined_corridor": 0.5,
+        "h_target_mm": 0.0075,
+        "bulk_h_target_rule": "min(4*h_target_mm,0.04_mm)",
+        "bulk_h_target_mm": 0.03
+      },
+      {
+        "id": "medium",
+        "h_target_over_ell_in_refined_corridor": 0.25,
+        "h_target_mm": 0.00375,
+        "bulk_h_target_rule": "min(4*h_target_mm,0.04_mm)",
+        "bulk_h_target_mm": 0.015
+      },
+      {
+        "id": "fine",
+        "h_target_over_ell_in_refined_corridor": 0.125,
+        "h_target_mm": 0.001875,
+        "bulk_h_target_rule": "min(4*h_target_mm,0.04_mm)",
+        "bulk_h_target_mm": 0.0075
+      }
+    ],
+    "refined_corridor_max_edge_over_target": 1.15,
+    "damage_component_threshold": 0.5,
+    "damage_component_must_remain_inside_refined_corridor": true,
+    "damage_escape_action": "STOP_REMESH_BEFORE_RERUN"
+  },
+  "topology_qc": {
+    "required": [
+      "notch_upper_and_lower_nodes_distinct_except_shared_tip",
+      "notch_upper_and_lower_facets_distinct",
+      "every_open_notch_face_facet_has_exactly_one_adjacent_rock_element",
+      "no_triangle_crosses_the_open_slit",
+      "all_required_physical_boundary_labels_nonempty_and_disjoint_where_expected",
+      "all_oriented_triangle_areas_strictly_positive",
+      "refined_corridor_max_edge_not_greater_than_1.15_h_target",
+      "connected_d_ge_0.5_component_seeded_at_tip_stays_inside_refined_corridor"
+    ],
+    "any_failure_action": "STOP_INVALID"
+  },
+  "solver": {
+    "nonlinear_scheme": "alternate_minimization_displacement_history_bound_constrained_damage",
+    "damage_constraint_method": "primal_dual_active_set",
+    "max_staggered_iterations": 100,
+    "max_active_set_iterations": 100,
+    "relative_displacement_increment_tolerance": 1e-8,
+    "relative_damage_increment_tolerance": 1e-8,
+    "relative_potential_energy_increment_tolerance": 1e-8,
+    "equilibrium_relative_residual_tolerance": 1e-8,
+    "kkt_complementarity_relative_residual_tolerance": 1e-8,
+    "damage_irreversibility_tolerance": 1e-12,
+    "accepted_unconverged_step_allowed": false
+  },
+  "per_tier_qc": {
+    "max_nonfinite_fraction": 0.0,
+    "max_equilibrium_relative_residual": 1e-8,
+    "max_kkt_complementarity_relative_residual": 1e-8,
+    "max_relative_displacement_increment": 1e-8,
+    "max_relative_damage_increment": 1e-8,
+    "max_relative_potential_energy_increment": 1e-8,
+    "max_damage_irreversibility_violation": 1e-12,
+    "max_global_force_relative_imbalance": 1e-8,
+    "max_global_moment_relative_imbalance": 1e-8,
+    "max_path_energy_relative_imbalance": 0.05,
+    "require_all_prescribed_states": true,
+    "require_no_accepted_nonconverged_step": true,
+    "require_complete_attempt_ledger": true,
+    "any_failure_action": "STOP_INVALID"
+  },
+  "three_grid_convergence": {
+    "comparison": "medium_against_fine_with_coarse_to_medium_monotonicity",
+    "fine_reference_denominator_rule": "absolute_fine_value_with_1e-12_quantity_unit_floor",
+    "reaction_curve_relative_L2": "sqrt(trapz((F_a-F_b)^2,dU)/max(trapz(F_b^2,dU),1e-24_kN2_mm))_on_frozen_common_U_grid",
+    "peak_location_rule": "smallest_U_at_global_maximum_reaction_magnitude",
+    "crack_path_rule": "symmetric_Hausdorff_of_tip_seeded_final_d_eq_0.95_P1_contours_divided_by_ell",
+    "medium_to_fine": {
+      "max_peak_reaction_relative_change": 0.05,
+      "max_final_fracture_energy_relative_change": 0.05,
+      "max_reaction_curve_relative_L2": 0.05,
+      "max_peak_displacement_relative_change": 0.05,
+      "max_symmetric_crack_path_Hausdorff_over_ell": 0.5
+    },
+    "monotonicity": {
+      "required_for_each_metric": true,
+      "rule": "every_medium_to_fine_error_not_greater_than_corresponding_coarse_to_medium_error"
+    },
+    "any_failure_action": "STOP_NUMERICAL"
+  },
+  "digitized_sanity_windows": {
+    "role": "ambiguity_screen_not_exact_gold_and_not_substitute_for_three_grid_convergence",
+    "sent": {
+      "peak_reaction_kN": [0.6, 0.82],
+      "peak_displacement_mm": [0.005, 0.0061]
+    },
+    "sens": {
+      "peak_reaction_kN": [0.44, 0.62],
+      "peak_displacement_mm": [0.0075, 0.0115]
+    },
+    "inclusive_bounds": true,
+    "mismatch_action": "ABSTAIN_REFERENCE_AMBIGUITY"
+  },
+  "compute_preflight": {
+    "required_before_medium_or_fine": true,
+    "projection_method": "linear_in_formal_load_increment_count_times_measured_median_accepted_step_wall_time_on_same_benchmark_and_tier",
+    "unmeasured_DOF_scaling_exponent_allowed": false,
+    "timing_probe": {
+      "minimum_measured_accepted_steps_per_benchmark_and_tier": 10,
+      "coarse_source": "coarse_subsampled_loading_accepted_steps",
+      "medium_source": "explicit_fixed_10_step_probe_before_any_formal_medium_trajectory",
+      "fine_source": "explicit_fixed_10_step_probe_before_any_formal_fine_trajectory",
+      "record_raw_step_wall_seconds_and_median": true,
+      "projection_formula": "formal_increment_count_times_same_benchmark_and_tier_median_step_wall_seconds_divided_by_3600"
+    },
+    "coarse_subsampled_loading": {
+      "sent": {
+        "segments": [
+          {
+            "start_U_mm": 0.0,
+            "end_U_mm": 0.005,
+            "increment_mm": 0.0001,
+            "accepted_increment_count": 50,
+            "include_start": true,
+            "include_end": true
+          },
+          {
+            "start_U_mm": 0.005,
+            "end_U_mm": 0.0065,
+            "increment_mm": 0.00001,
+            "accepted_increment_count": 150,
+            "include_start": false,
+            "include_end": true
+          }
+        ],
+        "required_state_count": 201
+      },
+      "sens": {
+        "segments": [
+          {
+            "start_U_mm": 0.0,
+            "end_U_mm": 0.015,
+            "increment_mm": 0.0001,
+            "accepted_increment_count": 150,
+            "include_start": true,
+            "include_end": true
+          }
+        ],
+        "required_state_count": 151
+      }
+    },
+    "coarse_only_stage_reports_only_coarse_formal_step_projection": true,
+    "all_tier_probes_required_before_all_six_projection": true,
+    "projection_must_be_recorded_before_authorization": true,
+    "max_projected_single_medium_case_wall_hours": 12.0,
+    "max_projected_all_six_cases_wall_hours": 72.0,
+    "threshold_failure_action": "ABSTAIN_COMPUTE_OPTIMIZE_BEFORE_RERUN"
+  },
+  "decision": {
+    "precedence": [
+      "STOP_INVALID",
+      "ABSTAIN_COMPUTE_OPTIMIZE_BEFORE_RERUN",
+      "ABSTAIN_REFERENCE_AMBIGUITY",
+      "STOP_NUMERICAL",
+      "READY_FOR_PHASE1_PILOT"
+    ],
+    "routes": {
+      "STOP_INVALID": "invalid_config_topology_mesh_or_per_tier_QC",
+      "ABSTAIN_COMPUTE_OPTIMIZE_BEFORE_RERUN": "projected_single_medium_over_12h_or_all_six_over_72h",
+      "ABSTAIN_REFERENCE_AMBIGUITY": "digitized_figure_window_mismatch_or_primary_source_interpretation_ambiguity",
+      "STOP_NUMERICAL": "valid_run_but_three_grid_convergence_or_monotonicity_gate_failed",
+      "READY_FOR_PHASE1_PILOT": "all_hard_gates_and_digitized_sanity_screens_pass"
+    },
+    "go_family_code": "READY_FOR_PHASE1_PILOT",
+    "go_is_not_paper_or_field_GO": true,
+    "passing_claim": "local_development_solver_passed_frozen_SENT_SENS_prerequisite_and_may_attempt_Phase1_pilot",
+    "not_run_code": "ABSTAIN_NOT_RUN"
+  },
+  "identity": {
+    "case_id_template": "fss1-{benchmark_id}-{mesh_tier}",
+    "canonical_order": "benchmark_sent_then_sens_each_coarse_then_medium_then_fine",
+    "expected_case_count": 6,
+    "result_conditioned_replacement_allowed": false,
+    "mesh_or_loading_change_creates_new_protocol_version": true
+  }
+}
