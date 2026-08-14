@@ -198,6 +198,11 @@
   拓扑和 `hmax<=1.15h` 审计，但没有运行耦合裂纹轨迹。
 - [x] 实现最多 12 个显式状态的完整体 `d=0` 非授权探针；默认 validate-only，
   严格区分自由 DOF 残差、约束反力、合力/力矩和路径功，且不能授权正式计算。
+- [x] 在同一 clean/pushed HEAD 下串行完成 SENT+SENS coarse fixed-`d=0` 三状态
+  成对实跑；6/6 状态通过适用 QC，峰值 RSS 约 402 MiB。固定损伤完整 coarse
+  轨迹耗时下界合计约 113 h，因此该结果只允许 timing/QC triage。
+- [ ] 接通 checkpoint 的 `u/d/H` 单步重启并完成 SENT+SENS 各三状态的 bounded
+  coupled coarse prefix；在此之前不得启动完整 201/151 状态轨迹。
 - [ ] 完成预缺口拉伸/剪切 SENT/SENS 耦合裂纹演化三网格基准。
 - [ ] 三网格、加载步、长度尺度、能量、残差与不可逆门全部通过。
 - [ ] 完成 36 条 development-only 轨迹和 12 条 ultrafine 复算，无静默替换。

@@ -1,7 +1,8 @@
 # SENT/SENS three-grid development protocol
 
-Status: **protocol v1.2 frozen; real-Gmsh mesh contract verified; fracture solver
-not run**. Before the first coupled benchmark trajectory, v1.2 freezes the
+Status: **protocol v1.2 frozen; real-Gmsh mesh contract verified; paired
+fixed-`d=0` triage completed; coupled fracture solver not run**. Before the
+first coupled benchmark trajectory, v1.2 freezes the
 previously missing displacement-solver, line-search, active-set, adaptive
 bisection, damage-range, and balance-normalization controls. It retains the
 v1.1 rule that escape of the tip-seeded damage component from the frozen
@@ -18,6 +19,13 @@ benchmark result exists. The only valid benchmark decision remains
 `ABSTAIN_NOT_RUN`. The dedicated real-Gmsh mesh tests and their narrower
 evidence boundary are documented in
 [`FRACTURE_BENCHMARK_MESH.md`](FRACTURE_BENCHMARK_MESH.md).
+
+The completed paired intact campaign is recorded separately under
+`artifacts/development/fracture-benchmark-intact-paired-v1/validated-dd08317-20260814`.
+Its six fixed-`d=0` equilibrium states passed the applicable QC gates, but the
+projected complete coarse fixed-damage lower bound is about 113 h in total.
+It is timing/QC triage only, does not satisfy the ten-step timing rule, and
+does not change the `ABSTAIN_NOT_RUN` coupled-benchmark decision.
 
 This protocol is a narrow prerequisite for attempting the 36-case tunnel
 Phase-1 pilot. It is not an exact reproduction of Miehe et al., an experimental

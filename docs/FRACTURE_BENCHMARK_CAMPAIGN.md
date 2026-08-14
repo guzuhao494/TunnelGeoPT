@@ -56,6 +56,24 @@ damage. The artifacts set `real_paired_probe_completed=true`, but also freeze:
 Thus the campaign cannot support a fracture, benchmark-reproduction, tunnel,
 rockburst, or learned-model effect claim.
 
+## Executed immutable evidence
+
+The first paired campaign completed on implementation HEAD
+`dd08317bb0727d810d9c71f54142afba2dcd2e27` at
+`artifacts/development/fracture-benchmark-intact-paired-v1/validated-dd08317-20260814`.
+The external SHA-256 of its final completion manifest is
+`dbd63cb3af2a903e411615e9bc1a261970eaea585717b9f21027fa68891af9e3`.
+
+All six fixed-`d=0` states converged and passed the applicable `1e-8`
+equilibrium, global-force, and global-moment gates plus the 5% path-energy
+gate. The process-level peak working set was 402.125 MiB. Median step times
+were 97.6331 s for SENT and 141.0994 s for SENS, giving non-authorizing
+fixed-damage lower-bound projections of 54.2406 h and 58.7914 h for their full
+coarse formal increment counts. These three-state results do not satisfy the
+protocol's ten-accepted-step timing requirement and do not authorize a coupled
+trajectory. They instead show that performance optimization and a bounded
+restartable coupled prefix are required before any complete coarse run.
+
 ## Invocation
 
 Run only from a clean branch whose HEAD is already at its upstream:
