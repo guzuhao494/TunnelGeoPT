@@ -1,6 +1,6 @@
 {
   "schema_version": "tunnelgeopt.fracture.sent_sens.development_protocol.v1",
-  "protocol_id": "miehe-sent-sens-three-grid-development-v1.1",
+  "protocol_id": "miehe-sent-sens-three-grid-development-v1.2",
   "status": {
     "state": "protocol_frozen_mesh_contract_verified_solver_not_run",
     "development_only": true,
@@ -246,14 +246,35 @@
     "nonlinear_scheme": "alternate_minimization_displacement_history_bound_constrained_damage",
     "damage_constraint_method": "primal_dual_active_set",
     "max_staggered_iterations": 100,
+    "max_displacement_iterations": 30,
+    "line_search_steps": 16,
     "max_active_set_iterations": 100,
+    "active_set_tolerance": 1e-10,
+    "tangent_perturbation": 1e-7,
     "relative_displacement_increment_tolerance": 1e-8,
     "relative_damage_increment_tolerance": 1e-8,
     "relative_potential_energy_increment_tolerance": 1e-8,
     "equilibrium_relative_residual_tolerance": 1e-8,
     "kkt_complementarity_relative_residual_tolerance": 1e-8,
     "damage_irreversibility_tolerance": 1e-12,
-    "accepted_unconverged_step_allowed": false
+    "raise_on_nonconvergence": false,
+    "accepted_unconverged_step_allowed": false,
+    "adaptive_bisection": {
+      "factor": 0.5,
+      "max_retry_depth": 6,
+      "minimum_increment_mm": 1e-7,
+      "retryable_codes": [
+        "QC_NONCONVERGED",
+        "QC_EQUILIBRIUM",
+        "QC_KKT",
+        "QC_DU",
+        "QC_DD",
+        "QC_DPI",
+        "QC_PATH_ENERGY"
+      ],
+      "retry_exhausted_action": "STOP_NUMERICAL",
+      "max_rejected_attempts_per_required_interval": 6
+    }
   },
   "per_tier_qc": {
     "max_nonfinite_fraction": 0.0,
@@ -263,9 +284,14 @@
     "max_relative_damage_increment": 1e-8,
     "max_relative_potential_energy_increment": 1e-8,
     "max_damage_irreversibility_violation": 1e-12,
+    "max_damage_range_violation": 1e-10,
     "max_global_force_relative_imbalance": 1e-8,
     "max_global_moment_relative_imbalance": 1e-8,
     "max_path_energy_relative_imbalance": 0.05,
+    "force_balance_normalization_floor_kN": 1e-15,
+    "moment_balance_normalization_floor_kN_mm": 1e-15,
+    "path_energy_normalization_floor_kN_mm": 1e-18,
+    "global_moment_origin_yz_mm": [0.0, 0.0],
     "require_all_prescribed_states": true,
     "require_no_accepted_nonconverged_step": true,
     "require_complete_attempt_ledger": true,

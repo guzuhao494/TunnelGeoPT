@@ -21,10 +21,12 @@ from tunnelgeopt.fracture_benchmark_validation import (
 def test_frozen_mesh_verified_solver_not_run_status_and_six_case_order() -> None:
     config = load_fracture_sent_sens_config()
     assert SCHEMA_VERSION == "tunnelgeopt.fracture.sent_sens.development_protocol.v1"
-    assert PROTOCOL_ID == "miehe-sent-sens-three-grid-development-v1.1"
+    assert PROTOCOL_ID == "miehe-sent-sens-three-grid-development-v1.2"
     assert config["schema_version"] == SCHEMA_VERSION
     assert config["protocol_id"] == PROTOCOL_ID
-    assert len(FROZEN_CANONICAL_SHA256) == 64
+    assert FROZEN_CANONICAL_SHA256 == (
+        "61d95d66cc2ae3d0904cf4d9e6af8602cab9f018fac1c2372c9a326074be5ff0"
+    )
     assert config["status"] == {
         "state": "protocol_frozen_mesh_contract_verified_solver_not_run",
         "development_only": True,
@@ -174,10 +176,72 @@ def test_topology_and_per_tier_qc_fail_closed_before_convergence_claim() -> None
     assert qc["max_relative_damage_increment"] == 1e-8
     assert qc["max_relative_potential_energy_increment"] == 1e-8
     assert qc["max_damage_irreversibility_violation"] == 1e-12
+    assert qc["max_damage_range_violation"] == 1e-10
     assert qc["max_global_force_relative_imbalance"] == 1e-8
     assert qc["max_global_moment_relative_imbalance"] == 1e-8
     assert qc["max_path_energy_relative_imbalance"] == 0.05
+    assert qc["force_balance_normalization_floor_kN"] == 1e-15
+    assert qc["moment_balance_normalization_floor_kN_mm"] == 1e-15
+    assert qc["path_energy_normalization_floor_kN_mm"] == 1e-18
+    assert qc["global_moment_origin_yz_mm"] == [0.0, 0.0]
     assert qc["require_no_accepted_nonconverged_step"] is True
+
+
+def test_solver_and_adaptive_bisection_controls_are_frozen_in_v1_2() -> None:
+    config = load_fracture_sent_sens_config()
+    solver = config["solver"]
+    assert solver["max_displacement_iterations"] == 30
+    assert solver["line_search_steps"] == 16
+    assert solver["active_set_tolerance"] == 1e-10
+    assert solver["tangent_perturbation"] == 1e-7
+    assert solver["raise_on_nonconvergence"] is False
+    assert solver["accepted_unconverged_step_allowed"] is False
+    assert solver["adaptive_bisection"] == {
+        "factor": 0.5,
+        "max_retry_depth": 6,
+        "minimum_increment_mm": 1e-7,
+        "retryable_codes": [
+            "QC_NONCONVERGED",
+            "QC_EQUILIBRIUM",
+            "QC_KKT",
+            "QC_DU",
+            "QC_DD",
+            "QC_DPI",
+            "QC_PATH_ENERGY",
+        ],
+        "retry_exhausted_action": "STOP_NUMERICAL",
+        "max_rejected_attempts_per_required_interval": 6,
+    }
+    assert {
+        "SOLVER_EXCEPTION",
+        "QC_NONFINITE",
+        "QC_IRREVERSIBILITY",
+        "QC_RANGE",
+        "QC_GLOBAL_FORCE",
+        "QC_GLOBAL_MOMENT",
+        "QC_REACTION",
+        "STOP_INVALID",
+    }.isdisjoint(solver["adaptive_bisection"]["retryable_codes"])
+
+
+def test_legacy_v1_1_identity_and_control_shape_changes_fail_closed() -> None:
+    legacy = copy.deepcopy(load_fracture_sent_sens_config())
+    legacy["protocol_id"] = "miehe-sent-sens-three-grid-development-v1.1"
+    with pytest.raises(FractureBenchmarkContractError, match="frozen v1.2"):
+        validate_fracture_sent_sens_config(legacy)
+
+    for section, key in (
+        ("solver", "line_search_steps"),
+        ("adaptive_bisection", "max_rejected_attempts_per_required_interval"),
+        ("per_tier_qc", "path_energy_normalization_floor_kN_mm"),
+    ):
+        changed = copy.deepcopy(load_fracture_sent_sens_config())
+        if section == "adaptive_bisection":
+            del changed["solver"]["adaptive_bisection"][key]
+        else:
+            del changed[section][key]
+        with pytest.raises(FractureBenchmarkContractError, match="keys differ"):
+            validate_fracture_sent_sens_config(changed)
 
 
 def test_three_grid_curve_path_and_monotonicity_gates_are_frozen() -> None:
@@ -259,6 +323,46 @@ def test_decision_routes_do_not_promote_benchmark_readiness_to_paper_go() -> Non
                 {"damage_escape_action": "STOP_REMESH_BEFORE_RERUN"}
             ),
             "damage corridor escape",
+        ),
+        (
+            lambda value: value["solver"].update({"max_displacement_iterations": 31}),
+            "max_displacement_iterations",
+        ),
+        (
+            lambda value: value["solver"]["adaptive_bisection"]["retryable_codes"].append(
+                "SOLVER_EXCEPTION"
+            ),
+            "seven-code order",
+        ),
+        (
+            lambda value: value["solver"]["adaptive_bisection"].update(
+                {"retry_exhausted_action": "STOP_INVALID"}
+            ),
+            "retry exhaustion",
+        ),
+        (
+            lambda value: value["solver"]["adaptive_bisection"].update(
+                {"max_rejected_attempts_per_required_interval": 7}
+            ),
+            "max_rejected_attempts_per_required_interval",
+        ),
+        (
+            lambda value: value["per_tier_qc"].update({"global_moment_origin_yz_mm": [0.0, 0.1]}),
+            "global_moment_origin_yz_mm",
+        ),
+        (
+            lambda value: value["per_tier_qc"].update({"any_failure_action": "STOP_NUMERICAL"}),
+            "per_tier_qc.any_failure_action",
+        ),
+        (
+            lambda value: value["topology_qc"].update({"any_failure_action": "STOP_NUMERICAL"}),
+            "topology failures",
+        ),
+        (
+            lambda value: value["three_grid_convergence"].update(
+                {"any_failure_action": "STOP_INVALID"}
+            ),
+            "three-grid convergence",
         ),
     ],
 )

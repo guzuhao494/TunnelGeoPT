@@ -1,11 +1,14 @@
 # SENT/SENS three-grid development protocol
 
-Status: **protocol v1.1 frozen; real-Gmsh mesh contract verified; fracture solver
-not run**. Before the first numerical benchmark run, v1.1 resolves an ambiguity
-in v1: escape of the tip-seeded damage component from the frozen refinement
-corridor is unambiguously `STOP_INVALID`, matching the topology-QC and decision
-precedence. The schema remains v1 because no field shape changed. The
-machine-readable source of truth is
+Status: **protocol v1.2 frozen; real-Gmsh mesh contract verified; fracture solver
+not run**. Before the first coupled benchmark trajectory, v1.2 freezes the
+previously missing displacement-solver, line-search, active-set, adaptive
+bisection, damage-range, and balance-normalization controls. It retains the
+v1.1 rule that escape of the tip-seeded damage component from the frozen
+refinement corridor is unambiguously `STOP_INVALID`. The machine-readable
+schema family remains v1; the new immutable protocol identity is
+`miehe-sent-sens-three-grid-development-v1.2`. The machine-readable source of
+truth is
 [`configs/fracture_sent_sens_v1.json`](../configs/fracture_sent_sens_v1.json).
 All six SENT/SENS x coarse/medium/fine mesh contracts have been generated with
 the real Gmsh path and audited for their frozen topology, physical labels, and
@@ -204,10 +207,38 @@ Every accepted state of all six cases must satisfy:
 - zero non-finite values, all prescribed states, a complete attempt ledger,
   and no accepted unconverged state.
 
-The alternate-minimization and active-set iteration caps are both 100. A
-failure of topology, completeness, balance, convergence, or ledger integrity
-makes the run invalid (`STOP_INVALID`); it cannot be counted as numerical
-evidence by dropping failed states.
+The alternate-minimization and active-set iteration caps are both 100. The
+displacement solve is capped at 30 iterations with 16 line-search steps. The
+active-set tolerance is `1e-10`, the tangent perturbation is `1e-7`, and
+`raise_on_nonconvergence=false` ensures that a failed candidate can be recorded
+in the attempt ledger. It never authorizes acceptance of that candidate:
+`accepted_unconverged_step_allowed` remains false.
+
+Damage values have an additional absolute range-violation gate of `1e-10`.
+Force and moment balance use denominator floors of `1e-15 kN` and
+`1e-15 kN mm`; path energy uses `1e-18 kN mm`. These are zero-scale guards,
+not relaxed balance tolerances. Global moment is evaluated about the frozen
+`(y0,z0)=(0,0) mm` origin.
+
+Adaptive recovery uses exact bisection (`factor=0.5`), at most six levels, a
+strict `1e-7 mm` minimum increment, and at most six rejected attempts per
+required interval. Only the following seven numerical codes are retryable, in
+the frozen order:
+
+1. `QC_NONCONVERGED`;
+2. `QC_EQUILIBRIUM`;
+3. `QC_KKT`;
+4. `QC_DU`;
+5. `QC_DD`;
+6. `QC_DPI`;
+7. `QC_PATH_ENERGY`.
+
+`SOLVER_EXCEPTION`, `QC_NONFINITE`, `QC_IRREVERSIBILITY`, `QC_RANGE`,
+`QC_GLOBAL_FORCE`, `QC_GLOBAL_MOMENT`, `QC_REACTION`, and `STOP_INVALID` are
+not retryable. A retryable numerical failure that exhausts the frozen recovery
+budget routes to `STOP_NUMERICAL`. Invalid configuration, identity, topology,
+mesh, damage-corridor containment, completeness, or ledger evidence routes to
+`STOP_INVALID`. No failed or unconverged state may be silently retained.
 
 ## Three-grid convergence gates
 
@@ -304,7 +335,9 @@ coarse_probe_U = prescribed_displacements(
 )  # 201 states
 ```
 
-The validator pins the canonical JSON hash in code. Any nested value, key, or
-decision change fails closed and requires a new protocol version. The API does
+The validator pins the v1.2 canonical JSON SHA-256
+`61d95d66cc2ae3d0904cf4d9e6af8602cab9f018fac1c2372c9a326074be5ff0` in
+code. Any nested value, key, or decision change fails closed and requires a new
+protocol version. The API does
 not import the mesh or fracture solver and cannot accidentally turn validation
 of the frozen plan into fracture-solver or numerical-benchmark evidence.

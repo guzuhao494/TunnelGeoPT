@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = "tunnelgeopt.fracture.sent_sens.development_protocol.v1"
-PROTOCOL_ID = "miehe-sent-sens-three-grid-development-v1.1"
+PROTOCOL_ID = "miehe-sent-sens-three-grid-development-v1.2"
 BENCHMARK_IDS = ("sent", "sens")
 MESH_TIERS = ("coarse", "medium", "fine")
 CASE_COUNT = 6
@@ -28,7 +28,17 @@ CASE_COUNT = 6
 # SHA-256 of canonical JSON (sorted keys, compact separators, UTF-8).  The
 # value is intentionally pinned: changing any scientific or decision field
 # requires a new protocol version instead of silently relaxing this validator.
-FROZEN_CANONICAL_SHA256 = "d10036cfe1a0fa54600acae5d5f04425014074ec3d8ebace9e8f284251d8a20d"
+FROZEN_CANONICAL_SHA256 = "61d95d66cc2ae3d0904cf4d9e6af8602cab9f018fac1c2372c9a326074be5ff0"
+
+_RETRYABLE_NUMERICAL_CODES = (
+    "QC_NONCONVERGED",
+    "QC_EQUILIBRIUM",
+    "QC_KKT",
+    "QC_DU",
+    "QC_DD",
+    "QC_DPI",
+    "QC_PATH_ENERGY",
+)
 
 _EXPECTED_TOP_LEVEL = {
     "schema_version",
@@ -143,6 +153,15 @@ def _require_sequence(value: Any, path: str) -> Sequence[Any]:
     return value
 
 
+def _require_exact_keys(value: Mapping[str, Any], expected: set[str], path: str) -> None:
+    actual = set(value)
+    if actual != expected:
+        raise FractureBenchmarkContractError(
+            f"{path} keys differ; missing={sorted(expected - actual)}, "
+            f"extra={sorted(actual - expected)}"
+        )
+
+
 def _number(value: Any, path: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise FractureBenchmarkContractError(f"{path} must be a number")
@@ -226,7 +245,7 @@ def _validate_semantics(config: Mapping[str, Any]) -> None:
             "config top-level keys differ from the frozen SENT/SENS contract"
         )
     if config["schema_version"] != SCHEMA_VERSION or config["protocol_id"] != PROTOCOL_ID:
-        raise FractureBenchmarkContractError("schema_version or protocol_id is not frozen v1.1")
+        raise FractureBenchmarkContractError("schema_version or protocol_id is not frozen v1.2")
 
     status = _require_mapping(config["status"], "status")
     expected_status = {
@@ -334,6 +353,147 @@ def _validate_semantics(config: Mapping[str, Any]) -> None:
             tier.get("bulk_h_target_mm"), min(4.0 * h_target, 0.04), f"mesh.{tier_id}.bulk"
         )
 
+    topology_qc = _require_mapping(config["topology_qc"], "topology_qc")
+    if topology_qc.get("any_failure_action") != "STOP_INVALID":
+        raise FractureBenchmarkContractError("topology failures must fail closed as STOP_INVALID")
+
+    solver = _require_mapping(config["solver"], "solver")
+    expected_solver: dict[str, Any] = {
+        "nonlinear_scheme": (
+            "alternate_minimization_displacement_history_bound_constrained_damage"
+        ),
+        "damage_constraint_method": "primal_dual_active_set",
+        "max_staggered_iterations": 100,
+        "max_displacement_iterations": 30,
+        "line_search_steps": 16,
+        "max_active_set_iterations": 100,
+        "active_set_tolerance": 1e-10,
+        "tangent_perturbation": 1e-7,
+        "relative_displacement_increment_tolerance": 1e-8,
+        "relative_damage_increment_tolerance": 1e-8,
+        "relative_potential_energy_increment_tolerance": 1e-8,
+        "equilibrium_relative_residual_tolerance": 1e-8,
+        "kkt_complementarity_relative_residual_tolerance": 1e-8,
+        "damage_irreversibility_tolerance": 1e-12,
+        "raise_on_nonconvergence": False,
+        "accepted_unconverged_step_allowed": False,
+        "adaptive_bisection": None,
+    }
+    _require_exact_keys(solver, set(expected_solver), "solver")
+    for key, expected in expected_solver.items():
+        if key == "adaptive_bisection":
+            continue
+        if isinstance(expected, bool):
+            if solver[key] is not expected:
+                raise FractureBenchmarkContractError(
+                    f"solver.{key} must equal frozen value {expected!r}"
+                )
+        elif isinstance(expected, int):
+            if _integer(solver[key], f"solver.{key}") != expected:
+                raise FractureBenchmarkContractError(
+                    f"solver.{key} must equal frozen value {expected!r}"
+                )
+        elif isinstance(expected, float):
+            _require_close(solver[key], expected, f"solver.{key}")
+        elif solver[key] != expected:
+            raise FractureBenchmarkContractError(
+                f"solver.{key} must equal frozen value {expected!r}"
+            )
+
+    adaptive = _require_mapping(solver["adaptive_bisection"], "solver.adaptive_bisection")
+    _require_exact_keys(
+        adaptive,
+        {
+            "factor",
+            "max_retry_depth",
+            "minimum_increment_mm",
+            "retryable_codes",
+            "retry_exhausted_action",
+            "max_rejected_attempts_per_required_interval",
+        },
+        "solver.adaptive_bisection",
+    )
+    _require_close(adaptive["factor"], 0.5, "solver.adaptive_bisection.factor")
+    if _integer(adaptive["max_retry_depth"], "solver.adaptive_bisection.max_retry_depth") != 6:
+        raise FractureBenchmarkContractError(
+            "solver.adaptive_bisection.max_retry_depth must equal frozen value 6"
+        )
+    _require_close(
+        adaptive["minimum_increment_mm"],
+        1e-7,
+        "solver.adaptive_bisection.minimum_increment_mm",
+    )
+    retryable = _require_sequence(
+        adaptive["retryable_codes"], "solver.adaptive_bisection.retryable_codes"
+    )
+    if tuple(retryable) != _RETRYABLE_NUMERICAL_CODES:
+        raise FractureBenchmarkContractError(
+            "solver.adaptive_bisection.retryable_codes must equal the frozen seven-code order"
+        )
+    if adaptive["retry_exhausted_action"] != "STOP_NUMERICAL":
+        raise FractureBenchmarkContractError(
+            "adaptive retry exhaustion must route to STOP_NUMERICAL"
+        )
+    if (
+        _integer(
+            adaptive["max_rejected_attempts_per_required_interval"],
+            "solver.adaptive_bisection.max_rejected_attempts_per_required_interval",
+        )
+        != 6
+    ):
+        raise FractureBenchmarkContractError(
+            "solver.adaptive_bisection.max_rejected_attempts_per_required_interval "
+            "must equal frozen value 6"
+        )
+
+    per_tier_qc = _require_mapping(config["per_tier_qc"], "per_tier_qc")
+    expected_per_tier_qc: dict[str, Any] = {
+        "max_nonfinite_fraction": 0.0,
+        "max_equilibrium_relative_residual": 1e-8,
+        "max_kkt_complementarity_relative_residual": 1e-8,
+        "max_relative_displacement_increment": 1e-8,
+        "max_relative_damage_increment": 1e-8,
+        "max_relative_potential_energy_increment": 1e-8,
+        "max_damage_irreversibility_violation": 1e-12,
+        "max_damage_range_violation": 1e-10,
+        "max_global_force_relative_imbalance": 1e-8,
+        "max_global_moment_relative_imbalance": 1e-8,
+        "max_path_energy_relative_imbalance": 0.05,
+        "force_balance_normalization_floor_kN": 1e-15,
+        "moment_balance_normalization_floor_kN_mm": 1e-15,
+        "path_energy_normalization_floor_kN_mm": 1e-18,
+        "global_moment_origin_yz_mm": None,
+        "require_all_prescribed_states": True,
+        "require_no_accepted_nonconverged_step": True,
+        "require_complete_attempt_ledger": True,
+        "any_failure_action": "STOP_INVALID",
+    }
+    _require_exact_keys(per_tier_qc, set(expected_per_tier_qc), "per_tier_qc")
+    for key, expected in expected_per_tier_qc.items():
+        if key == "global_moment_origin_yz_mm":
+            continue
+        if isinstance(expected, bool):
+            if per_tier_qc[key] is not expected:
+                raise FractureBenchmarkContractError(
+                    f"per_tier_qc.{key} must equal frozen value {expected!r}"
+                )
+        elif isinstance(expected, float):
+            _require_close(per_tier_qc[key], expected, f"per_tier_qc.{key}")
+        elif per_tier_qc[key] != expected:
+            raise FractureBenchmarkContractError(
+                f"per_tier_qc.{key} must equal frozen value {expected!r}"
+            )
+    moment_origin = _require_sequence(
+        per_tier_qc["global_moment_origin_yz_mm"],
+        "per_tier_qc.global_moment_origin_yz_mm",
+    )
+    if len(moment_origin) != 2:
+        raise FractureBenchmarkContractError(
+            "per_tier_qc.global_moment_origin_yz_mm must contain y0 and z0"
+        )
+    _require_close(moment_origin[0], 0.0, "per_tier_qc.global_moment_origin_yz_mm[0]")
+    _require_close(moment_origin[1], 0.0, "per_tier_qc.global_moment_origin_yz_mm[1]")
+
     compute = _require_mapping(config["compute_preflight"], "compute_preflight")
     if compute.get("unmeasured_DOF_scaling_exponent_allowed") is not False:
         raise FractureBenchmarkContractError("unmeasured DOF scaling exponents are forbidden")
@@ -367,6 +527,12 @@ def _validate_semantics(config: Mapping[str, Any]) -> None:
     if decision.get("go_is_not_paper_or_field_GO") is not True:
         raise FractureBenchmarkContractError("benchmark readiness must not become a paper GO")
 
+    convergence = _require_mapping(config["three_grid_convergence"], "three_grid_convergence")
+    if convergence.get("any_failure_action") != "STOP_NUMERICAL":
+        raise FractureBenchmarkContractError(
+            "valid three-grid convergence failure must route to STOP_NUMERICAL"
+        )
+
 
 def validate_fracture_sent_sens_config(config: Mapping[str, Any]) -> None:
     """Fail closed unless *config* is the exact frozen validate-only protocol."""
@@ -377,7 +543,7 @@ def validate_fracture_sent_sens_config(config: Mapping[str, Any]) -> None:
     digest = _canonical_sha256(root)
     if digest != FROZEN_CANONICAL_SHA256:
         raise FractureBenchmarkContractError(
-            "config differs from frozen canonical SENT/SENS v1.1; create a new protocol version "
+            "config differs from frozen canonical SENT/SENS v1.2; create a new protocol version "
             f"instead (sha256={digest})"
         )
 

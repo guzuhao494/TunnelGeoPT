@@ -8,11 +8,18 @@ and does not provide paper evidence.
 
 ## Current decision
 
-The checked-in v1.1 protocol returns
-`NOT_READY_MISSING_FROZEN_CONTROLS`. This is intentional. The coupled runner
-will not construct `FractureSolverOptions` from library defaults and will not
-choose an adaptive policy locally. A versioned protocol extension must freeze
-all of the following paths:
+The checked-in v1.2 protocol freezes the complete controls below and returns
+`READY_DEVELOPMENT_PREFIX_ONLY`. This only enables a bounded, injected coarse
+development prefix; it does not authorize a real FEM campaign or formal run.
+Every non-legacy mapping must pass the strict current SENT/SENS validator,
+including its exact protocol ID, semantic contract, and canonical SHA-256;
+unknown future IDs and any field/hash drift return
+`NOT_READY_INVALID_FROZEN_CONTROLS` with a path-free generic detail.
+The exact pinned v1.1 shape, reconstructed in regression tests by removing the
+v1.2 additions, still returns `NOT_READY_MISSING_FROZEN_CONTROLS`. The coupled
+runner will not construct `FractureSolverOptions` from library defaults and
+will not choose an adaptive policy locally. A coupled-ready protocol must
+freeze all of the following paths:
 
 - `solver.max_displacement_iterations`
 - `solver.line_search_steps`
@@ -24,6 +31,7 @@ all of the following paths:
 - `solver.adaptive_bisection.minimum_increment_mm`
 - `solver.adaptive_bisection.retryable_codes`
 - `solver.adaptive_bisection.retry_exhausted_action`
+- `solver.adaptive_bisection.max_rejected_attempts_per_required_interval`
 - `per_tier_qc.max_damage_range_violation`
 - `per_tier_qc.force_balance_normalization_floor_kN`
 - `per_tier_qc.moment_balance_normalization_floor_kN_mm`
@@ -33,7 +41,10 @@ all of the following paths:
 The extension must have a new protocol identity. Adding fields while retaining
 the immutable v1.1 ID is rejected as
 `NOT_READY_PROTOCOL_EXTENSION_REQUIRED`. No numerical value for any missing
-control is proposed or implied by this module.
+control is proposed or implied by this module. The legacy guard pins both the
+literal v1.1 protocol ID and its canonical SHA-256 locally; it intentionally
+does not import a validator's moving "current protocol" identity, so a future
+v1.2 cannot drift into the v1.1 rejection branch.
 
 When a new protocol supplies those fields, every `FractureSolverOptions` field
 is passed explicitly. The existing displacement and damage tolerances define
@@ -47,8 +58,17 @@ Every accepted state is an immutable `RestartCheckpoint` containing:
 - scalar displacement `U`;
 - complete displacement, damage, history, and reaction arrays;
 - cumulative path work and total potential energy;
-- mesh, protocol, and exact solver-options SHA-256 identities; and
+- mesh, protocol, and exact solver-options-plus-adaptive-policy SHA-256
+  identities; and
 - a content SHA-256 over the metadata and all array bytes.
+
+Checkpoint construction rejects non-finite `U`, displacement, damage,
+history, reaction, path-work, or potential-energy values before a solver can
+receive a restart seed. Candidate construction likewise requires finite
+applied nodal force and finite, nonnegative residual, increment, violation,
+and reaction-magnitude diagnostics. A candidate-construction failure inside
+the injected solver is ledgered as nonretryable `SOLVER_EXCEPTION` and routes
+to `STOP_INVALID`.
 
 The injectable one-step solver receives only the last accepted checkpoint,
 the attempted scalar target, and the explicitly constructed options. A
@@ -58,15 +78,21 @@ rollback guarantee.
 
 Adaptive bisection is allowed only when its failure code is listed by the new
 protocol and its frozen depth and minimum-increment gates permit both child
-intervals. The factor is exactly `0.5`. A midpoint is an adaptive state only;
-the original required target remains pending and must later be accepted
-exactly once. `required_prefix_count` truncates the exact coarse grid by count;
-callers cannot provide replacement displacement values.
+intervals. The factor is exactly `0.5`. Rejections are counted independently
+for each `required_state_index`; v1.2 stops with `STOP_NUMERICAL` immediately
+on the sixth rejection, before a seventh attempt can be issued. A midpoint is
+an adaptive state only; the original required target remains pending and must
+later be accepted exactly once. `required_prefix_count` truncates the exact
+coarse grid by count; callers cannot provide replacement displacement values.
+The restart `options_sha256` binds both the explicit
+`FractureSolverOptions` and the complete adaptive policy, including this
+rejection budget.
 
 Each ledger row records the required target and index, attempted `U` and
 `dU`, retry depth and parent, start/result checkpoint hashes, wall time, peak
 RSS, exception type/message, all QC results, terminal/acceptance code, and
-whether the accepted state is a required output.
+whether the accepted state is a required output. It also records the cumulative
+rejected-attempt count for that required state.
 
 ## Per-attempt QC formulas
 
@@ -99,9 +125,15 @@ max(|Pi_n-Pi_previous|,|W_n-W_previous|,energy_floor)`.
 
 Finally, the caller must inject a damage-corridor callback evaluated with the
 protocol's `d>=0.5` component threshold. Callback failure, malformed identity,
-or corridor escape produces `STOP_INVALID` and is never bisected. Other
-failures are retried only if the future protocol explicitly lists their code;
-exhaustion produces `STOP_NUMERICAL`.
+or corridor escape produces `STOP_INVALID` and is never bisected. This has
+explicit highest precedence even when the same candidate also reports a
+retryable convergence or residual failure. The only retryable codes are the
+frozen seven: `QC_NONCONVERGED`, `QC_EQUILIBRIUM`, `QC_KKT`, `QC_DU`,
+`QC_DD`, `QC_DPI`, and `QC_PATH_ENERGY`; their depth, increment, or rejection
+budget exhaustion produces `STOP_NUMERICAL`. `QC_NONFINITE`,
+`QC_IRREVERSIBILITY`, `QC_RANGE`, `QC_GLOBAL_FORCE`, `QC_GLOBAL_MOMENT`,
+`QC_REACTION`, `SOLVER_EXCEPTION`, unknown codes, and `STOP_INVALID` all route
+immediately to `STOP_INVALID` and are never bisected.
 
 The mock tests exercise preflight refusal, explicit option construction,
 checkpoint immutability, rejected-state rollback, midpoint insertion without

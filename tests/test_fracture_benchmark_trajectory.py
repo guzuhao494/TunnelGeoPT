@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
+import math
+from dataclasses import fields, replace
 from pathlib import Path
 
 import numpy as np
 import pytest
 
+import tunnelgeopt.fracture_benchmark_trajectory as trajectory_module
 from tunnelgeopt.fracture_benchmark_trajectory import (
     DEVELOPMENT_PREFIX_ACCEPTED,
+    NOT_READY_INVALID_FROZEN_CONTROLS,
     NOT_READY_MISSING_FROZEN_CONTROLS,
     READY_DEVELOPMENT_PREFIX_ONLY,
     STOP_INVALID,
@@ -25,38 +30,28 @@ def _base_config() -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _extended_config() -> dict:
+def _legacy_v11_config() -> dict:
+    """Reconstruct the exact pinned v1.1 control shape from current v1.2."""
+
     config = copy.deepcopy(_base_config())
-    config["protocol_id"] = "miehe-sent-sens-three-grid-development-v1.2-test"
-    config["solver"].update(
-        {
-            "max_displacement_iterations": 37,
-            "line_search_steps": 19,
-            "active_set_tolerance": 2.0e-11,
-            "tangent_perturbation": 3.0e-8,
-            "raise_on_nonconvergence": False,
-            "adaptive_bisection": {
-                "factor": 0.5,
-                "max_retry_depth": 4,
-                "minimum_increment_mm": 1.0e-8,
-                "retryable_codes": [
-                    "QC_NONCONVERGED",
-                    "QC_EQUILIBRIUM",
-                    "SOLVER_EXCEPTION",
-                ],
-                "retry_exhausted_action": "STOP_NUMERICAL",
-            },
-        }
-    )
-    config["per_tier_qc"].update(
-        {
-            "max_damage_range_violation": 1.0e-12,
-            "force_balance_normalization_floor_kN": 1.0e-15,
-            "moment_balance_normalization_floor_kN_mm": 1.0e-15,
-            "path_energy_normalization_floor_kN_mm": 1.0e-18,
-            "global_moment_origin_yz_mm": [0.0, 0.0],
-        }
-    )
+    config["protocol_id"] = "miehe-sent-sens-three-grid-development-v1.1"
+    for key in (
+        "max_displacement_iterations",
+        "line_search_steps",
+        "active_set_tolerance",
+        "tangent_perturbation",
+        "raise_on_nonconvergence",
+        "adaptive_bisection",
+    ):
+        del config["solver"][key]
+    for key in (
+        "max_damage_range_violation",
+        "force_balance_normalization_floor_kN",
+        "moment_balance_normalization_floor_kN_mm",
+        "path_energy_normalization_floor_kN_mm",
+        "global_moment_origin_yz_mm",
+    ):
+        del config["per_tier_qc"][key]
     return config
 
 
@@ -124,9 +119,21 @@ def _candidate(
 
 
 def test_v11_preflight_lists_missing_controls_without_options() -> None:
-    preflight = preflight_coupled_coarse_prefix(_base_config())
+    legacy = _legacy_v11_config()
+    canonical_sha256 = hashlib.sha256(
+        json.dumps(
+            legacy,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+    ).hexdigest()
+    preflight = preflight_coupled_coarse_prefix(legacy)
 
     assert preflight.status == NOT_READY_MISSING_FROZEN_CONTROLS
+    assert canonical_sha256 == "d10036cfe1a0fa54600acae5d5f04425014074ec3d8ebace9e8f284251d8a20d"
+    assert preflight.protocol_sha256 == canonical_sha256
     assert preflight.options is None
     assert preflight.adaptive_policy is None
     assert "solver.max_displacement_iterations" in preflight.missing_controls
@@ -134,35 +141,107 @@ def test_v11_preflight_lists_missing_controls_without_options() -> None:
     assert "solver.active_set_tolerance" in preflight.missing_controls
     assert "solver.tangent_perturbation" in preflight.missing_controls
     assert "solver.adaptive_bisection.factor" in preflight.missing_controls
+    assert (
+        "solver.adaptive_bisection.max_rejected_attempts_per_required_interval"
+        in preflight.missing_controls
+    )
     assert "per_tier_qc.max_damage_range_violation" in preflight.missing_controls
 
 
-def test_extended_preflight_builds_every_option_explicitly() -> None:
-    preflight = preflight_coupled_coarse_prefix(_extended_config())
+def test_current_frozen_v12_config_preflight_is_ready() -> None:
+    preflight = preflight_coupled_coarse_prefix(_base_config())
+
+    assert preflight.status == READY_DEVELOPMENT_PREFIX_ONLY
+    assert preflight.missing_controls == ()
+    assert preflight.options is not None
+    assert preflight.options.max_displacement_iterations == 30
+    assert preflight.options.line_search_steps == 16
+    assert preflight.options.active_set_tolerance == 1.0e-10
+    assert preflight.options.tangent_perturbation == 1.0e-7
+    assert preflight.options.raise_on_nonconvergence is False
+    assert preflight.adaptive_policy is not None
+    assert preflight.adaptive_policy.max_rejected_attempts_per_required_interval == 6
+
+
+def test_current_preflight_builds_every_option_explicitly() -> None:
+    preflight = preflight_coupled_coarse_prefix(_base_config())
 
     assert preflight.status == READY_DEVELOPMENT_PREFIX_ONLY
     assert preflight.options is not None
     assert preflight.options.max_staggered_iterations == 100
-    assert preflight.options.max_displacement_iterations == 37
+    assert preflight.options.max_displacement_iterations == 30
     assert preflight.options.max_active_set_iterations == 100
     assert preflight.options.staggered_tolerance == 1.0e-8
     assert preflight.options.energy_tolerance == 1.0e-8
     assert preflight.options.equilibrium_tolerance == 1.0e-8
     assert preflight.options.kkt_tolerance == 1.0e-8
-    assert preflight.options.active_set_tolerance == 2.0e-11
-    assert preflight.options.line_search_steps == 19
-    assert preflight.options.tangent_perturbation == 3.0e-8
+    assert preflight.options.active_set_tolerance == 1.0e-10
+    assert preflight.options.line_search_steps == 16
+    assert preflight.options.tangent_perturbation == 1.0e-7
     assert preflight.options.raise_on_nonconvergence is False
+    assert {item.name for item in fields(preflight.options)} == {
+        "max_staggered_iterations",
+        "max_displacement_iterations",
+        "max_active_set_iterations",
+        "staggered_tolerance",
+        "energy_tolerance",
+        "equilibrium_tolerance",
+        "kkt_tolerance",
+        "active_set_tolerance",
+        "line_search_steps",
+        "tangent_perturbation",
+        "raise_on_nonconvergence",
+    }
+
+
+def test_unknown_future_identity_has_no_validator_and_is_not_ready() -> None:
+    config = _base_config()
+    config["protocol_id"] = "miehe-sent-sens-three-grid-development-v1.3"
+
+    preflight = preflight_coupled_coarse_prefix(config)
+
+    assert preflight.status == NOT_READY_INVALID_FROZEN_CONTROLS
+    assert preflight.detail == "current SENT/SENS protocol validation failed"
 
 
 def test_preflight_refuses_when_adaptive_policy_is_not_frozen() -> None:
-    config = _extended_config()
+    config = _base_config()
     del config["solver"]["adaptive_bisection"]
 
     preflight = preflight_coupled_coarse_prefix(config)
 
-    assert preflight.status == NOT_READY_MISSING_FROZEN_CONTROLS
-    assert "solver.adaptive_bisection.factor" in preflight.missing_controls
+    assert preflight.status == NOT_READY_INVALID_FROZEN_CONTROLS
+    assert preflight.missing_controls == ()
+    assert preflight.detail == "current SENT/SENS protocol validation failed"
+
+
+def test_runtime_control_hash_binds_adaptive_rejection_policy() -> None:
+    original = preflight_coupled_coarse_prefix(_base_config())
+    assert original.options is not None and original.adaptive_policy is not None
+    changed_policy = replace(
+        original.adaptive_policy,
+        max_rejected_attempts_per_required_interval=5,
+    )
+    changed_hash = trajectory_module._options_and_policy_sha256(original.options, changed_policy)
+
+    assert original.status == READY_DEVELOPMENT_PREFIX_ONLY
+    assert original.options_sha256 != changed_hash
+
+
+def test_current_v12_control_or_hash_drift_is_not_ready() -> None:
+    changed_control = _base_config()
+    changed_control["solver"]["max_displacement_iterations"] = 31
+    hash_only_drift = _base_config()
+    hash_only_drift["evidence_basis"]["public_implementations"]["phasefieldx_url"] = (
+        "https://invalid.example/drift"
+    )
+
+    for config in (changed_control, hash_only_drift):
+        preflight = preflight_coupled_coarse_prefix(config)
+        assert preflight.status == NOT_READY_INVALID_FROZEN_CONTROLS
+        assert preflight.options is None
+        assert preflight.detail == "current SENT/SENS protocol validation failed"
+        assert "invalid.example" not in preflight.detail
 
 
 def test_restart_checkpoint_arrays_are_bytes_backed_and_hash_stays_stable() -> None:
@@ -202,6 +281,39 @@ def test_restart_checkpoint_arrays_are_bytes_backed_and_hash_stays_stable() -> N
     assert checkpoint.checkpoint_sha256 == stable_hash
 
 
+@pytest.mark.parametrize(
+    ("field_name", "invalid_value"),
+    [
+        ("U_mm", math.nan),
+        ("displacement_yz_mm", np.asarray([[math.nan, 0.0], [0.0, 0.0]])),
+        ("damage", np.asarray([0.0, math.inf])),
+        ("history_kN_per_mm2", np.asarray([math.nan])),
+        ("reaction_yz_kN", np.asarray([[0.0, 0.0], [0.0, -math.inf]])),
+        ("path_work_kN_mm", math.nan),
+        ("total_potential_energy_kN_mm", math.inf),
+    ],
+)
+def test_restart_checkpoint_rejects_every_nonfinite_persistent_field(
+    field_name: str, invalid_value: object
+) -> None:
+    values = {
+        "U_mm": 0.0,
+        "displacement_yz_mm": np.zeros((2, 2)),
+        "damage": np.zeros(2),
+        "history_kN_per_mm2": np.zeros(1),
+        "reaction_yz_kN": np.zeros((2, 2)),
+        "path_work_kN_mm": 0.0,
+        "total_potential_energy_kN_mm": 0.0,
+        "mesh_sha256": "a" * 64,
+        "protocol_sha256": "b" * 64,
+        "options_sha256": "c" * 64,
+    }
+    values[field_name] = invalid_value
+
+    with pytest.raises(ValueError, match="finite"):
+        RestartCheckpoint(**values)
+
+
 def test_step_candidate_applied_force_is_bytes_backed_and_input_isolated() -> None:
     checkpoint = _checkpoint(0.0, "b" * 64, "c" * 64)
     source = np.zeros((2, 2))
@@ -228,6 +340,39 @@ def test_step_candidate_applied_force_is_bytes_backed_and_input_isolated() -> No
         candidate.applied_nodal_force_yz_kN.setflags(write=True)
 
 
+@pytest.mark.parametrize(
+    "field_name",
+    [
+        "equilibrium_relative_residual",
+        "kkt_relative_residual",
+        "complementarity_relative_residual",
+        "relative_displacement_increment",
+        "relative_damage_increment",
+        "relative_potential_energy_increment",
+        "reported_irreversibility_violation",
+        "reported_range_violation",
+        "generalized_reaction_magnitude_kN",
+    ],
+)
+@pytest.mark.parametrize("invalid_value", [-1.0, math.nan, math.inf])
+def test_step_candidate_rejects_invalid_nonnegative_diagnostics(
+    field_name: str, invalid_value: float
+) -> None:
+    valid = _candidate(_checkpoint(0.0, "b" * 64, "c" * 64), 0.0)
+
+    with pytest.raises(ValueError):
+        replace(valid, **{field_name: invalid_value})
+
+
+def test_step_candidate_rejects_nonfinite_applied_force() -> None:
+    valid = _candidate(_checkpoint(0.0, "b" * 64, "c" * 64), 0.0)
+    applied = np.zeros((2, 2))
+    applied[0, 0] = math.nan
+
+    with pytest.raises(ValueError, match="finite"):
+        replace(valid, applied_nodal_force_yz_kN=applied)
+
+
 def test_not_ready_runner_never_calls_solver() -> None:
     calls = 0
 
@@ -238,7 +383,7 @@ def test_not_ready_runner_never_calls_solver() -> None:
 
     seed = _checkpoint(0.0, "b" * 64, "c" * 64)
     result = run_coupled_coarse_prefix(
-        _base_config(),
+        _legacy_v11_config(),
         benchmark_id="sent",
         initial_checkpoint=seed,
         nodes_yz_mm=np.asarray([[0.0, 0.0], [1.0, 0.0]]),
@@ -253,7 +398,7 @@ def test_not_ready_runner_never_calls_solver() -> None:
 
 
 def test_rejected_step_rolls_back_and_required_state_is_not_replaced() -> None:
-    config = _extended_config()
+    config = _base_config()
     preflight = preflight_coupled_coarse_prefix(config)
     assert preflight.options_sha256 is not None
     seed = _checkpoint(0.0, preflight.protocol_sha256, preflight.options_sha256)
@@ -304,8 +449,156 @@ def test_rejected_step_rolls_back_and_required_state_is_not_replaced() -> None:
     assert all(item.peak_rss_bytes >= 1234 for item in result.attempt_ledger)
 
 
+def test_sixth_retryable_rejection_stops_without_a_seventh_attempt() -> None:
+    config = _base_config()
+    preflight = preflight_coupled_coarse_prefix(config)
+    assert preflight.options_sha256 is not None
+    seed = _checkpoint(0.0, preflight.protocol_sha256, preflight.options_sha256)
+    calls: list[float] = []
+
+    def solver(start, target, _options):
+        calls.append(target)
+        return _candidate(start, target, converged=target == 0.0)
+
+    result = run_coupled_coarse_prefix(
+        config,
+        benchmark_id="sent",
+        initial_checkpoint=seed,
+        nodes_yz_mm=np.asarray([[0.0, 0.0], [1.0, 0.0]]),
+        required_prefix_count=2,
+        single_step_solver=solver,
+        corridor_callback=lambda _checkpoint, _threshold: True,
+    )
+
+    rejected = [entry for entry in result.attempt_ledger if not entry.accepted]
+    assert result.status == "STOP_NUMERICAL"
+    assert len(rejected) == 6
+    assert len(calls) == 7  # one accepted U=0 plus exactly six rejected attempts
+    assert rejected[-1].rejected_attempt_count_for_required_state == 6
+    assert [entry.required_state_index for entry in rejected] == [1] * 6
+    assert all(entry.code == "QC_NONCONVERGED" for entry in rejected)
+
+
+def test_global_force_failure_is_stop_invalid_and_never_retried() -> None:
+    config = _base_config()
+    preflight = preflight_coupled_coarse_prefix(config)
+    assert preflight.options_sha256 is not None
+    seed = _checkpoint(0.0, preflight.protocol_sha256, preflight.options_sha256)
+    calls: list[float] = []
+
+    def solver(start, target, _options):
+        calls.append(target)
+        if target == 0.0:
+            return _candidate(start, target)
+        return _candidate(
+            start,
+            target,
+            reaction=np.asarray([[1.0, 0.0], [0.0, 0.0]]),
+        )
+
+    result = run_coupled_coarse_prefix(
+        config,
+        benchmark_id="sent",
+        initial_checkpoint=seed,
+        nodes_yz_mm=np.asarray([[0.0, 0.0], [1.0, 0.0]]),
+        required_prefix_count=2,
+        single_step_solver=solver,
+        corridor_callback=lambda _checkpoint, _threshold: True,
+    )
+
+    assert result.status == STOP_INVALID
+    assert calls == [0.0, 0.0001]
+    assert result.attempt_ledger[-1].code == "QC_GLOBAL_FORCE"
+    assert result.attempt_ledger[-1].rejected_attempt_count_for_required_state == 1
+
+
+def test_solver_exception_is_stop_invalid_and_never_retried() -> None:
+    config = _base_config()
+    preflight = preflight_coupled_coarse_prefix(config)
+    assert preflight.options_sha256 is not None
+    seed = _checkpoint(0.0, preflight.protocol_sha256, preflight.options_sha256)
+    calls: list[float] = []
+
+    def solver(start, target, _options):
+        calls.append(target)
+        if target == 0.0:
+            return _candidate(start, target)
+        raise RuntimeError("synthetic solver failure")
+
+    result = run_coupled_coarse_prefix(
+        config,
+        benchmark_id="sent",
+        initial_checkpoint=seed,
+        nodes_yz_mm=np.asarray([[0.0, 0.0], [1.0, 0.0]]),
+        required_prefix_count=2,
+        single_step_solver=solver,
+        corridor_callback=lambda _checkpoint, _threshold: True,
+    )
+
+    assert result.status == STOP_INVALID
+    assert calls == [0.0, 0.0001]
+    assert result.attempt_ledger[-1].code == "SOLVER_EXCEPTION"
+    assert result.attempt_ledger[-1].exception_type == "RuntimeError"
+    assert result.attempt_ledger[-1].exception_message == "synthetic solver failure"
+
+
+def test_nonfinite_candidate_construction_is_solver_exception_and_never_retried() -> None:
+    config = _base_config()
+    preflight = preflight_coupled_coarse_prefix(config)
+    assert preflight.options_sha256 is not None
+    seed = _checkpoint(0.0, preflight.protocol_sha256, preflight.options_sha256)
+    calls: list[float] = []
+
+    def solver(start, target, _options):
+        calls.append(target)
+        return _candidate(start, target, equilibrium=0.0 if target == 0.0 else math.nan)
+
+    result = run_coupled_coarse_prefix(
+        config,
+        benchmark_id="sent",
+        initial_checkpoint=seed,
+        nodes_yz_mm=np.asarray([[0.0, 0.0], [1.0, 0.0]]),
+        required_prefix_count=2,
+        single_step_solver=solver,
+        corridor_callback=lambda _checkpoint, _threshold: True,
+    )
+
+    assert result.status == STOP_INVALID
+    assert calls == [0.0, 0.0001]
+    assert result.attempt_ledger[-1].code == "SOLVER_EXCEPTION"
+    assert result.attempt_ledger[-1].exception_type == "ValueError"
+
+
+@pytest.mark.parametrize("malformed", [object(), {"checkpoint": "not-a-candidate"}])
+def test_malformed_solver_return_is_ledgered_stop_invalid(malformed: object) -> None:
+    config = _base_config()
+    preflight = preflight_coupled_coarse_prefix(config)
+    assert preflight.options_sha256 is not None
+    seed = _checkpoint(0.0, preflight.protocol_sha256, preflight.options_sha256)
+
+    result = run_coupled_coarse_prefix(
+        config,
+        benchmark_id="sent",
+        initial_checkpoint=seed,
+        nodes_yz_mm=np.asarray([[0.0, 0.0], [1.0, 0.0]]),
+        required_prefix_count=1,
+        single_step_solver=lambda _start, _target, _options: malformed,
+        corridor_callback=lambda _checkpoint, _threshold: True,
+    )
+
+    assert result.status == STOP_INVALID
+    assert result.accepted_checkpoints == ()
+    assert len(result.attempt_ledger) == 1
+    entry = result.attempt_ledger[0]
+    assert entry.code == STOP_INVALID
+    assert entry.accepted is False
+    assert entry.result_checkpoint_sha256 is None
+    assert entry.exception_type == "TypeError"
+    assert entry.rejected_attempt_count_for_required_state == 1
+
+
 def test_damage_corridor_escape_stops_invalid_without_bisection() -> None:
-    config = _extended_config()
+    config = _base_config()
     preflight = preflight_coupled_coarse_prefix(config)
     assert preflight.options_sha256 is not None
     seed = _checkpoint(0.0, preflight.protocol_sha256, preflight.options_sha256)
@@ -332,8 +625,44 @@ def test_damage_corridor_escape_stops_invalid_without_bisection() -> None:
     assert [item.U_mm for item in result.required_checkpoints] == [0.0]
 
 
+def test_corridor_stop_invalid_outranks_simultaneous_retryable_failure() -> None:
+    config = _base_config()
+    preflight = preflight_coupled_coarse_prefix(config)
+    assert preflight.options_sha256 is not None
+    seed = _checkpoint(0.0, preflight.protocol_sha256, preflight.options_sha256)
+    calls: list[float] = []
+
+    def solver(start, target, _options):
+        calls.append(target)
+        return _candidate(
+            start,
+            target,
+            converged=target == 0.0,
+        )
+
+    result = run_coupled_coarse_prefix(
+        config,
+        benchmark_id="sent",
+        initial_checkpoint=seed,
+        nodes_yz_mm=np.asarray([[0.0, 0.0], [1.0, 0.0]]),
+        required_prefix_count=2,
+        single_step_solver=solver,
+        corridor_callback=lambda checkpoint, _threshold: checkpoint.U_mm == 0.0,
+    )
+
+    assert result.status == STOP_INVALID
+    assert calls == [0.0, 0.0001]
+    assert result.attempt_ledger[-1].qc.failed_codes == (
+        "QC_NONCONVERGED",
+        STOP_INVALID,
+    )
+    assert result.attempt_ledger[-1].code == STOP_INVALID
+    assert result.attempt_ledger[-1].retry_depth == 0
+    assert len(result.attempt_ledger) == 2
+
+
 def test_qc_formulas_cover_all_required_gates() -> None:
-    config = _extended_config()
+    config = _base_config()
     preflight = preflight_coupled_coarse_prefix(config)
     assert preflight.options_sha256 is not None and preflight.qc is not None
     previous = _checkpoint(0.0, preflight.protocol_sha256, preflight.options_sha256)
@@ -346,7 +675,7 @@ def test_qc_formulas_cover_all_required_gates() -> None:
         potential=0.0,
         damage=np.asarray([-0.1, 0.0]),
         reaction=np.asarray([[0.0, 0.0], [0.0, 1.0]]),
-        generalized_reaction=-1.0,
+        generalized_reaction=1.0,
         kkt=1.0,
         complementarity=1.0,
         du=1.0,
@@ -377,7 +706,6 @@ def test_qc_formulas_cover_all_required_gates() -> None:
         "QC_GLOBAL_FORCE",
         "QC_GLOBAL_MOMENT",
         "QC_PATH_ENERGY",
-        "QC_REACTION",
         STOP_INVALID,
     } <= set(qc.failed_codes)
     assert qc.irreversibility_violation == pytest.approx(0.2)

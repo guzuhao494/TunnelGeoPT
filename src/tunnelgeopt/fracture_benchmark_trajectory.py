@@ -3,9 +3,9 @@
 This module is development-only.  It does not run a finite-element solve by
 itself and it does not authorize a formal SENT/SENS trajectory.  Its purpose
 is to freeze the state, retry, QC, and ledger semantics that a future solver
-adapter must satisfy.  In particular, the current v1.1 protocol is rejected
-because it does not freeze every :class:`FractureSolverOptions` field or an
-adaptive-bisection policy.
+adapter must satisfy.  The exact current v1.2 protocol is accepted only after
+its strict canonical validator passes; the pinned legacy v1.1 shape remains
+rejected because it lacks complete solver and adaptive controls.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .fracture import FractureSolverOptions
-from .fracture_benchmark_validation import FROZEN_CANONICAL_SHA256, PROTOCOL_ID
+from .fracture_benchmark_validation import validate_fracture_sent_sens_config
 
 FloatArray = NDArray[np.float64]
 
@@ -35,6 +35,32 @@ STOP_INVALID = "STOP_INVALID"
 STOP_NUMERICAL = "STOP_NUMERICAL"
 DEVELOPMENT_PREFIX_ACCEPTED = "DEVELOPMENT_PREFIX_ACCEPTED"
 
+_RETRYABLE_NUMERICAL_CODES = (
+    "QC_NONCONVERGED",
+    "QC_EQUILIBRIUM",
+    "QC_KKT",
+    "QC_DU",
+    "QC_DD",
+    "QC_DPI",
+    "QC_PATH_ENERGY",
+)
+_NONRETRYABLE_INVALID_CODES = (
+    "QC_NONFINITE",
+    "QC_IRREVERSIBILITY",
+    "QC_RANGE",
+    "QC_GLOBAL_FORCE",
+    "QC_GLOBAL_MOMENT",
+    "QC_REACTION",
+    "SOLVER_EXCEPTION",
+    STOP_INVALID,
+)
+
+# These literals identify only the immutable validate-only v1.1 artifact.  Do
+# not import the validator's current identity here: when that validator moves
+# to v1.2, an imported constant could silently turn the new protocol into the
+# legacy protocol that this runner must reject.
+_LEGACY_V11_PROTOCOL_ID = "miehe-sent-sens-three-grid-development-v1.1"
+_LEGACY_V11_CANONICAL_SHA256 = "d10036cfe1a0fa54600acae5d5f04425014074ec3d8ebace9e8f284251d8a20d"
 _MISSING = object()
 _FROZEN_CONTROL_PATHS = (
     "solver.max_displacement_iterations",
@@ -47,6 +73,7 @@ _FROZEN_CONTROL_PATHS = (
     "solver.adaptive_bisection.minimum_increment_mm",
     "solver.adaptive_bisection.retryable_codes",
     "solver.adaptive_bisection.retry_exhausted_action",
+    "solver.adaptive_bisection.max_rejected_attempts_per_required_interval",
     "per_tier_qc.max_damage_range_violation",
     "per_tier_qc.force_balance_normalization_floor_kN",
     "per_tier_qc.moment_balance_normalization_floor_kN_mm",
@@ -114,10 +141,13 @@ def _nonnegative_int(value: Any, *, name: str) -> int:
     return value
 
 
-def _options_sha256(options: FractureSolverOptions) -> str:
+def _options_and_policy_sha256(
+    options: FractureSolverOptions, policy: AdaptiveBisectionPolicy
+) -> str:
     payload = {
-        "schema": "tunnelgeopt.fracture.solver_options.v1",
-        **asdict(options),
+        "schema": "tunnelgeopt.fracture.runtime_controls.v1",
+        "solver_options": asdict(options),
+        "adaptive_bisection": asdict(policy),
     }
     return _canonical_sha256(payload)
 
@@ -131,6 +161,7 @@ class AdaptiveBisectionPolicy:
     minimum_increment_mm: float
     retryable_codes: tuple[str, ...]
     retry_exhausted_action: str
+    max_rejected_attempts_per_required_interval: int
 
     def __post_init__(self) -> None:
         if self.factor != 0.5:
@@ -141,16 +172,16 @@ class AdaptiveBisectionPolicy:
             name="adaptive_bisection.minimum_increment_mm",
             positive=True,
         )
-        if not self.retryable_codes or any(
-            not isinstance(code, str) or not code for code in self.retryable_codes
-        ):
-            raise ValueError("adaptive_bisection.retryable_codes must be non-empty strings")
-        if len(set(self.retryable_codes)) != len(self.retryable_codes):
-            raise ValueError("adaptive_bisection.retryable_codes must be unique")
-        if STOP_INVALID in self.retryable_codes:
-            raise ValueError("STOP_INVALID must never be retryable")
+        if self.retryable_codes != _RETRYABLE_NUMERICAL_CODES:
+            raise ValueError(
+                "adaptive_bisection.retryable_codes must equal the frozen seven-code order"
+            )
         if self.retry_exhausted_action != STOP_NUMERICAL:
             raise ValueError("adaptive_bisection.retry_exhausted_action must be STOP_NUMERICAL")
+        _positive_int(
+            self.max_rejected_attempts_per_required_interval,
+            name="adaptive_bisection.max_rejected_attempts_per_required_interval",
+        )
 
 
 @dataclass(frozen=True)
@@ -204,8 +235,9 @@ def preflight_coupled_coarse_prefix(config: Mapping[str, Any]) -> CoupledPrefixP
             detail=f"protocol is not canonical finite JSON: {exc}",
         )
 
+    is_legacy_v11 = config.get("protocol_id") == _LEGACY_V11_PROTOCOL_ID
     missing = tuple(path for path in _FROZEN_CONTROL_PATHS if _lookup(config, path) is _MISSING)
-    if missing:
+    if is_legacy_v11 and missing:
         return CoupledPrefixPreflight(
             status=NOT_READY_MISSING_FROZEN_CONTROLS,
             protocol_sha256=protocol_sha,
@@ -213,14 +245,34 @@ def preflight_coupled_coarse_prefix(config: Mapping[str, Any]) -> CoupledPrefixP
             detail="protocol extension required before any coupled prefix solve",
         )
 
-    if config.get("protocol_id") == PROTOCOL_ID:
+    if is_legacy_v11:
         detail = "the v1.1 identity is immutable; adding controls requires a new protocol version"
-        if protocol_sha == FROZEN_CANONICAL_SHA256:
+        if protocol_sha == _LEGACY_V11_CANONICAL_SHA256:
             detail = "v1.1 cannot be coupled-ready without a versioned protocol extension"
         return CoupledPrefixPreflight(
             status=NOT_READY_PROTOCOL_EXTENSION_REQUIRED,
             protocol_sha256=protocol_sha,
             detail=detail,
+        )
+
+    # Non-legacy execution is permitted only for the validator's exact current
+    # protocol ID, semantics, and canonical hash.  Keep the legacy identity
+    # literal-pinned above while letting the strict validator own the moving
+    # current identity.  Never expose config contents or host paths in detail.
+    try:
+        validate_fracture_sent_sens_config(config)
+    except Exception:  # noqa: BLE001 - arbitrary mappings must fail closed
+        return CoupledPrefixPreflight(
+            status=NOT_READY_INVALID_FROZEN_CONTROLS,
+            protocol_sha256=protocol_sha,
+            detail="current SENT/SENS protocol validation failed",
+        )
+
+    if missing:  # defensive: the strict current validator should make this unreachable
+        return CoupledPrefixPreflight(
+            status=NOT_READY_INVALID_FROZEN_CONTROLS,
+            protocol_sha256=protocol_sha,
+            detail="current SENT/SENS protocol validation failed",
         )
 
     try:
@@ -306,6 +358,10 @@ def preflight_coupled_coarse_prefix(config: Mapping[str, Any]) -> CoupledPrefixP
             ),
             retryable_codes=tuple(retryable),
             retry_exhausted_action=str(adaptive["retry_exhausted_action"]),
+            max_rejected_attempts_per_required_interval=_positive_int(
+                adaptive["max_rejected_attempts_per_required_interval"],
+                name=("adaptive_bisection.max_rejected_attempts_per_required_interval"),
+            ),
         )
 
         frozen_qc = config["per_tier_qc"]
@@ -391,7 +447,7 @@ def preflight_coupled_coarse_prefix(config: Mapping[str, Any]) -> CoupledPrefixP
         protocol_sha256=protocol_sha,
         detail="bounded coarse prefix only; no formal-run authorization",
         options=options,
-        options_sha256=_options_sha256(options),
+        options_sha256=_options_and_policy_sha256(options, policy),
         adaptive_policy=policy,
         qc=qc,
     )
@@ -421,8 +477,14 @@ class RestartCheckpoint:
     checkpoint_sha256: str = field(init=False)
 
     def __post_init__(self) -> None:
-        if not math.isfinite(float(self.U_mm)) or float(self.U_mm) < 0.0:
+        U_mm = _finite_number(self.U_mm, name="U_mm")
+        if U_mm < 0.0:
             raise ValueError("U_mm must be finite and nonnegative")
+        path_work = _finite_number(self.path_work_kN_mm, name="path_work_kN_mm")
+        total_potential = _finite_number(
+            self.total_potential_energy_kN_mm,
+            name="total_potential_energy_kN_mm",
+        )
         displacement = _readonly_float(self.displacement_yz_mm, name="displacement_yz_mm", ndim=2)
         reaction = _readonly_float(self.reaction_yz_kN, name="reaction_yz_kN", ndim=2)
         damage = _readonly_float(self.damage, name="damage", ndim=1)
@@ -431,6 +493,14 @@ class RestartCheckpoint:
             raise ValueError("displacement_yz_mm and reaction_yz_kN must have shape [N,2]")
         if damage.shape != (displacement.shape[0],):
             raise ValueError("damage must have one entry per node")
+        for name, array in (
+            ("displacement_yz_mm", displacement),
+            ("damage", damage),
+            ("history_kN_per_mm2", history),
+            ("reaction_yz_kN", reaction),
+        ):
+            if not np.isfinite(array).all():
+                raise ValueError(f"{name} must contain only finite values")
         for name in ("mesh_sha256", "protocol_sha256", "options_sha256"):
             digest = getattr(self, name)
             if (
@@ -439,6 +509,9 @@ class RestartCheckpoint:
                 or any(character not in "0123456789abcdef" for character in digest)
             ):
                 raise ValueError(f"{name} must be a lowercase SHA-256 hex digest")
+        object.__setattr__(self, "U_mm", U_mm)
+        object.__setattr__(self, "path_work_kN_mm", path_work)
+        object.__setattr__(self, "total_potential_energy_kN_mm", total_potential)
         object.__setattr__(self, "displacement_yz_mm", displacement)
         object.__setattr__(self, "reaction_yz_kN", reaction)
         object.__setattr__(self, "damage", damage)
@@ -488,6 +561,8 @@ class CoupledStepCandidate:
         )
         if applied.shape != self.checkpoint.reaction_yz_kN.shape:
             raise ValueError("applied_nodal_force_yz_kN must have shape [N,2]")
+        if not np.isfinite(applied).all():
+            raise ValueError("applied_nodal_force_yz_kN must contain only finite values")
         if not isinstance(self.converged, bool):
             raise TypeError("converged must be boolean")
         if (
@@ -496,6 +571,19 @@ class CoupledStepCandidate:
             or self.peak_rss_bytes < 0
         ):
             raise ValueError("peak_rss_bytes must be a nonnegative integer")
+        for name in (
+            "equilibrium_relative_residual",
+            "kkt_relative_residual",
+            "complementarity_relative_residual",
+            "relative_displacement_increment",
+            "relative_damage_increment",
+            "relative_potential_energy_increment",
+            "reported_irreversibility_violation",
+            "reported_range_violation",
+            "generalized_reaction_magnitude_kN",
+        ):
+            value = _nonnegative_number(getattr(self, name), name=name)
+            object.__setattr__(self, name, value)
         object.__setattr__(self, "applied_nodal_force_yz_kN", applied)
 
 
@@ -752,6 +840,7 @@ class AttemptLedgerEntry:
     qc: StepQCEvaluation
     accepted: bool
     accepted_as_required_state: bool
+    rejected_attempt_count_for_required_state: int
 
 
 @dataclass(frozen=True)
@@ -907,6 +996,7 @@ def run_coupled_coarse_prefix(
     policy = preflight.adaptive_policy
     terminal_status: str | None = None
     terminal_detail = ""
+    rejected_attempt_counts: dict[int, int] = {}
 
     def record_attempt(
         start: RestartCheckpoint,
@@ -922,13 +1012,17 @@ def run_coupled_coarse_prefix(
         started = float(clock())
         before_rss = int(peak_rss_reader())
         candidate: CoupledStepCandidate | None = None
+        returned_candidate: Any = None
+        solver_returned = False
         exception_type: str | None = None
         exception_message: str | None = None
         qc = StepQCEvaluation.not_evaluated()
         code = "SOLVER_EXCEPTION"
         try:
-            candidate = single_step_solver(start, target, preflight.options)
-            _validate_candidate_identity(candidate, start, target)
+            returned_candidate = single_step_solver(start, target, preflight.options)
+            solver_returned = True
+            _validate_candidate_identity(returned_candidate, start, target)
+            candidate = returned_candidate
             qc = evaluate_step_qc(
                 start,
                 candidate,
@@ -937,17 +1031,39 @@ def run_coupled_coarse_prefix(
                 damage_component_threshold=damage_threshold,
                 corridor_callback=corridor_callback,
             )
-            code = (
-                ("ACCEPTED_REQUIRED" if is_required_target else "ACCEPTED_ADAPTIVE")
-                if qc.all_passed
-                else qc.failed_codes[0]
-            )
+            if qc.all_passed:
+                code = "ACCEPTED_REQUIRED" if is_required_target else "ACCEPTED_ADAPTIVE"
+            elif STOP_INVALID in qc.failed_codes:
+                # Invalid geometry/topology/corridor evidence always outranks
+                # retryable numerical failures from the same candidate.
+                code = STOP_INVALID
+            else:
+                invalid_code = next(
+                    (
+                        failure
+                        for failure in _NONRETRYABLE_INVALID_CODES
+                        if failure in qc.failed_codes
+                    ),
+                    None,
+                )
+                retryable_code = next(
+                    (
+                        failure
+                        for failure in _RETRYABLE_NUMERICAL_CODES
+                        if failure in qc.failed_codes
+                    ),
+                    None,
+                )
+                # Unknown failure codes are invalid, never implicitly
+                # retryable.  Preserve a known concrete invalid code in the
+                # ledger when one is available.
+                code = invalid_code or retryable_code or STOP_INVALID
         # Arbitrary exceptions are part of the injectable solver contract and
         # must be ledgered before the frozen retry policy can classify them.
         except Exception as exc:  # noqa: BLE001
             exception_type = type(exc).__name__
             exception_message = str(exc)
-            code = "SOLVER_EXCEPTION" if candidate is None else STOP_INVALID
+            code = STOP_INVALID if solver_returned else "SOLVER_EXCEPTION"
         completed = float(clock())
         wall_seconds = completed - started
         if not math.isfinite(wall_seconds) or wall_seconds < 0.0:
@@ -959,6 +1075,10 @@ def run_coupled_coarse_prefix(
             candidate.peak_rss_bytes if candidate is not None else 0,
         )
         accepted_attempt = candidate is not None and qc.all_passed and code.startswith("ACCEPTED_")
+        rejected_count = rejected_attempt_counts.get(required_index, 0)
+        if not accepted_attempt:
+            rejected_count += 1
+            rejected_attempt_counts[required_index] = rejected_count
         ledger.append(
             AttemptLedgerEntry(
                 attempt_id=attempt_id,
@@ -980,15 +1100,22 @@ def run_coupled_coarse_prefix(
                 qc=qc,
                 accepted=accepted_attempt,
                 accepted_as_required_state=accepted_attempt and is_required_target,
+                rejected_attempt_count_for_required_state=rejected_count,
             )
         )
         if accepted_attempt:
             assert candidate is not None
             accepted.append(candidate.checkpoint)
             return candidate.checkpoint, attempt_id, code
-        if code == STOP_INVALID:
+        if code in _NONRETRYABLE_INVALID_CODES or code not in policy.retryable_codes:
             terminal_status = STOP_INVALID
-            terminal_detail = "damage corridor escaped or an auditable candidate was malformed"
+            terminal_detail = f"attempt {attempt_id} failed closed with nonretryable {code}"
+        elif rejected_count >= policy.max_rejected_attempts_per_required_interval:
+            terminal_status = policy.retry_exhausted_action
+            terminal_detail = (
+                f"required state {required_index} reached the frozen rejected-attempt limit "
+                f"{policy.max_rejected_attempts_per_required_interval}"
+            )
         return None, attempt_id, code
 
     def advance(
